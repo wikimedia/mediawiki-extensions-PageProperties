@@ -1,0 +1,41 @@
+{
+	"keywords": "keywords",
+	"title": "title",
+	"title mode": "title_mode",
+	"title separator": "title_separator",
+	"Metatag generator": {
+		"robots": "robots",
+		"googlebot": "googlebot",
+		"hreflang xx-xx": "hreflang_xx-xx"
+	},
+	"OpenGraph / Twitter generator": {
+		"type": "type",
+		"image": "image",
+		"image width": "image_width",
+		"image height": "image_height",
+		"image alt": "image_alt",
+		"locale": "locale",
+		"site name": "site_name"
+	},
+	"OpenGraph with type article": {
+		"author": "author",
+		"section": "section",
+		"published time": "published_time"
+	},
+	"Twitter generator": {
+		"twitter site": "twitter_site"
+	},
+	"Citation generator": {
+		"citation type": "citation_type",
+		"citation name": "citation_name",
+		"citation headline": "citation_headline",
+		"citation date published": "citation_date_published",
+		"citation date created": "citation_date_created",
+		"citation page start": "citation_page_start",
+		"citation doi": "citation_doi",
+		"citation author": "citation_author",
+		"citation publisher": "citation_publisher",
+		"citation license": "citation_license",
+		"citation volume": "citation_volume"
+	}
+}

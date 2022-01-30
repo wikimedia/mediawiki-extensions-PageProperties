@@ -1,0 +1,51 @@
+{
+	"name": "PageProperties",
+	"author": "thomas-topway-it",
+	"version": "1.0.0",
+	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
+	"descriptionmsg": "pageproperties-extension-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "parserhook",
+	"MessagesDirs": {
+		"PageProperties": [
+			"i18n"
+		]
+	},
+	"callback": "PageProperties::initExtension",
+	"AutoloadClasses": {
+		"PageProperties": "includes/PageProperties.php",
+		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php"
+	},
+	"ExtensionMessagesFiles": {
+		"PagePropertiesMagic": "PagePropertiesMagic.i18n.magic.php"
+	},
+	"Hooks": {
+		"LoadExtensionSchemaUpdates": "PageProperties::onLoadExtensionSchemaUpdates",
+		"BeforePageDisplay": "PageProperties::BeforePageDisplay",
+		"SkinTemplateNavigation": "PageProperties::onSkinTemplateNavigation",
+		"HtmlPageLinkRendererBegin": "PageProperties::onHtmlPageLinkRendererBegin",
+		"SelfLinkBegin": "PageProperties::onSelfLinkBegin",
+		"SMW::Store::BeforeDataUpdateComplete": "PageProperties::onSMWStoreBeforeDataUpdateComplete"
+	},
+	"SpecialPages": {
+		"PageProperties": "SpecialPageProperties"
+	},
+	"ResourceModules": {
+		"ext.PageProperties": {
+			"position": "top",
+			"localBasePath": "resources",
+			"remoteExtPath": "PageProperties/resources",
+			"scripts": [				
+				"tabs.js",		
+				"dynamictable.js"
+			],
+			"styles": [
+				"style.css"
+			],
+			"dependencies": [
+				"oojs-ui-widgets"
+			]
+		}
+	},
+	"manifest_version": 1
+}

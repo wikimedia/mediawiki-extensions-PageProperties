@@ -1,0 +1,63 @@
+{
+	"pageproperties": "Page Properties",
+	"pageproperties-extension-desc": "Allows to easily edit display title, language and content model of a page. To associate semantic properties to pages (provided that Semantic MediaWiki is installed), and to set arbitrary SEO meta tags for the entire wiki or specific pages",
+
+	"pageproperties-form-fieldset-language": "language",
+	"pageproperties-form-fieldset-publishing": "publishing",
+
+	"pageproperties-form-language-label": "language",
+	"pageproperties-form-language-help": "type a letter to scroll the select there",
+
+
+	"pageproperties-form-meta_robots_noindex_nofollow-label": "noindex, nofollow",
+
+	"pageproperties-form-meta_googlebot_notranslate-label": "notranslate", 
+
+
+	"pageproperties-form-meta_entire_wiki-label": "apply to entire wiki (set values can be overwritten from other pages)",
+	"pageproperties-form-meta_entire_wiki-help": "",
+
+	"pageproperties-form-access-label": "access",
+	"pageproperties-form-publish_as-label": "publish as",
+	"pageproperties-form-publish_as-help": "attribution used for links from external pages",
+
+	"pageproperties-form-published-label": "published",
+	"pageproperties-form-published-help": "If unselected the page is considered a draft and will be not visible to regular visitors",
+	"pageproperties-form-meta_keywords-label": "keywords",
+	"pageproperties-form-meta_keywords-help": "keywords",
+
+	"pageproperties-form-meta_description-label": "description",
+	"pageproperties-form-meta_description-help": "https://moz.com/learn/seo/meta-description<br /><br />",
+
+
+	"pageproperties-form-meta_copyright-label": "copyright",
+	"pageproperties-form-meta_copyright-help": "copyright",
+
+	"pageproperties-form-meta_author-label": "author",
+	"pageproperties-form-meta_robots-label": "robots",
+	"pageproperties-form-meta_robots-help": "https://moz.com/learn/seo/robots-meta-directives",
+
+	"pageproperties-form-meta_subpages-label": "Sub-pages (apply to pages inlcuded in this page)",
+	"pageproperties-form-meta_subpages-help_": "Select to let subpages inherit these values",
+	"pageproperties-return": "← [[$1|$2]]",
+
+	"pageproperties-form-section-main": "main",
+	"pageproperties-form-section-SEO": "SEO",
+
+	"pageproperties-form-section-main-label": "",
+	"pageproperties-form-section-SEO-label": "Here you can set arbitrary metadata for this page and its subpages. If the extension <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> is installed, you can use the related parameters without the need to annotate them manually on the page.<br /><br />",
+
+	"pageproperties-form-section-main-label-entire-wiki": "Here you can set arbitrary metadata for this page, its subpages and even the entire wiki. If the extension <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> is installed, you can use the related parameters without the need to annotate them manually on the page. <br /><br />",
+
+	"pageproperties-form-displaytitle-label": "Display title",
+	"pageproperties-form-displaytitle-help": "can be blank",
+
+	"pageproperties-form-model-label": "Content model",
+
+	"pageproperties-form-section-semantic-properties-label" : "Here you can set all semantic properties which aren't already annotated in the page (those annotated in the page, manually or through a template, will take the precedence to avoid inconsistencies). The \"predefined\" optgroup contains the <a target=\"_blank\" href=\"https://www.semantic-mediawiki.org/wiki/Help:Special_properties/annotable\">annotable special properties</a>. Same properties can be used multiple times.<br><br>",
+	
+	"pageproperties-form-section-semantic-properties-label_" :"Here you can set semantic properties withot having to manually annotate them on the page, and where they are not being inserted by forms. Attention: properties set here will override the values of the same properties set through forms or annotations!",
+	"pageproperties-form-section-semantic-properties": "semantic properties"
+
+}
+
