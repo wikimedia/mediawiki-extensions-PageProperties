@@ -1,41 +1,41 @@
 {
 	"keywords": "keywords",
 	"title": "title",
-	"title mode": "title_mode",
-	"title separator": "title_separator",
+	"title mode": "title mode",
+	"title separator": "title separator",
 	"Metatag generator": {
 		"robots": "robots",
 		"googlebot": "googlebot",
-		"hreflang xx-xx": "hreflang_xx-xx"
+		"hreflang xx-xx": "hreflang xx-xx"
 	},
 	"OpenGraph / Twitter generator": {
 		"type": "type",
 		"image": "image",
-		"image width": "image_width",
-		"image height": "image_height",
-		"image alt": "image_alt",
+		"image width": "image width",
+		"image height": "image height",
+		"image alt": "image alt",
 		"locale": "locale",
-		"site name": "site_name"
+		"site name": "site name"
 	},
 	"OpenGraph with type article": {
 		"author": "author",
 		"section": "section",
-		"published time": "published_time"
+		"published time": "published time"
 	},
 	"Twitter generator": {
-		"twitter site": "twitter_site"
+		"twitter site": "twitter site"
 	},
 	"Citation generator": {
-		"citation type": "citation_type",
-		"citation name": "citation_name",
-		"citation headline": "citation_headline",
-		"citation date published": "citation_date_published",
-		"citation date created": "citation_date_created",
-		"citation page start": "citation_page_start",
-		"citation doi": "citation_doi",
-		"citation author": "citation_author",
-		"citation publisher": "citation_publisher",
-		"citation license": "citation_license",
-		"citation volume": "citation_volume"
+		"citation type": "citation type",
+		"citation name": "citation name",
+		"citation headline": "citation headline",
+		"citation date published": "citation date published",
+		"citation date created": "citation date created",
+		"citation page start": "citation page start",
+		"citation doi": "citation doi",
+		"citation author": "citation author",
+		"citation publisher": "citation publisher",
+		"citation license": "citation license",
+		"citation volume": "citation volume"
 	}
 }

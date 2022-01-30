@@ -233,7 +233,7 @@ class PageProperties
 			if ( $title_obj && $title_obj->isKnown() ) {
 				$page_properties_ = self::getPageProperties( $title_obj->getArticleID() );
 
-				if ( !empty( $page_properties_ ) && ( !empty( $page_properties_['subpages'] ) || $title_obj->getArticleID() == $title->getArticleID() ) && !empty( $page_properties_['meta'] ) ) {
+				if ( !empty( $page_properties_ ) && ( !empty( $page_properties_['meta_subpages'] ) || $title_obj->getArticleID() == $title->getArticleID() ) && !empty( $page_properties_['meta'] ) ) {
 					$output = array_merge( $output, $page_properties_['meta'] );
 				}
 
@@ -273,18 +273,22 @@ class PageProperties
 			$meta = array_merge( $meta, self::getMergedMetas( $title ) );
 
 
-			if ( empty( $meta ) ) {
-				return;
-			}
+			if ( !empty( $meta ) ) {
+					
+				$meta = array_map( function( $value ) {
+					return str_replace( ' ', '_', $value );
+				}, $meta );
 
 
-			if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
-				$seo = new MediaWiki\Extension\WikiSEO\WikiSEO();
-				$seo->setMetadata( $meta );
-				$seo->addMetadataToPage( $outputPage );
+				if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
+					$seo = new MediaWiki\Extension\WikiSEO\WikiSEO();
+					$seo->setMetadata( $meta );
+					$seo->addMetadataToPage( $outputPage );
 			
-			} else {
-				self::addMetadataToPage( $outputPage, $meta );
+				} else {
+					self::addMetadataToPage( $outputPage, $meta );
+				}
+
 			}
 
 			$page_title = self::getDisplayTitle( $title );
@@ -312,9 +316,9 @@ class PageProperties
 
 			if ( !$html_title_already_set ) {
 
-				$html_title = '';
-
 				if ( !array_key_exists( 'title', $meta ) ) {
+
+					$html_title = '';
 	
 					if ( $wgSitename != $title->getText() ) {
 						$html_title = $title->getText() . ' - ';
@@ -741,8 +745,9 @@ https://www.semantic-mediawiki.org/wiki/Help:Media_files_and_metadata
 
 
 // see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
-		foreach ($properties as $value_) {
-			list($property, $value) = $value_;
+		foreach ( $properties as $val ) {
+
+			list( $property, $value ) = $val;
 
 			$dataValue = $annotationProcessor->newDataValueByText(
 				$property,
