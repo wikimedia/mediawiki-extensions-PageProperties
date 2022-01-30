@@ -228,7 +228,6 @@
 
 		var el = $("#meta_robots_noindex_nofollow input")
 		
-
 		update_noindex_nofollow(el);
 
 	});
@@ -274,7 +273,6 @@
 
 		values = (values != '' ? values.split(/\s*,\s*/) : [])
 
-
 		if ( checked ) {
 			var parameters = {'index': false, 'follow': false, 'noindex': true, 'nofollow': true }
 
@@ -283,11 +281,16 @@
 		}
 
 		for(var i in parameters) {
+
 			if (parameters[i]) {
-				values.push(i)
-			} else {
+				if ( values.indexOf(i) == -1 ) {
+					values.push(i)
+				}
+
+			} else if ( values.indexOf(i) > -1 ) {
 				values.splice(values.indexOf(i),1)
 			}
+
 		}
 
 

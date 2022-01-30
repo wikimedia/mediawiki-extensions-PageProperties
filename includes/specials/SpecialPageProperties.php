@@ -417,7 +417,10 @@ class SpecialPageProperties extends FormSpecialPage
 					'prepend_html' => $prepend_html,
 					'append_html' => '</td>',
 					'section' => 'form-section-semantic-properties',
-					'type' => 'select',	// combobox
+					'type' => 'select',
+
+					// **** !important, otherwise data will be loaded from the request!
+					'nodata' => true,
 
 				// make optgroup, see includes/xml/Xml.php _> listDropDownOptionsOoui()
 					'options' => $options,
@@ -437,6 +440,10 @@ class SpecialPageProperties extends FormSpecialPage
 					'name' => 'dynamictable_properties_value_' . $n,
 					'prepend_html' => $prepend_html,
 					'append_html' => $append_html,
+
+					// **** !important, otherwise data will be loaded from the request!
+					'nodata' => true,
+
 					'section' => 'form-section-semantic-properties',
 					'type' => 'text',
 					'default' => $value,
@@ -516,6 +523,9 @@ class SpecialPageProperties extends FormSpecialPage
 				'section' => 'form-section-SEO',
 				'type' => 'combobox',
 
+				// **** !important, otherwise data will be loaded from the request!
+				'nodata' => true,
+
 				// make optgroup, see includes/xml/Xml.php _> listDropDownOptionsOoui()
 				'options' => $options,
 				'default' => $key,
@@ -536,6 +546,9 @@ class SpecialPageProperties extends FormSpecialPage
 				'append_html' => $append_html,
 				'section' => 'form-section-SEO',
 				'type' => 'text',
+
+				// **** !important, otherwise data will be loaded from the request!
+				'nodata' => true,
 				'default' => $value,
 			];
 
@@ -897,7 +910,8 @@ class SpecialPageProperties extends FormSpecialPage
 
 					if ( !empty( $data[ $key_of_value ] ) ) {
 						$output[ $match[1] ][] = [ $value, $data[ $key_of_value ] ];
-					}
+
+					} 
 
 				}
 
