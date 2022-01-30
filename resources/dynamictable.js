@@ -22,17 +22,33 @@
 
 (function () {
 	function increment_name(value, increment) {
-		if (!value) {
+		if ( !value ) {
 			return "";
 		}
 
 		var num = parseInt(value.match(/\d+/)) + increment;
 
-		if (isNaN(num)) {
+		if ( isNaN(num) ) {
 			return value + "_" + increment;
 		}
 
 		return value.replace(/\d+/, num);
+	}
+
+	function closest(el, selector) {
+
+		var output_el;
+
+		$(el).parents().each(function () {
+			var el_ = $(this).has(selector).first();
+
+			if (el_.length) {
+				output_el = el_;
+				return false;
+			}
+		});
+
+		return output_el;
 	}
 
 	var OoUiDropdownInputWidget_options = [];
@@ -45,17 +61,18 @@
 		// search table
 
 		if (!$table.length) {
-			$(this)
-				.parents()
-				.each(function () {
-					$table = $(this).has(".pageproperties_dynamictable").first();
 
-					if ($table.length) {
-						$tr_first = $($table).find("tr:first");
-						$tr_last = $($table).find("tr:last");
-						return false;
-					}
-				});
+			$table = closest(this, ".pageproperties_dynamictable");
+
+			if (!$table.length) {
+				console.log("cannot find related pageproperties_dynamictable");
+				return;
+			}
+
+
+			var $tr_first = $($table).find("tr:first");
+			var $tr_last = $($table).find("tr:last");
+			
 
 		} else {
 			var $tr_first = $(this).closest("tr:first");
@@ -63,10 +80,6 @@
 
 		}
 
-		if (!$table.length) {
-			console.log("cannot find related pageproperties_dynamictable");
-			return;
-		}
 
 		// clone latest row
 
@@ -209,4 +222,75 @@
 			$(this).closest("table").find("tr").find(":text").val("");
 		}
 	});
+
+
+	$("#meta_robots_noindex_nofollow input").change(function () {
+
+		var checked = $(this).is(':checked')
+
+		$table = closest(this, ".pageproperties_dynamictable");
+
+		var found = false;
+		var name;
+
+		$($table).find('input').each(function () {
+
+			name = $(this).attr("name")
+
+			if ( name.indexOf( '_key_' ) != -1 && $(this).val().trim() == 'robots' ) {
+				found = true
+				return false
+			}
+
+		})
+
+
+		if (!found) {
+
+			if (!checked) {
+				return;
+			}
+
+			$table.find(".pageproperties_dynamictable_add_button").click()
+			var el = $($table).find("tr:last input").eq(0)
+			var name = el.attr("name")
+			el.val("robots")
+		}
+
+
+		var el = $($table).find('[name=' + name.replace('_key_', '_value_') + ']').eq(0)
+
+		var values = $(el).val().trim()
+
+		values = (values != '' ? values.split(/\s*,\s*/) : [])
+
+
+		if ( checked ) {
+			var parameters = {'index': false, 'follow': false, 'noindex': true, 'nofollow': true }
+
+		} else {
+			var parameters = {'noindex': false, 'nofollow': false }
+		}
+
+		for(var i in parameters) {
+			if (parameters[i]) {
+				values.push(i)
+			} else {
+				values.splice(values.indexOf(i),1)
+			}
+		}
+
+
+		if( values.length) {
+			$(el).val(values.join(", "))
+
+		} else {
+			$(el).closest('tr').remove()
+		}
+
+
+	});
+
+
 })();
+

@@ -489,8 +489,7 @@ class SpecialPageProperties extends FormSpecialPage
 				if ( in_array( 'noindex', $arr) && in_array( 'nofollow', $arr ) ) {
 					$meta_robots_noindex_nofollow = true;
 				}
-			} 
-
+			}
 
 		}
 
