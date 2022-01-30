@@ -41,6 +41,62 @@ class SpecialPageProperties extends FormSpecialPage
 	protected $title;
 	protected $record_exists;
 
+	// see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
+	protected $exclude = [
+		//content_group
+		"_SOBJ",
+		"_ASK",
+		"_MEDIA",
+		"_MIME",
+		"_ATTCH_LINK",
+		"_FILE_ATTCH",
+		"_CONT_TYPE",
+		"_CONT_AUTHOR",
+		"_CONT_LEN",
+		"_CONT_LANG",
+		"_CONT_TITLE",
+		"_CONT_DATE",
+		"_CONT_KEYW",
+		"_TRANS",
+		"_TRANS_SOURCE",
+		"_TRANS_GROUP",
+
+		//declarative
+		"_TYPE",
+		"_UNIT",
+		"_IMPO",
+		"_CONV",
+		"_SERV",
+		"_PVAL",
+		"_LIST",
+		"_PREC",
+		"_PDESC",
+		"_PPLB",
+		"_PVAP",
+		"_PVALI",
+		"_PVUC",
+		"_PEID",
+		"_PEFU",
+
+		//schema
+		"_SCHEMA_TYPE",
+		"_SCHEMA_DEF",
+		"_SCHEMA_DESC",
+		"_SCHEMA_TAG",
+		"_SCHEMA_LINK",
+		"_FORMAT_SCHEMA",
+		"_CONSTRAINT_SCHEMA",
+		"_PROFILE_SCHEMA",
+
+		//classification_group
+		"_INST",
+		"_PPGR",
+		"_SUBP",
+		"_SUBC"
+	];
+
+
+
 	public function __construct(
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
@@ -327,14 +383,12 @@ class SpecialPageProperties extends FormSpecialPage
 
 			$options = $this->getSemanticPropertiesOptions();
 
-
 			if ( empty( $_POST[ 'wpEditToken' ] ) ) {
 				$values['properties']  = \PageProperties::getSemanticData( $this->title );
 
 				$values['properties'] = array_filter( $values['properties'], function( $value ) use( $options ) {
-					return in_array( $value[0], $options);
+					return in_array( $value[0], $options ) || in_array( $value[0], $options[ 'predefined' ] );
 				});
-
 
 			}
 
@@ -581,8 +635,15 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$this->semanticPropertiesOptions( \PageProperties::getSpecialProperties( $this->title ) );
 
+
+		$this->options_predefined = array_filter( $this->options_predefined, function( $value ) {
+			return !in_array( $value, $this->exclude);
+		});
+
 		ksort($this->options_user_defined);
 		ksort($this->options_predefined);
+
+		
 
 		$options = $this->options_user_defined + [ 'predefined' => $this->options_predefined ];
 
@@ -847,16 +908,11 @@ class SpecialPageProperties extends FormSpecialPage
 	public function onSubmit($data)
 	{
 
-//print_r($_POST);
-//print_r($data);
-
 		// merge dynamically created inputs with
 		// inputs from form descriptor
 
 		$properties = $this->dynamic_values;
 
-
-//print_r($properties);
 
 		$title = $this->title;
 
@@ -886,9 +942,6 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$update_obj = array_intersect_key( $data, $this->record );
 
-//print_r($data);
-//print_r($this->record);
-
 
 		$update_obj['updated_at'] = $date;
 
@@ -896,7 +949,6 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$update_obj['meta'] = ( !empty( $properties[ 'meta' ] ) ? json_encode( $properties[ 'meta' ] ) : null );
 
-//print_r($update_obj);
 
 		$page_id = $title->getArticleID();
 

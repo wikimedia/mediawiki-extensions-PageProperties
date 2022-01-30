@@ -603,22 +603,6 @@ class PageProperties
 	public static function getSpecialProperties( Title $title )
 	{
 
-	/*
-	see
-https://github.com/SemanticMediaWiki/SemanticMediaWiki/blob/master/i18n/extra/en.json
-https://www.semantic-mediawiki.org/wiki/Help:Media_files_and_metadata
-	*/
-		
-		$file = [
-			"_CONT_TYPE",
-			"_CONT_AUTHOR",
-			"_CONT_LEN",
-			"_CONT_LANG",
-			"_CONT_TITLE",
-			"_CONT_DATE",
-			"_CONT_KEYW"
-		];
-
 		$properties = [];
 		
 		$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
@@ -627,17 +611,12 @@ https://www.semantic-mediawiki.org/wiki/Help:Media_files_and_metadata
 
 		foreach ( $propertyList as $key => $property ) {
 
-			if ( $title->getNamespace() == NS_FILE && in_array( $key, $file ) ) {
-				return;
-			}
-
-
 			if ( !array_key_exists( $key, $typeLabels ) ) {
 				$properties[] = new SMW\DIProperty( $key );
 			}
 
 		}
-		
+
 		return $properties;
 
 	}
@@ -756,7 +735,10 @@ https://www.semantic-mediawiki.org/wiki/Help:Media_files_and_metadata
 				$subject
 			);
 
-			$res = $semanticData->addDataValue($dataValue);
+			$semanticData->addDataValue($dataValue);
+
+			//print_r($semanticData->getErrors());
+
 		}
 
 		return true;

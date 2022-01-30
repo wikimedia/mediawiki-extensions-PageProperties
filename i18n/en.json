@@ -54,7 +54,7 @@
 
 	"pageproperties-form-model-label": "Content model",
 
-	"pageproperties-form-section-semantic-properties-label" : "Here you can set all semantic properties which aren't already annotated in the page (those annotated in the page, manually or through a template, will take the precedence to avoid inconsistencies). The \"predefined\" optgroup contains the <a target=\"_blank\" href=\"https://www.semantic-mediawiki.org/wiki/Help:Special_properties/annotable\">annotable special properties</a>. Same properties can be used multiple times.<br><br>",
+	"pageproperties-form-section-semantic-properties-label" : "Here you can set all semantic properties which aren't already annotated in the page (those annotated in the page, manually or through a template, will take the precedence to avoid inconsistencies). The \"predefined\" optgroup contains the allowed <a target=\"_blank\" href=\"https://www.semantic-mediawiki.org/wiki/Help:Special_properties/annotable\">annotable special properties</a>. Same properties can be used multiple times.<br><br>",
 	
 	"pageproperties-form-section-semantic-properties-label_" :"Here you can set semantic properties withot having to manually annotate them on the page, and where they are not being inserted by forms. Attention: properties set here will override the values of the same properties set through forms or annotations!",
 	"pageproperties-form-section-semantic-properties": "semantic properties"
