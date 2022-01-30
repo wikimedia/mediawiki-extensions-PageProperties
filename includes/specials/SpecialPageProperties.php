@@ -216,7 +216,6 @@ class SpecialPageProperties extends FormSpecialPage
 				$meta[ $value[0] ] = $value[1];
 			}
 			$values['meta'] = $meta;
-
 			$this->dynamic_values = $values;
 		}
 
@@ -414,6 +413,7 @@ class SpecialPageProperties extends FormSpecialPage
 
 // $this->mName = "wp{$params['fieldname']}";
 				$formDescriptor['dynamictable_properties_key_' . $n] = [
+					'name' => 'dynamictable_properties_key_' . $n,
 					'prepend_html' => $prepend_html,
 					'append_html' => '</td>',
 					'section' => 'form-section-semantic-properties',
@@ -434,6 +434,7 @@ class SpecialPageProperties extends FormSpecialPage
 				}
 
 				$formDescriptor['dynamictable_properties_value_' . $n] = [
+					'name' => 'dynamictable_properties_value_' . $n,
 					'prepend_html' => $prepend_html,
 					'append_html' => $append_html,
 					'section' => 'form-section-semantic-properties',
@@ -472,11 +473,12 @@ class SpecialPageProperties extends FormSpecialPage
 				'default' => $key,
 			];
 */
-			$hidden_inputs['wpdynamictable_meta_key_' . $n] = $key;
+			$hidden_inputs['dynamictable_meta_key_' . $n] = $key;
 
 
 
 			$formDescriptor['dynamictable_meta_value_' . $n] = [
+				'name' => 'dynamictable_meta_value_' . $n,
 				'label-message' => 'pageproperties-form-meta_' . $key . '-label',
 				'help-message' => 'pageproperties-form-meta_' . $key . '-help',
 				'type' => $input_type,
@@ -495,7 +497,6 @@ class SpecialPageProperties extends FormSpecialPage
 			$values['meta'] = [ array_key_first( $options ) => ''];
 		}
 
-
 		$meta_robots_noindex_nofollow = false;
 
 		foreach ( $values['meta'] as $key => $value ) {
@@ -509,6 +510,7 @@ class SpecialPageProperties extends FormSpecialPage
 			$prepend_html .= '<tr class="pageproperties_dynamictable_row"><td style="padding:2px 2px 2px 0" class="pageproperties_dynamictable_key_cell">';
 
 			$formDescriptor['dynamictable_meta_key_' . $n] = [
+				'name' => 'dynamictable_meta_key_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => '</td>',
 				'section' => 'form-section-SEO',
@@ -529,6 +531,7 @@ class SpecialPageProperties extends FormSpecialPage
 			}
 
 			$formDescriptor['dynamictable_meta_value_' . $n] = [
+				'name' => 'dynamictable_meta_value_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => $append_html,
 				'section' => 'form-section-SEO',
@@ -546,6 +549,7 @@ class SpecialPageProperties extends FormSpecialPage
 			}
 
 		}
+
 
 		$formDescriptor['meta_robots_noindex_nofollow'] = [
 			'type' => 'toggle',
@@ -882,10 +886,10 @@ class SpecialPageProperties extends FormSpecialPage
 // see includes/htmlform/HTMLFormField.php
 // $this->mName = "wp{$params['fieldname']}";
 		foreach ( $data as $key => $value ) {
-			if ( strpos( $key, 'wpdynamictable_' ) === 0) {
+			if ( strpos( $key, 'dynamictable_' ) === 0) {
 
 				// dynamictable_properties_key_1
-				preg_match( '/wpdynamictable_([^_]+)_key_([^_]+)/', $key, $match );
+				preg_match( '/dynamictable_([^_]+)_key_([^_]+)/', $key, $match );
 
 				if ( $match ) {
 
