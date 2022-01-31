@@ -80,25 +80,39 @@ class PageProperties
 	}
 
 
-	public static function canEditPageProperties($user, $title)
-	{
+	/**
+	 * @return array
+	 */
+	protected function getUserGroups( $user ) {
 
-		global $wgPagePropertiesEditorGroups;
+		$user_groups = $user->getImplicitGroups();
+		$user_groups = array_merge( $user_groups, $user->getGroups() );
+		$user_groups[] = $user->getName();
 
-		// show to moderator, 
-		// to page creator if the page is not owned
-		// or to admin/moderator if the page is owned
-
-		if (self::is_moderator($user)) {
-			return true;
+		if ( array_search( '*', $user_groups ) === false ) {
+			$user_groups[] = '*';
 		}
 
-		$wikiPage = WikiPage::factory($title);
-
-		$creator = $wikiPage->getCreator();
-
-		return ($creator == $user->getName());
+		return $user_groups;
 	}
+
+
+	public static function canEditPageProperties( $user, $title )
+	{
+		global $wgPagePropertiesAuthorizedEditors;
+
+		$allowed_groups = [ 'sysop' ];
+		
+		if ( is_array( $wgPagePropertiesAuthorizedEditors ) ) {
+			$allowed_groups = array_unique (array_merge ( $allowed_groups, $wgPagePropertiesAuthorizedEditors) );
+		}
+
+		$user_groups = self::getUserGroups( $user );
+
+		return sizeof( array_intersect( $allowed_groups, $user_groups ) );
+
+	}
+
 
 
 	// ***
@@ -126,27 +140,6 @@ class PageProperties
 		return $output;
 	}
 
-	public static function is_moderator( $user, &$user_groups = null )
-	{
-		if ( !$user || !$user->isLoggedIn() ) {
-			$user_groups[] = 'all';
-			return false;
-		}
-
-		$user_groups = $user->getImplicitGroups();
-
-		$user_groups = array_merge( $user_groups, $user->getGroups() );
-	
-		$allowed_groups = [ 'sysop', 'moderator' ];
-
-		foreach ( $allowed_groups as $value ) {
-			if ( in_array( $value, $user_groups ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
 
 
 	public static function onSkinTemplateNavigation(SkinTemplate $skinTemplate, array &$links)
@@ -170,9 +163,9 @@ class PageProperties
 			return;
 		}
 
-		$show_action = self::canEditPageProperties( $wgUser, $title );
+		$can_edit = self::canEditPageProperties( $wgUser, $title );
 
-		if ( $show_action ) {
+		if ( $can_edit ) {
 			$specialpage = Title::newFromText( 'Special:PageProperties' )->getLocalURL();
 			$links[ 'actions' ][] = [ 'text' => 'Properties', 'href' => $specialpage . '/' . wfEscapeWikiText( $title->getPartialURL() ) ];
 		}
@@ -314,24 +307,20 @@ class PageProperties
 			}
 
 
-			if ( !$html_title_already_set ) {
+			if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta )  ) {
 
-				if ( !array_key_exists( 'title', $meta ) ) {
-
-					$html_title = '';
+				$html_title = '';
 	
-					if ( $wgSitename != $title->getText() ) {
-						$html_title = $title->getText() . ' - ';
-					}
-
-					$html_title .= $wgSitename;
-
-				} else {
-					$html_title = $meta[ 'title' ];
+				if ( $wgSitename != $title->getText() ) {
+					$html_title = $title->getText() . ' - ';
 				}
-			
-				$outputPage->setHTMLTitle($html_title);
 
+				$html_title .= $wgSitename;
+
+				$outputPage->setHTMLTitle( $html_title );
+
+			} else if ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
+				$outputPage->setHTMLTitle( $meta[ 'title' ] );
 			}
 
 		}

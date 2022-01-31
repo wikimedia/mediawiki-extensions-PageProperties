@@ -154,13 +154,9 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$creator = User::newFromIdentity($creator_identity);
 
-		$is_moderator = \PageProperties::is_moderator($user);
+		$can_edit = \PageProperties::canEditPageProperties( $user, $title );
 
-		$is_creator = ( $creator->getName() === $user->getName() );
-
-		$show_action = \PageProperties::canEditPageProperties($user, $title);
-
-		if ( !$show_action ) {
+		if ( !$can_edit ) {
 			return;
 		}
 
@@ -282,7 +278,7 @@ class SpecialPageProperties extends FormSpecialPage
 		/********** display title **********/
 
 
-		$display_title = $this->record['display_title'];
+		$display_title = $this->record[ 'display_title' ];
 
 		if ( !$this->record_exists ) {
 			$result_ = self::getDisplayTitle( $this->title, $display_title );
@@ -292,7 +288,7 @@ class SpecialPageProperties extends FormSpecialPage
 			}
 		}
 
-		$formDescriptor['display_title'] = [
+		$formDescriptor[ 'display_title' ] = [
 			'label-message' => 'pageproperties-form-displaytitle-label',
 			'help-message' => 'pageproperties-form-displaytitle-help',
 			'type' => 'text',
