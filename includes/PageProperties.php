@@ -335,7 +335,7 @@ class PageProperties
 // Meta tags already set in the page
 		$outputMeta = [];
 		foreach ( $this->outputPage->getMetaTags() as $metaTag ) {
-			$outputMeta[$metaTag[0]] = $metaTag[1];
+			$outputMeta[ $metaTag[0] ] = $metaTag[1];
 		}
 
 		foreach ( $meta as $k => $v ) {

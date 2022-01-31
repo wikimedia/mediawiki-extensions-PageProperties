@@ -656,18 +656,21 @@ class SpecialPageProperties extends FormSpecialPage
 		ksort($this->options_user_defined);
 		ksort($this->options_predefined);
 
-		
-
-		$options = $this->options_user_defined + [ 'predefined' => $this->options_predefined ];
 
 		// remove annotated properties
 
 		$annotatedProperties = \PageProperties::getAnnotatedProperties( $this->title );
 
+		$this->options_user_defined = array_filter( $this->options_user_defined, function( $value ) use( $annotatedProperties ) {
+			return !in_array( $value, $annotatedProperties);
+		});
 
-		return array_filter($options, function( $key ) use( $annotatedProperties ) {
-			return !in_array( $key, $annotatedProperties);
-		}, ARRAY_FILTER_USE_KEY);
+		$this->options_predefined = array_filter( $this->options_predefined, function( $value ) use( $annotatedProperties ) {
+			return !in_array( $value, $annotatedProperties);
+		});
+
+
+		return $this->options_user_defined + [ 'predefined' => $this->options_predefined ];
 
 	}
 
