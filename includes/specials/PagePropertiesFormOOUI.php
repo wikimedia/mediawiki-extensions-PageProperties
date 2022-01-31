@@ -89,7 +89,7 @@ class PagePropertiesFormOOUI extends OOUIHTMLForm
 				'mw-prefsection-' . $key,
 				[
 // ***edited
-// see file resources/src/mediawiki.htmlform/autoinfuse.js
+// see resources/src/mediawiki.htmlform/autoinfuse.js
 
 			//	'classes' => [ 'mw-htmlform-autoinfuse-lazy' ],
 					'label' => $label,
