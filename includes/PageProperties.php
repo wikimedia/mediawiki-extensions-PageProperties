@@ -97,7 +97,7 @@ class PageProperties
 	}
 
 
-	public static function canEditPageProperties( $user, $title )
+	public static function isAuthorized( $user, $title )
 	{
 		global $wgPagePropertiesAuthorizedEditors;
 
@@ -163,9 +163,9 @@ class PageProperties
 			return;
 		}
 
-		$can_edit = self::canEditPageProperties( $wgUser, $title );
+		$isAuthorized = self::isAuthorized( $wgUser, $title );
 
-		if ( $can_edit ) {
+		if ( $isAuthorized ) {
 			$specialpage = Title::newFromText( 'Special:PageProperties' )->getLocalURL();
 			$links[ 'actions' ][] = [ 'text' => 'Properties', 'href' => $specialpage . '/' . wfEscapeWikiText( $title->getPartialURL() ) ];
 		}

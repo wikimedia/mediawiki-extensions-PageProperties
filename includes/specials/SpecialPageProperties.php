@@ -154,9 +154,9 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$creator = User::newFromIdentity($creator_identity);
 
-		$can_edit = \PageProperties::canEditPageProperties( $user, $title );
+		$isAuthorized = \PageProperties::isAuthorized( $user, $title );
 
-		if ( !$can_edit ) {
+		if ( !$isAuthorized ) {
 			return;
 		}
 
