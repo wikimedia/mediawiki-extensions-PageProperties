@@ -254,6 +254,26 @@
 		})
 
 
+
+		if (!found) {
+
+			$($table).find('input').each(function () {
+
+				name = $(this).attr("name")
+
+				if ( name.indexOf( '_key_' ) != -1 && $(this).val().trim() == ''
+					&& $($table).find('[name=' + name.replace('_key_', '_value_') + ']').eq(0).val().trim() == ''
+					) {
+						$(this).val('robots')
+						found = true
+						return false
+				}
+
+			})
+
+		}
+
+
 		if (!found) {
 
 			if (!checked) {
@@ -264,14 +284,14 @@
 			var el = $($table).find("tr:last input").eq(0)
 			var name = el.attr("name")
 			el.val("robots")
+
 		}
 
-
+		
 		var el = $($table).find('[name=' + name.replace('_key_', '_value_') + ']').eq(0)
+		var value = $(el).val().trim()
 
-		var values = $(el).val().trim()
-
-		values = (values != '' ? values.split(/\s*,\s*/) : [])
+		var values = (value != '' ? value.split(/\s*,\s*/) : [])
 
 		if ( checked ) {
 			var parameters = {'index': false, 'follow': false, 'noindex': true, 'nofollow': true }
@@ -298,7 +318,15 @@
 			$(el).val(values.join(", "))
 
 		} else {
-			$(el).closest('tr').remove()
+			//$(el).closest('tr').remove()
+
+			if ($table.find("tr").length > 1) {
+				$(el).closest('tr').remove()
+
+			} else {
+				$(el).closest('tr').find(":text").val("");
+			}
+
 		}
 
 

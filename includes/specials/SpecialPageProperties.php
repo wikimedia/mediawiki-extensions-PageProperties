@@ -23,7 +23,7 @@
  */
 
 
-include_once __DIR__ . '/PagePropertiesFormOOUI.php';
+include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 use MediaWiki\MediaWikiServices;
 
@@ -221,7 +221,7 @@ class SpecialPageProperties extends FormSpecialPage
 		$form_descriptor = $this->getFormDescriptor( $values, $hidden_inputs );
 
 		
-		$htmlForm = new \PagePropertiesFormOOUI( $form_descriptor, $context, 'pageproperties' );
+		$htmlForm = new \OOUIHTMLFormTabs( $form_descriptor, $context, 'pageproperties' );
 
 
 		foreach ($hidden_inputs as $key => $value ) {
@@ -830,6 +830,8 @@ class SpecialPageProperties extends FormSpecialPage
 		}
 
 		$logid = null;
+
+		// ***edited
 		if (false) {
 		// Logging change of language
 			$logParams = [
