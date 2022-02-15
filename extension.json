@@ -1,11 +1,14 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "parserhook",
+	"requires": {
+		"MediaWiki": ">= 1.35.0"
+	},
 	"MessagesDirs": {
 		"PageProperties": [
 			"i18n"
@@ -14,6 +17,7 @@
 	"callback": "PageProperties::initExtension",
 	"AutoloadClasses": {
 		"PageProperties": "includes/PageProperties.php",
+		"PagePropertiesFunctions": "includes/PagePropertiesFunctions.php",
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php"
 	},
 	"ExtensionMessagesFiles": {

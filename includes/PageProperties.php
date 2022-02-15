@@ -22,13 +22,6 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-use SMW\Store;
-use SMW\ApplicationFactory;
-use SMW\Options;
-use SMW\StoreFactory;
-use SMW\DIProperty;
-use SMW\Parser\AnnotationProcessor;
-use SMW\DataValueFactory;
 
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
@@ -41,8 +34,73 @@ class PageProperties
 	protected static $SMWApplicationFactory = null;
 	protected static $SMWStore = null;
 	protected static $SMWDataValueFactory = null;
+	private static $User;
 
-	public static function initExtension($credits = [])
+
+	// see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
+	public static $exclude = [
+		//content_group
+		"_SOBJ",
+		"_ASK",
+		"_MEDIA",
+		"_MIME",
+		"_ATTCH_LINK",
+		"_FILE_ATTCH",
+		"_CONT_TYPE",
+		"_CONT_AUTHOR",
+		"_CONT_LEN",
+		"_CONT_LANG",
+		"_CONT_TITLE",
+		"_CONT_DATE",
+		"_CONT_KEYW",
+		"_TRANS",
+		"_TRANS_SOURCE",
+		"_TRANS_GROUP",
+
+		//declarative
+		"_TYPE",
+		"_UNIT",
+		"_IMPO",
+		"_CONV",
+		"_SERV",
+		"_PVAL",
+		"_LIST",
+		"_PREC",
+		"_PDESC",
+		"_PPLB",
+		"_PVAP",
+		"_PVALI",
+		"_PVUC",
+		"_PEID",
+		"_PEFU",
+
+		//schema
+		"_SCHEMA_TYPE",
+		"_SCHEMA_DEF",
+		"_SCHEMA_DESC",
+		"_SCHEMA_TAG",
+		"_SCHEMA_LINK",
+		"_FORMAT_SCHEMA",
+		"_CONSTRAINT_SCHEMA",
+		"_PROFILE_SCHEMA",
+
+		//classification_group
+		"_INST",
+		"_PPGR",
+		"_SUBP",
+		"_SUBC"
+	];
+
+
+	public function __constructStatic()
+	{
+
+		self::$User = RequestContext::getMain()->getUser();
+
+	}
+
+
+	public static function initExtension( $credits = [] )
 	{
 
 		// see includes/specialpage/SpecialPageFactory.php
@@ -57,6 +115,9 @@ class PageProperties
 			]
 
 		];
+
+
+
 	}
 
 	public static function onLoadExtensionSchemaUpdates($updater = null)
@@ -80,74 +141,14 @@ class PageProperties
 	}
 
 
-	/**
-	 * @return array
-	 */
-	protected function getUserGroups( $user ) {
-
-		$user_groups = $user->getImplicitGroups();
-		$user_groups = array_merge( $user_groups, $user->getGroups() );
-		$user_groups[] = $user->getName();
-
-		if ( array_search( '*', $user_groups ) === false ) {
-			$user_groups[] = '*';
-		}
-
-		return $user_groups;
-	}
-
-
-	public static function isAuthorized( $user, $title )
-	{
-		global $wgPagePropertiesAuthorizedEditors;
-
-		$allowed_groups = [ 'sysop' ];
-		
-		if ( is_array( $wgPagePropertiesAuthorizedEditors ) ) {
-			$allowed_groups = array_unique (array_merge ( $allowed_groups, $wgPagePropertiesAuthorizedEditors) );
-		}
-
-		$user_groups = self::getUserGroups( $user );
-
-		return sizeof( array_intersect( $allowed_groups, $user_groups ) );
-
-	}
-
-
-
-	// ***
-	// $title->isKnown() might be used to split 
-	public static function parsePageTitle( $title )
-	{
-		return explode( '/', $title) ;
-	}
-
-	public static function page_ancestors( $title_parts, $pop = true )
-	{
-		$output = [];
-
-		if ( $pop ) {
-			array_pop( $title_parts );
-		}
-
-		$path = [];
-
-		foreach ( $title_parts as $value ) {
-			$path[] = $value;
-			$output[] = implode( '/', $path );
-		}
-
-		return $output;
-	}
-
-
 
 	public static function onSkinTemplateNavigation(SkinTemplate $skinTemplate, array &$links)
 	{
-		global $wgUser;
 		//global $wgTitle;
 
-		if ( !$wgUser->isLoggedIn() ) {
+		$user = self::$User;
+
+		if ( !$user->isRegistered() ) {
 			return;
 		}
 
@@ -163,7 +164,8 @@ class PageProperties
 			return;
 		}
 
-		$isAuthorized = self::isAuthorized( $wgUser, $title );
+		$isAuthorized = \PagePropertiesFunctions::isAuthorized( $user, $title );
+
 
 		if ( $isAuthorized ) {
 			$specialpage = Title::newFromText( 'Special:PageProperties' )->getLocalURL();
@@ -214,22 +216,16 @@ class PageProperties
 
 	private static function getMergedMetas($title) {
 
-		$title_parts = self::parsePageTitle( $title->getText() );
-
-		$page_ancestors = self::page_ancestors( $title_parts, false );
+		$page_ancestors = \PagePropertiesFunctions::page_ancestors( $title, false );
 
 		$output = [];
 
 		foreach ( $page_ancestors as $title_ ) {
-			$title_obj = Title::newFromText( $title_ );
 
-			if ( $title_obj && $title_obj->isKnown() ) {
-				$page_properties_ = self::getPageProperties( $title_obj->getArticleID() );
+			$page_properties_ = self::getPageProperties( $title_->getArticleID() );
 
-				if ( !empty( $page_properties_ ) && ( !empty( $page_properties_['meta_subpages'] ) || $title_obj->getArticleID() == $title->getArticleID() ) && !empty( $page_properties_['meta'] ) ) {
-					$output = array_merge( $output, $page_properties_['meta'] );
-				}
-
+			if ( !empty( $page_properties_ ) && ( !empty( $page_properties_['meta_subpages'] ) || $title_->getArticleID() == $title->getArticleID() ) && !empty( $page_properties_['meta'] ) ) {
+				$output = array_merge( $output, $page_properties_['meta'] );
 			}
 
 		}
@@ -246,7 +242,7 @@ class PageProperties
 		global $wgScriptPath;
 
 
-		if ($outputPage->isArticle()) {
+		if ( $outputPage->isArticle() ) {
 
 			$title = $outputPage->getTitle();
 
@@ -496,33 +492,37 @@ class PageProperties
 	}
 
 
-	public static function array_last( $array )
+
+	public static function shownTitle( $title )
 	{
-		return $array[ array_key_last( $array ) ];
-	}
-
-
-	public static function shownTitle( $title_text )
-	{
-		return  self::array_last( self::parsePageTitle($title_text ) );
-
+		return  \PagePropertiesFunctions::array_last( explode( ",", $title->getText() ) );
 	}
 
 
 
-	public static function getAnnotatedProperties( Title $title )
+	public static function initSMW()
 	{
-		global $wgUser;
 
+		if ( !defined( 'SMW_VERSION' ) ) {
+			return;
+		}
+
+		self::$SMWOptions = new \SMWRequestOptions();
+		self::$SMWOptions->limit = 500;
+		self::$SMWApplicationFactory = SMW\ApplicationFactory::getInstance();
+		self::$SMWStore = \SMW\StoreFactory::getStore();
+		self::$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
+	}
+
+
+
+	public static function getAnnotatedProperties( Title $title, $user )
+	{
 		$output = [];
 
 		$page = WikiPage::factory( $title );
 
-		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $wgUser ) );
-
-		if ( !self::$SMWApplicationFactory ) {
-			self::$SMWApplicationFactory = SMW\ApplicationFactory::getInstance();
-		}
+		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $user ) );
 
 		$parserData = self::$SMWApplicationFactory->newParserData( $title, $parserOutput );
 
@@ -541,15 +541,6 @@ class PageProperties
 
 	public static function getUnusedProperties( Title $title )
 	{
-		if ( !self::$SMWOptions ) {
-			self::$SMWOptions = new \SMWRequestOptions();
-			$options->limit = 500;
-		}
-
-		if ( !self::$SMWStore ) {
-			self::$SMWStore = \SMW\StoreFactory::getStore();
-		}
-
 		$properties = self::$SMWStore->getUnusedPropertiesSpecial( self::$SMWOptions );
 
 		if ($properties instanceof SMW\SQLStore\PropertiesCollector) {
@@ -565,15 +556,6 @@ class PageProperties
 
 	public static function getUsedProperties( Title $title )
 	{
-		if ( !self::$SMWOptions ) {
-			self::$SMWOptions = new \SMWRequestOptions();
-			$options->limit = 500;
-		}
-
-		if ( !self::$SMWStore ) {
-			self::$SMWStore = \SMW\StoreFactory::getStore();
-		}
-
 		$properties = self::$SMWStore->getPropertiesSpecial( self::$SMWOptions );
 
 		if ($properties instanceof SMW\SQLStore\PropertiesCollector) {
@@ -591,7 +573,6 @@ class PageProperties
 
 	public static function getSpecialProperties( Title $title )
 	{
-
 		$properties = [];
 		
 		$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
@@ -613,25 +594,15 @@ class PageProperties
 
 	public static function getSemanticData( Title $title )
 	{
-
-		if ( !self::$SMWStore ) {
-			self::$SMWStore = \SMW\StoreFactory::getStore();
-		}
-
-		if ( !self::$SMWDataValueFactory ) {
-			self::$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
-		}
-
 		$subject = new SMW\DIWikiPage( $title, NS_MAIN );
 
 		$semanticData = self::$SMWStore->getSemanticData( $subject );
-
 
 		$output = [];
 
 		foreach ( $semanticData->getProperties() as $property ) {
 																																										$key = $property->getKey();
-			if ( in_array( $key, $filter ) ) {
+			if ( in_array( $key, self::$exclude ) ) {
 				continue;
 			}
 				
@@ -672,17 +643,21 @@ class PageProperties
 // the function onSMWStoreBeforeDataUpdateComplete will be called
 	public static function rebuildSemanticData(Title $title)
 	{
-		$store = StoreFactory::getStore();
-		$store->setOption(Store::OPT_CREATE_UPDATE_JOB, false);
+		if ( !defined( 'SMW_VERSION' ) ) {
+			return;
+		}
+
+		$store = \SMW\StoreFactory::getStore();
+		$store->setOption( \SMW\Store::OPT_CREATE_UPDATE_JOB, false);
 
 		$rebuilder = new \SMW\Maintenance\DataRebuilder(
 			$store,
-			ApplicationFactory::getInstance()->newTitleFactory()
+			self::$SMWApplicationFactory->newTitleFactory()
 		);
 
 		$rebuilder->setOptions(
 			// Tell SMW to only rebuild the current page
-			new Options(['page' => $title])
+			new \SMW\Options( [ 'page' => $title ] )
 		);
 
 		$rebuilder->rebuild();
@@ -706,9 +681,9 @@ class PageProperties
 
 		$valueCaption = false;
 
-		$annotationProcessor = new AnnotationProcessor(
+		$annotationProcessor = new \SMW\Parser\AnnotationProcessor(
 			$semanticData,
-			DataValueFactory::getInstance()
+			self::$SMWDataValueFactory
 		);
 
 
@@ -734,7 +709,11 @@ class PageProperties
 	}
 
 
-
 }
+
+
+
+PageProperties::__constructStatic();
+
 
 

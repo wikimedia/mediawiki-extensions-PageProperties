@@ -12,7 +12,7 @@
 	"pageproperties-form-meta_robots_noindex_nofollow-label": "noindex, nofollow",
 
 	"pageproperties-form-meta_googlebot_notranslate-label": "notranslate", 
-
+	"pageproperties_dynamictable_addfield": "add field",
 
 	"pageproperties-form-meta_entire_wiki-label": "apply to entire wiki (set values can be overwritten from other pages)",
 	"pageproperties-form-meta_entire_wiki-help": "",

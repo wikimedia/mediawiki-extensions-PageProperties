@@ -40,60 +40,7 @@ class SpecialPageProperties extends FormSpecialPage
 	protected $record;
 	protected $title;
 	protected $record_exists;
-
-	// see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
-	protected $exclude = [
-		//content_group
-		"_SOBJ",
-		"_ASK",
-		"_MEDIA",
-		"_MIME",
-		"_ATTCH_LINK",
-		"_FILE_ATTCH",
-		"_CONT_TYPE",
-		"_CONT_AUTHOR",
-		"_CONT_LEN",
-		"_CONT_LANG",
-		"_CONT_TITLE",
-		"_CONT_DATE",
-		"_CONT_KEYW",
-		"_TRANS",
-		"_TRANS_SOURCE",
-		"_TRANS_GROUP",
-
-		//declarative
-		"_TYPE",
-		"_UNIT",
-		"_IMPO",
-		"_CONV",
-		"_SERV",
-		"_PVAL",
-		"_LIST",
-		"_PREC",
-		"_PDESC",
-		"_PPLB",
-		"_PVAP",
-		"_PVALI",
-		"_PVUC",
-		"_PEID",
-		"_PEFU",
-
-		//schema
-		"_SCHEMA_TYPE",
-		"_SCHEMA_DEF",
-		"_SCHEMA_DESC",
-		"_SCHEMA_TAG",
-		"_SCHEMA_LINK",
-		"_FORMAT_SCHEMA",
-		"_CONSTRAINT_SCHEMA",
-		"_PROFILE_SCHEMA",
-
-		//classification_group
-		"_INST",
-		"_PPGR",
-		"_SUBP",
-		"_SUBC"
-	];
+	protected $content_model_error;
 
 
 
@@ -127,12 +74,16 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$user = $this->getUser();
 
+		$this->user = $user;
+
 		// This will throw exceptions if there's a problem
 		$this->checkExecutePermissions( $user );
 
 		$securityLevel = $this->getLoginSecurityLevel();
 
+
 		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+			$this->displayRestrictionError();
 			return;
 		}
 
@@ -143,6 +94,7 @@ class SpecialPageProperties extends FormSpecialPage
 		$title = Title::newFromText( $title_text, NS_MAIN );
 
 		if ( !$title->isKnown() ) {
+			$this->displayRestrictionError();
 			return;
 		}
 		
@@ -154,11 +106,15 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$creator = User::newFromIdentity($creator_identity);
 
-		$isAuthorized = \PageProperties::isAuthorized( $user, $title );
+		$isAuthorized = \PagePropertiesFunctions::isAuthorized( $user, $title );
 
 		if ( !$isAuthorized ) {
+			$this->displayRestrictionError();
 			return;
 		}
+
+
+		\PageProperties::initSMW();
 
 		$this->outputHeader();
 
@@ -184,6 +140,7 @@ class SpecialPageProperties extends FormSpecialPage
 		$this->record_exists = false;
 
 		if ( !$row || $row == [ false ] ) {
+
 			$row = [
 				'display_title' => null,
 				'language' => null,
@@ -249,7 +206,7 @@ class SpecialPageProperties extends FormSpecialPage
 		$out->addWikiMsg(
 			'pageproperties-return',
 			$title->getText(),
-			( !empty( $display_title ) ? $display_title : \PageProperties::shownTitle( $title->getText() ) )
+			( !empty( $display_title ) ? $display_title : \PageProperties::shownTitle( $title ) )
 		);
 
 		$out->addHTML('<br>');
@@ -284,7 +241,7 @@ class SpecialPageProperties extends FormSpecialPage
 			$result_ = self::getDisplayTitle( $this->title, $display_title );
 
 			if ( empty($display_title ) ) {
-				$display_title = \PageProperties::shownTitle( $this->title->getText() );
+				$display_title = \PageProperties::shownTitle( $this->title );
 			}
 		}
 
@@ -363,7 +320,7 @@ class SpecialPageProperties extends FormSpecialPage
 		$add_field_button = new OOUI\ButtonWidget(
 			[
 				'classes' => [ 'pageproperties_dynamictable_add_button' ],
-				'label' => $this->msg( 'pf_createtemplate_addfield' )->text(),
+				'label' => $this->msg( 'pageproperties_dynamictable_addfield' )->text(),
 				'icon' => 'add'
 			]
 		);
@@ -373,8 +330,7 @@ class SpecialPageProperties extends FormSpecialPage
 		/********** semantic properties **********/
 
 
-
-		if ( class_exists( 'SemanticMediaWiki' ) ) {
+		if ( defined( 'SMW_VERSION' ) ) {
 
 			$options = $this->getSemanticPropertiesOptions();
 
@@ -523,7 +479,7 @@ class SpecialPageProperties extends FormSpecialPage
 				'nodata' => true,
 
 				// make optgroup, see includes/xml/Xml.php _> listDropDownOptionsOoui()
-				'options' => $options,
+				'data' => $options,
 				'default' => $key,
 				'infusable' => true,
 			];
@@ -649,17 +605,18 @@ class SpecialPageProperties extends FormSpecialPage
 		$this->semanticPropertiesOptions( \PageProperties::getSpecialProperties( $this->title ) );
 
 
+/*
 		$this->options_predefined = array_filter( $this->options_predefined, function( $value ) {
 			return !in_array( $value, $this->exclude);
 		});
-
+*/
 		ksort($this->options_user_defined);
 		ksort($this->options_predefined);
 
 
 		// remove annotated properties
 
-		$annotatedProperties = \PageProperties::getAnnotatedProperties( $this->title );
+		$annotatedProperties = \PageProperties::getAnnotatedProperties( $this->title, $this->user );
 
 		$this->options_user_defined = array_filter( $this->options_user_defined, function( $value ) use( $annotatedProperties ) {
 			return !in_array( $value, $annotatedProperties);
@@ -686,7 +643,7 @@ class SpecialPageProperties extends FormSpecialPage
 				continue;
 			}
 
-			if ( in_array( $property->getKey(), $this->filterProperties ) ) {
+			if ( in_array( $property->getKey(), \PageProperties::$exclude ) ) {
 				continue;
 			}
 
@@ -924,7 +881,7 @@ class SpecialPageProperties extends FormSpecialPage
 
 
 // see includes/specialpage/FormSpecialPage.php
-	public function onSubmit($data)
+	public function onSubmit( $data )
 	{
 
 		// merge dynamically created inputs with
@@ -952,9 +909,6 @@ class SpecialPageProperties extends FormSpecialPage
 			$newLanguage,
 			$data['reason'] ?? ''
 		);
-
-		$data['title'] = str_replace( '_', ' ', $data[ 'title' ] );
-
 
  
 		$date = date( 'Y-m-d H:i:s' );
