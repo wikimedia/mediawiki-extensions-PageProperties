@@ -242,9 +242,9 @@ class PageProperties
 		global $wgScriptPath;
 
 
-		if ( $outputPage->isArticle() ) {
+		$title = $outputPage->getTitle();
 
-			$title = $outputPage->getTitle();
+		if ( $outputPage->isArticle() && $title->isKnown() ) {
 
 			$meta = [];
 
@@ -281,7 +281,6 @@ class PageProperties
 			}
 
 			$page_title = self::getDisplayTitle( $title );
-
 
 			$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
 
@@ -466,7 +465,7 @@ class PageProperties
 			);
 		}
 
-		if (!$customized) {
+		if ( !$customized ) {
 			$html_ = self::getDisplayTitle($target);
 
 			if (!empty($html_)) {
