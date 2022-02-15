@@ -165,8 +165,10 @@ class SpecialPageProperties extends FormSpecialPage
 		} else {
 			$values = $this->getDynamictableValues( $_POST );
 			$meta = [];
-			foreach( $values['meta'] as $value ) {
-				$meta[ $value[0] ] = $value[1];
+			if ( array_key_exists( 'meta', $values ) ) {
+				foreach( $values['meta'] as $value ) {
+					$meta[ $value[0] ] = $value[1];
+				}
 			}
 			$values['meta'] = $meta;
 			$this->dynamic_values = $values;
