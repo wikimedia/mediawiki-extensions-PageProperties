@@ -22,54 +22,54 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
-use MediaWiki\MediaWikiServices;
-
 use MediaWiki\Content\IContentHandlerFactory;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
 use MediaWiki\Page\WikiPageFactory;
 
-use MediaWiki\Extension\WikiSEO;
+class SpecialPageProperties extends FormSpecialPage {
 
-class SpecialPageProperties extends FormSpecialPage
-{
-
+	/** @var WikiPageFactory */
 	private $wikiPageFactory;
 	protected $record;
 	protected $title;
 	protected $record_exists;
 	protected $content_model_error;
 
-
-
+	/**
+	 * @param IContentHandlerFactory $contentHandlerFactory
+	 * @param ContentModelChangeFactory $contentModelChangeFactory
+	 * @param WikiPageFactory $wikiPageFactory
+	 */
 	public function __construct(
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
 		WikiPageFactory $wikiPageFactory
-	)
-	{
-
-
-// https://www.mediawiki.org/wiki/Manual:Special_pages
+	) {
+		// https://www.mediawiki.org/wiki/Manual:Special_pages
 		$listed = false;
-		parent::__construct('PageProperties', '', $listed);
+		parent::__construct( 'PageProperties', '', $listed );
 
 		$this->contentHandlerFactory = $contentHandlerFactory;
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
 		$this->wikiPageFactory = $wikiPageFactory;
 	}
 
-	protected function getGroupName() {}
-	protected function getFormFields() {}
+	/** @inheritDoc */
+	protected function getGroupName() {
+	}
 
+	/** @inheritDoc */
+	protected function getFormFields() {
+	}
 
-	public function execute($par)
-	{
+	/** @inheritDoc */
+	public function execute( $par ) {
 		$this->requireLogin();
 
-		$this->setParameter($par);
+		$this->setParameter( $par );
 		$this->setHeaders();
 
 		$user = $this->getUser();
@@ -80,7 +80,6 @@ class SpecialPageProperties extends FormSpecialPage
 		$this->checkExecutePermissions( $user );
 
 		$securityLevel = $this->getLoginSecurityLevel();
-
 
 		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
 			$this->displayRestrictionError();
@@ -93,23 +92,23 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$title = Title::newFromText( $title_text, NS_MAIN );
 
-		if ( !$title->isKnown() ) {
+		if ( !$title || !$title->isKnown() ) {
 			$this->displayRestrictionError();
 			return;
 		}
-		
+
 		$this->title = $title;
 
 		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
 			// MW 1.36+
-			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle($title);
+			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 		} else {
-			$wikiPage = WikiPage::factory($title);
+			$wikiPage = WikiPage::factory( $title );
 		}
 
 		$creator_identity = $wikiPage->getCreator();
 
-		$creator = User::newFromIdentity($creator_identity);
+		$creator = User::newFromIdentity( $creator_identity );
 
 		$isAuthorized = \PagePropertiesFunctions::isAuthorized( $user, $title );
 
@@ -117,7 +116,6 @@ class SpecialPageProperties extends FormSpecialPage
 			$this->displayRestrictionError();
 			return;
 		}
-
 
 		\PageProperties::initSMW();
 
@@ -131,12 +129,12 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$page_id = $title->getArticleID();
 
-		$dbr = wfGetDB(DB_REPLICA);
+		$dbr = wfGetDB( DB_REPLICA );
 
 		$row = $dbr->selectRow(
 			'page_properties',
 			'*',
-			['page_id' => $page_id],
+			[ 'page_id' => $page_id ],
 			__METHOD__
 		);
 
@@ -161,17 +159,14 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$this->record = $row;
 
-
-
 		if ( empty( $_POST[ 'wpEditToken' ] ) ) {
 			$values = [ 'meta' => ( empty( $row['meta'] ) ? [] : json_decode( $row['meta'], true ) ) ];
-
 
 		} else {
 			$values = $this->getDynamictableValues( $_POST );
 			$meta = [];
 			if ( array_key_exists( 'meta', $values ) ) {
-				foreach( $values['meta'] as $value ) {
+				foreach ( $values['meta'] as $value ) {
 					$meta[ $value[0] ] = $value[1];
 				}
 			}
@@ -179,33 +174,26 @@ class SpecialPageProperties extends FormSpecialPage
 			$this->dynamic_values = $values;
 		}
 
-
-
 		$hidden_inputs = [];
 		$form_descriptor = $this->getFormDescriptor( $values, $hidden_inputs );
 
-		
 		$htmlForm = new \OOUIHTMLFormTabs( $form_descriptor, $context, 'pageproperties' );
 
-
-		foreach ($hidden_inputs as $key => $value ) {
+		foreach ( $hidden_inputs as $key => $value ) {
 			$htmlForm->addHiddenField( $key, $value );
 		}
-
-
 
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 
 		$htmlForm->setFormIdentifier( 'blocklist' );
 
-
 		// @todo: try to load required scripts from BeforePageDisplay
 		// *** (mw and ooui not loading)
-		$out->addModules('ext.PageProperties');
+		$out->addModules( 'ext.PageProperties' );
 
 		$out->addModuleStyles(
 			[
-				//'mediawiki.special',
+				// 'mediawiki.special',
 				'mediawiki.special.preferences.styles.ooui',
 			]
 		);
@@ -216,38 +204,34 @@ class SpecialPageProperties extends FormSpecialPage
 			( !empty( $display_title ) ? $display_title : \PageProperties::shownTitle( $title ) )
 		);
 
-		$out->addHTML('<br>');
+		$out->addHTML( '<br>' );
 
 		// see includes/htmlform/HTMLForm.php
 		if ( $htmlForm->showAlways() ) {
 			$this->onSuccess();
 		}
-
 	}
 
-
-	// see includes/htmlform/HTMLForm.php
+	/**
+	 * @see includes/htmlform/HTMLForm.php
+	 * @param string $value
+	 * @return Message
+	 */
 	protected function getMessage( $value ) {
 		return Message::newFromSpecifier( $value )->setContext( $this->getContext() );
 	}
 
-
-	protected function getFormDescriptor( $values, &$hidden_inputs ) 
-	{
-
+	protected function getFormDescriptor( $values, &$hidden_inputs ) {
 		$formDescriptor = [];
 
-
-
-		/********** display title **********/
-
+		/********** display title */
 
 		$display_title = $this->record[ 'display_title' ];
 
 		if ( !$this->record_exists ) {
 			$result_ = self::getDisplayTitle( $this->title, $display_title );
 
-			if ( empty($display_title ) ) {
+			if ( empty( $display_title ) ) {
 				$display_title = \PageProperties::shownTitle( $this->title );
 			}
 		}
@@ -260,14 +244,9 @@ class SpecialPageProperties extends FormSpecialPage
 			'default' => $display_title,
 		];
 
+		/********** language */
 
-
-
-		/********** language **********/
-
-
-		list( $language_code, $options) = $this->getLanguageData();
-
+		list( $language_code, $options ) = $this->getLanguageData();
 
 		$formDescriptor['language'] = [
 			'id' => 'mw-pl-languageselector',
@@ -279,13 +258,7 @@ class SpecialPageProperties extends FormSpecialPage
 			'default' => $language_code,
 		];
 
-
-
-
-
-		/********** content model **********/
-
-
+		/********** content model */
 
 		$options = $this->getOptionsForTitle( $this->title );
 
@@ -296,9 +269,9 @@ class SpecialPageProperties extends FormSpecialPage
 			'type' => 'select',
 			'options' => $options,
 
-			'validation-callback' => function() {
+			'validation-callback' => function () {
 				if ( $this->content_model_error ) {
-				
+
 					// see includes/htmlform/OOUIHTMLForm.php
 					$errors = $this->content_model_error->getErrorsByType( 'error' );
 					foreach ( $errors as &$error ) {
@@ -312,10 +285,7 @@ class SpecialPageProperties extends FormSpecialPage
 			'default' => $this->title->getContentModel(),
 		];
 
-
-
-
-		/********** buttons **********/
+		/********** buttons */
 
 		$clear_field_button = new OOUI\ButtonWidget(
 			[
@@ -332,29 +302,24 @@ class SpecialPageProperties extends FormSpecialPage
 			]
 		);
 
-
-
-		/********** semantic properties **********/
-
+		/********** semantic properties */
 
 		if ( defined( 'SMW_VERSION' ) ) {
 
 			$options = $this->getSemanticPropertiesOptions();
 
 			if ( empty( $_POST[ 'wpEditToken' ] ) ) {
-				$values['properties']  = \PageProperties::getSemanticData( $this->title );
+				$values['properties'] = \PageProperties::getSemanticData( $this->title );
 
-				$values['properties'] = array_filter( $values['properties'], function( $value ) use( $options ) {
+				$values['properties'] = array_filter( $values['properties'], static function ( $value ) use( $options ) {
 					return in_array( $value[0], $options ) || in_array( $value[0], $options[ 'predefined' ] );
-				});
+				} );
 
 			}
-
 
 			if ( empty( $values['properties'] ) ) {
 				$values['properties'][] = [ key( $options ), "" ];
 			}
-
 
 			$n = 0;
 			foreach ( $values['properties'] as $val ) {
@@ -368,7 +333,6 @@ class SpecialPageProperties extends FormSpecialPage
 				}
 
 				$prepend_html .= '<tr class="pageproperties_dynamictable_row"><td class="pageproperties_dynamictable_key_cell">';
-
 
 // $this->mName = "wp{$params['fieldname']}";
 				$formDescriptor['dynamictable_properties_key_' . $n] = [
@@ -390,7 +354,7 @@ class SpecialPageProperties extends FormSpecialPage
 				$prepend_html = '<td class="pageproperties_dynamictable_value_cell">';
 				$append_html = '</td><td class="pageproperties_dynamictable_cancel_cell">' . $clear_field_button . '</td></tr>';
 
-				if ( $n == sizeof( $values['properties'] ) - 1) {
+				if ( $n == count( $values['properties'] ) - 1 ) {
 					$append_html .= '</table>';
 					$append_html .= $add_field_button;
 				}
@@ -411,22 +375,16 @@ class SpecialPageProperties extends FormSpecialPage
 				$n++;
 			}
 
-
 		}
 
+		/********** SEO */
 
-
-
-		/********** SEO **********/
-
-		
 		$options = [];
 
 		if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
 			$options = json_decode( file_get_contents( __DIR__ . '/WikiSEO_parameters.json' ), true );
-		} 
+		}
 
-	
 		$tags = [ 'description' => 'textarea' ];
 
 		$n = 0;
@@ -441,15 +399,13 @@ class SpecialPageProperties extends FormSpecialPage
 */
 			$hidden_inputs['dynamictable_meta_key_' . $n] = $key;
 
-
-
 			$formDescriptor['dynamictable_meta_value_' . $n] = [
 				'name' => 'dynamictable_meta_value_' . $n,
 				'label-message' => 'pageproperties-form-meta_' . $key . '-label',
 				'help-message' => 'pageproperties-form-meta_' . $key . '-help',
 				'type' => $input_type,
 				'rows' => '3',
-				'section' => 'form-section-SEO',
+				'section' => 'form-section-seo',
 				'default' => ( empty( $values[ 'meta' ][ $key ] ) ? null : $values[ 'meta' ][ $key ] ),
 			];
 
@@ -458,9 +414,8 @@ class SpecialPageProperties extends FormSpecialPage
 			$n++;
 		}
 
-
 		if ( empty( $values['meta'] ) ) {
-			$values['meta'] = [ array_key_first( $options ) => ''];
+			$values['meta'] = [ array_key_first( $options ) => '' ];
 		}
 
 		$meta_robots_noindex_nofollow = false;
@@ -469,7 +424,7 @@ class SpecialPageProperties extends FormSpecialPage
 
 			$prepend_html = '';
 
-			if ($n == sizeof( $tags ) ) {
+			if ( $n == count( $tags ) ) {
 				$prepend_html .= '<table cellpadding="0" cellspacing="0" class="pageproperties_dynamictable" style="width:100%;margin-bottom:12px">';
 			}
 
@@ -479,7 +434,7 @@ class SpecialPageProperties extends FormSpecialPage
 				'name' => 'dynamictable_meta_key_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => '</td>',
-				'section' => 'form-section-SEO',
+				'section' => 'form-section-seo',
 				'type' => 'combobox',
 
 				// **** !important, otherwise data will be loaded from the request!
@@ -494,7 +449,7 @@ class SpecialPageProperties extends FormSpecialPage
 			$prepend_html = '<td style="padding:2px 2px 2px 2px" class="pageproperties_dynamictable_value_cell">';
 			$append_html = '</td><td style="padding:2px 0 2px 2px" class="pageproperties_dynamictable_cancel_cell">' . $clear_field_button . '</td></tr>';
 
-			if ( $n == sizeof( $values['meta'] ) - 1 + sizeof( $tags ) ) {
+			if ( $n == count( $values['meta'] ) - 1 + count( $tags ) ) {
 				$append_html .= '</table>';
 				$append_html .= $add_field_button;
 			}
@@ -503,7 +458,7 @@ class SpecialPageProperties extends FormSpecialPage
 				'name' => 'dynamictable_meta_value_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => $append_html,
-				'section' => 'form-section-SEO',
+				'section' => 'form-section-seo',
 				'type' => 'text',
 
 				// **** !important, otherwise data will be loaded from the request!
@@ -515,29 +470,27 @@ class SpecialPageProperties extends FormSpecialPage
 
 			if ( $key == 'robots' ) {
 				$arr = preg_split( "/\s*,\s*/", $value );
-				if ( in_array( 'noindex', $arr) && in_array( 'nofollow', $arr ) ) {
+				if ( in_array( 'noindex', $arr ) && in_array( 'nofollow', $arr ) ) {
 					$meta_robots_noindex_nofollow = true;
 				}
 			}
 
 		}
 
-
 		$formDescriptor['meta_robots_noindex_nofollow'] = [
 			'type' => 'toggle',
 			'id' => 'meta_robots_noindex_nofollow',
 			'label-message' => 'pageproperties-form-meta_robots_noindex_nofollow-label',
 			'help-message' => 'pageproperties-form-meta_robots_noindex_nofollow-help',
-			'section' => 'form-section-SEO',
+			'section' => 'form-section-seo',
 			'default' => $meta_robots_noindex_nofollow,
 		];
-
 
 		$formDescriptor['meta_subpages'] = [
 			'type' => 'toggle',
 			'label-message' => 'pageproperties-form-meta_subpages-label',
 			'help-message' => 'pageproperties-form-meta_subpages-help',
-			'section' => 'form-section-SEO',
+			'section' => 'form-section-seo',
 			'default' => $this->record['meta_subpages'],
 		];
 
@@ -562,15 +515,9 @@ class SpecialPageProperties extends FormSpecialPage
 */
 
 		return $formDescriptor;
-
 	}
 
-
-
-
-	protected function getLanguageData()
-	{	
-
+	protected function getLanguageData() {
 		// https://www.mediawiki.org/wiki/Manual:Language
 		// see specials/SpecialPageLanguage.php
 
@@ -579,10 +526,10 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$languages = MediaWikiServices::getInstance()
 			->getLanguageNameUtils()
-			->getLanguageNames($userLang, 'mwfile');
+			->getLanguageNames( $userLang, 'mwfile' );
 
 		$options = [];
-		foreach ($languages as $code => $name) {
+		foreach ( $languages as $code => $name ) {
 			$options["$code - $name"] = $code;
 		}
 
@@ -592,16 +539,10 @@ class SpecialPageProperties extends FormSpecialPage
 			$language_code = $this->title ? $this->title->getPageLanguage()->getCode() : $this->getConfig()->get( 'LanguageCode' );
 		}
 
-
 		return [ $language_code, $options ];
-
 	}
 
-
-
-	protected function getSemanticPropertiesOptions()
-	{
-		
+	protected function getSemanticPropertiesOptions() {
 		$this->options_user_defined = [];
 		$this->options_predefined = [];
 
@@ -611,37 +552,30 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$this->semanticPropertiesOptions( \PageProperties::getSpecialProperties( $this->title ) );
 
-
 /*
 		$this->options_predefined = array_filter( $this->options_predefined, function( $value ) {
 			return !in_array( $value, $this->exclude);
 		});
 */
-		ksort($this->options_user_defined);
-		ksort($this->options_predefined);
-
+		ksort( $this->options_user_defined );
+		ksort( $this->options_predefined );
 
 		// remove annotated properties
 
 		$annotatedProperties = \PageProperties::getAnnotatedProperties( $this->title, $this->user );
 
-		$this->options_user_defined = array_filter( $this->options_user_defined, function( $value ) use( $annotatedProperties ) {
-			return !in_array( $value, $annotatedProperties);
-		});
+		$this->options_user_defined = array_filter( $this->options_user_defined, static function ( $value ) use( $annotatedProperties ) {
+			return !in_array( $value, $annotatedProperties );
+		} );
 
-		$this->options_predefined = array_filter( $this->options_predefined, function( $value ) use( $annotatedProperties ) {
-			return !in_array( $value, $annotatedProperties);
-		});
-
+		$this->options_predefined = array_filter( $this->options_predefined, static function ( $value ) use( $annotatedProperties ) {
+			return !in_array( $value, $annotatedProperties );
+		} );
 
 		return $this->options_user_defined + [ 'predefined' => $this->options_predefined ];
-
 	}
 
-
-	protected function semanticPropertiesOptions( $properties )
-	{
-
+	protected function semanticPropertiesOptions( $properties ) {
 		$dataValueFactory = SMW\DataValueFactory::getInstance();
 
 		foreach ( $properties as $property ) {
@@ -661,11 +595,11 @@ class SpecialPageProperties extends FormSpecialPage
 				if ( !$propertyDv->isVisible() ) {
 					continue;
 				}
-			
+
 				$label = $property->getCanonicalLabel();
 				$name = $property->getKey();
 
-				if ( str_replace( '_', ' ', $name ) == $label) {
+				if ( str_replace( '_', ' ', $name ) == $label ) {
 					$this->options_user_defined[ $label ] = $name;
 
 				} else {
@@ -676,10 +610,12 @@ class SpecialPageProperties extends FormSpecialPage
 		}
 	}
 
-
-	//see includes/specials/SpecialChangeContentModel.php
-	private function getOptionsForTitle( Title $title = null )
-	{
+	/**
+	 * @see includes/specials/SpecialChangeContentModel.php
+	 * @param Title|null $title
+	 * @return array
+	 */
+	private function getOptionsForTitle( Title $title = null ) {
 		$models = $this->contentHandlerFactory->getContentModels();
 		$options = [];
 
@@ -692,20 +628,17 @@ class SpecialPageProperties extends FormSpecialPage
 			}
 
 			if ( $title ) {
-				
+
 				if ( !$handler->canBeUsedOn( $title ) ) {
 					continue;
 				}
 			}
 
-			$options[ ContentHandler::getLocalizedName($model) ] = $model;
+			$options[ ContentHandler::getLocalizedName( $model ) ] = $model;
 		}
 
 		return $options;
 	}
-
-
-
 
 	// https://www.mediawiki.org/wiki/Manual:Language
 	// see includes/specials/SpecialPageLanguage.php
@@ -724,44 +657,43 @@ class SpecialPageProperties extends FormSpecialPage
 		$newLanguage,
 		$reason,
 		array $tags = []
-	)
-	{
+	) {
 		// Get the default language for the wiki
-		$defLang = $context->getConfig()->get('LanguageCode');
+		$defLang = $context->getConfig()->get( 'LanguageCode' );
 
 		$pageId = $title->getArticleID();
 
 		// Check if article exists
-		if (!$pageId) {
+		if ( !$pageId ) {
 			return Status::newFatal(
 				'pagelang-nonexistent-page',
-				wfEscapeWikiText($title->getPrefixedText())
+				wfEscapeWikiText( $title->getPrefixedText() )
 			);
 		}
 
 		// Load the page language from DB
-		$dbw = wfGetDB(DB_MASTER);
+		$dbw = wfGetDB( DB_MASTER );
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',
-			['page_id' => $pageId],
+			[ 'page_id' => $pageId ],
 			__METHOD__
 		);
 
 		// Check if user wants to use the default language
-		if ($newLanguage === 'default') {
+		if ( $newLanguage === 'default' ) {
 			$newLanguage = null;
 		}
 
 		// No change in language
-		if ($newLanguage === $oldLanguage) {
+		if ( $newLanguage === $oldLanguage ) {
 			// Check if old language does not exist
-			if (!$oldLanguage) {
+			if ( !$oldLanguage ) {
 				return Status::newFatal(
 					ApiMessage::create(
 						[
 							'pagelang-unchanged-language-default',
-							wfEscapeWikiText($title->getPrefixedText())
+							wfEscapeWikiText( $title->getPrefixedText() )
 						],
 						'pagelang-unchanged-language'
 					)
@@ -769,7 +701,7 @@ class SpecialPageProperties extends FormSpecialPage
 			}
 			return Status::newFatal(
 				'pagelang-unchanged-language',
-				wfEscapeWikiText($title->getPrefixedText()),
+				wfEscapeWikiText( $title->getPrefixedText() ),
 				$oldLanguage
 			);
 		}
@@ -781,7 +713,7 @@ class SpecialPageProperties extends FormSpecialPage
 		// Writing new page language to database
 		$dbw->update(
 			'page',
-			['page_lang' => $newLanguage],
+			[ 'page_lang' => $newLanguage ],
 			[
 				'page_id' => $pageId,
 				'page_lang' => $oldLanguage
@@ -789,28 +721,29 @@ class SpecialPageProperties extends FormSpecialPage
 			__METHOD__
 		);
 
-		if (!$dbw->affectedRows()) {
-			return Status::newFatal('pagelang-db-failed');
+		if ( !$dbw->affectedRows() ) {
+			return Status::newFatal( 'pagelang-db-failed' );
 		}
 
 		$logid = null;
 
 		// ***edited
-		if (false) {
+		// phpcs:ignore Generic.CodeAnalysis.UnconditionalIfStatement.Found
+		if ( false ) {
 		// Logging change of language
 			$logParams = [
 				'4::oldlanguage' => $logOld,
 				'5::newlanguage' => $logNew
 			];
-			$entry = new ManualLogEntry('pagelang', 'pagelang');
-			$entry->setPerformer($context->getUser());
-			$entry->setTarget($title);
-			$entry->setParameters($logParams);
-			$entry->setComment($reason);
-			$entry->addTags($tags);
+			$entry = new ManualLogEntry( 'pagelang', 'pagelang' );
+			$entry->setPerformer( $context->getUser() );
+			$entry->setTarget( $title );
+			$entry->setParameters( $logParams );
+			$entry->setComment( $reason );
+			$entry->addTags( $tags );
 
 			$logid = $entry->insert();
-			$entry->publish($logid);
+			$entry->publish( $logid );
 		}
 		// Force re-render so that language-based content (parser functions etc.) gets updated
 		$title->invalidateCache();
@@ -824,47 +757,51 @@ class SpecialPageProperties extends FormSpecialPage
 		);
 	}
 
-
-
-	//see includes/specials/SpecialChangeContentModel.php 
-	protected function changeContentModel($title, $model)
-	{
-		$page = $this->wikiPageFactory->newFromTitle($title);
+	/**
+	 * @see includes/specials/SpecialChangeContentModel.php
+	 * @param Title $title
+	 * @param string $model
+	 * @return Status
+	 */
+	protected function changeContentModel( $title, $model ) {
+		$page = $this->wikiPageFactory->newFromTitle( $title );
 
 		$changer = $this->contentModelChangeFactory->newContentModelChange(
 			$this->getContext()->getAuthority(),
 			$page,
-		
+
 			// ***edited
 			$model
 		);
 
 		$permissionStatus = $changer->authorizeChange();
-		if (!$permissionStatus->isGood()) {
+		if ( !$permissionStatus->isGood() ) {
 			$out = $this->getOutput();
-			$wikitext = $out->formatPermissionStatus($permissionStatus);
+			$wikitext = $out->formatPermissionStatus( $permissionStatus );
 			// Hack to get our wikitext parsed
-			return Status::newFatal(new RawMessage('$1', [$wikitext]));
+			return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
 		}
 
 		// Can also throw a ThrottledError, don't catch it
 		$status = $changer->doContentModelChange(
 			$this->getContext(),
-			$data['reason'],
+
+			// ***edited
+			// $data['reason'],
+			null,
 			true
 		);
 
 		return $status;
 	}
 
-	protected function getDynamictableValues($data)
-	{
+	protected function getDynamictableValues( $data ) {
 		$output = [];
 
-// see includes/htmlform/HTMLFormField.php
-// $this->mName = "wp{$params['fieldname']}";
+		// see includes/htmlform/HTMLFormField.php
+		// $this->mName = "wp{$params['fieldname']}";
 		foreach ( $data as $key => $value ) {
-			if ( strpos( $key, 'dynamictable_' ) === 0) {
+			if ( strpos( $key, 'dynamictable_' ) === 0 ) {
 
 				// dynamictable_properties_key_1
 				preg_match( '/dynamictable_([^_]+)_key_([^_]+)/', $key, $match );
@@ -876,7 +813,7 @@ class SpecialPageProperties extends FormSpecialPage
 					if ( !empty( $data[ $key_of_value ] ) ) {
 						$output[ $match[1] ][] = [ $value, $data[ $key_of_value ] ];
 
-					} 
+					}
 
 				}
 
@@ -886,16 +823,16 @@ class SpecialPageProperties extends FormSpecialPage
 		return $output;
 	}
 
-
-// see includes/specialpage/FormSpecialPage.php
-	public function onSubmit( $data )
-	{
-
+	/**
+	 * @see includes/specialpage/FormSpecialPage.php
+	 * @param array $data
+	 * @return bool
+	 */
+	public function onSubmit( $data ) {
 		// merge dynamically created inputs with
 		// inputs from form descriptor
 
 		$properties = $this->dynamic_values;
-
 
 		$title = $this->title;
 
@@ -917,11 +854,9 @@ class SpecialPageProperties extends FormSpecialPage
 			$data['reason'] ?? ''
 		);
 
- 
 		$date = date( 'Y-m-d H:i:s' );
 
 		$update_obj = array_intersect_key( $data, $this->record );
-
 
 		$update_obj['updated_at'] = $date;
 
@@ -929,15 +864,14 @@ class SpecialPageProperties extends FormSpecialPage
 
 		$update_obj['meta'] = ( !empty( $properties[ 'meta' ] ) ? json_encode( $properties[ 'meta' ] ) : null );
 
-
 		$page_id = $title->getArticleID();
 
-		$dbr = wfGetDB(DB_MASTER);
+		$dbr = wfGetDB( DB_MASTER );
 
 		$row = $dbr->selectRow(
 			'page_properties',
 			'*',
-			['page_id' => $page_id],
+			[ 'page_id' => $page_id ],
 			__METHOD__
 		);
 
@@ -954,34 +888,34 @@ class SpecialPageProperties extends FormSpecialPage
 			$row = $dbr->update(
 				'page_properties',
 				$update_obj,
-				['page_id' => $page_id],
+				[ 'page_id' => $page_id ],
 				__METHOD__
 			);
 		}
 
 		\PageProperties::rebuildSemanticData( $title );
 
-
 		return true;
 	}
 
+	public function onSuccess() {
+	}
 
-
-
-	public function onSuccess() { }
-
-
-
-// https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	/**
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	 * @param Title $title
+	 * @param string &$displaytitle
+	 * @param bool $wrap
+	 * @return bool
+	 */
 	private static function getDisplayTitle(
 		Title $title,
 		&$displaytitle,
 		$wrap = false
-	)
-	{
-		$title = $title->createFragmentTarget('');
+	) {
+		$title = $title->createFragmentTarget( '' );
 
-		if (!$title->canExist()) {
+		if ( !$title->canExist() ) {
 			// If the Title isn't a valid content page (e.g. Special:UserLogin), just return.
 			return false;
 		}
@@ -989,50 +923,45 @@ class SpecialPageProperties extends FormSpecialPage
 		$originalPageName = $title->getPrefixedText();
 		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
 			// MW 1.36+
-			$wikipage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle($title);
+			$wikipage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 		} else {
-			$wikipage = new WikiPage($title);
+			$wikipage = new WikiPage( $title );
 		}
 		$redirect = false;
 		$redirectTarget = $wikipage->getRedirectTarget();
-		if ($redirectTarget !== null) {
+		if ( $redirectTarget !== null ) {
 			$redirect = true;
 			$title = $redirectTarget;
 		}
 		$id = $title->getArticleID();
 		if ( method_exists( MediaWikiServices::class, 'getPageProps' ) ) {
 			// MW 1.36+
-			$values = MediaWikiServices::getInstance()->getPageProps()->getProperties($title, 'displaytitle');
+			$values = MediaWikiServices::getInstance()->getPageProps()->getProperties( $title, 'displaytitle' );
 		} else {
-			$values = PageProps::getInstance()->getProperties($title, 'displaytitle');
+			$values = PageProps::getInstance()->getProperties( $title, 'displaytitle' );
 		}
-		if (array_key_exists($id, $values)) {
+		if ( array_key_exists( $id, $values ) ) {
 			$value = $values[$id];
-			if (trim(str_replace('&#160;', '', strip_tags($value))) !== ''
-				&& $value !== $originalPageName) {
+			if ( trim( str_replace( '&#160;', '', strip_tags( $value ) ) ) !== ''
+				&& $value !== $originalPageName ) {
 				$displaytitle = $value;
-				if ($wrap) {
-					$displaytitle = new HtmlArmor($displaytitle);
+				if ( $wrap ) {
+					$displaytitle = new HtmlArmor( $displaytitle );
 				}
 				return true;
 			}
-		} elseif ($redirect) {
+		} elseif ( $redirect ) {
 			$displaytitle = $title->getPrefixedText();
-			if ($wrap) {
-				$displaytitle = new HtmlArmor($displaytitle);
+			if ( $wrap ) {
+				$displaytitle = new HtmlArmor( $displaytitle );
 			}
 			return true;
 		}
 		return false;
 	}
 
-
-
-	protected function getDisplayFormat()
-	{
+	protected function getDisplayFormat() {
 		return 'ooui';
 	}
 
 }
-
-

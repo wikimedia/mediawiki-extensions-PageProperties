@@ -4,10 +4,10 @@
 ( function () {
 
 	$( function () {
-		var tabs, previousTab, switchingNoHash;
+		let tabs, previousTab, switchingNoHash;
 
-// ***edited
-switchingNoHash = true;
+		// ***edited
+		switchingNoHash = true;
 
 		// Make sure the accessibility tip is focussable so that keyboard users take notice,
 		// but hide it by default to reduce visual clutter.
@@ -32,7 +32,7 @@ switchingNoHash = true;
 		}
 
 		function onTabPanelSet( panel ) {
-			var scrollTop, active;
+			let scrollTop, active;
 
 			if ( switchingNoHash ) {
 				return;
@@ -72,7 +72,7 @@ switchingNoHash = true;
 		// Jump to correct section as indicated by the hash.
 		// This function is called onload and onhashchange.
 		function detectHash() {
-			var hash = location.hash,
+			let hash = location.hash,
 				matchedElement, $parentSection;
 			if ( hash.match( /^#mw-prefsection-[\w]+$/ ) ) {
 				mw.storage.session.remove( 'mwpreferences-prevTab' );
@@ -91,9 +91,10 @@ switchingNoHash = true;
 
 		$( window ).on( 'hashchange', function () {
 
-// ***edited
-return;
-			var hash = location.hash;
+			// ***edited
+			return;
+			// eslint-disable-next-line no-unreachable
+			const hash = location.hash;
 			if ( hash.match( /^#mw-[\w-]+/ ) ) {
 				detectHash();
 			} else if ( hash === '' ) {
@@ -112,7 +113,7 @@ return;
 		}
 
 		$( '#mw-prefs-form' ).on( 'submit', function () {
-			var value = tabs.getCurrentTabPanelName();
+			const value = tabs.getCurrentTabPanelName();
 			mw.storage.session.set( 'mwpreferences-prevTab', value );
 		} );
 

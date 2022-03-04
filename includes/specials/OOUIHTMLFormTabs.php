@@ -22,8 +22,7 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-class OOUIHTMLFormTabs extends OOUIHTMLForm
-{
+class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 	protected $html_fragments = [];
 
@@ -32,71 +31,69 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 	 * @inheritDoc
 	 */
 	public function __construct( $descriptor, $context = null, $messagePrefix = '' ) {
-
 		// ***edited
 
-		$symbols = ['append_html', 'prepend_html'];
+		$symbols = [ 'append_html', 'prepend_html' ];
 
-		foreach($descriptor as $key => $value) {
+		foreach ( $descriptor as $key => $value ) {
 
-			foreach($symbols as $symbol) {
+			foreach ( $symbols as $symbol ) {
 
-				if(!empty($value[$symbol])) {
+				if ( !empty( $value[$symbol] ) ) {
 					$this->html_fragments[$value['section']][$key][$symbol] = $value[$symbol];
-					unset($value[$symbol]);
+					unset( $value[$symbol] );
 				}
 
 			}
 
 		}
 
-
 		parent::__construct( $descriptor, $context, $messagePrefix );
 		$this->getOutput()->enableOOUI();
 		$this->getOutput()->addModuleStyles( 'mediawiki.htmlform.ooui.styles' );
 	}
 
-
-// see includes/specials/forms/PreferencesFormOOUI.php
-	function getBody()
-	{
+	/**
+	 * @see includes/specials/forms/PreferencesFormOOUI.php
+	 * @return string
+	 */
+	function getBody() {
 		$tabPanels = [];
-		foreach ($this->mFieldTree as $key => $val) {
-			if (!is_array($val)) {
-				wfDebug(__METHOD__ . " encountered a field not attached to a section: '$key'");
+		foreach ( $this->mFieldTree as $key => $val ) {
+			if ( !is_array( $val ) ) {
+				wfDebug( __METHOD__ . " encountered a field not attached to a section: '$key'" );
 				continue;
 			}
-			$label = $this->getLegend($key);
+			$label = $this->getLegend( $key );
 
 			$content =
-		// ***edited
-			//	$this->getHeaderText( $key ) .
-			$this->msg($this->mMessagePrefix . '-' . $key . '-label')->text()
-				. $this->displaySection(
-					$val,
 				// ***edited
-					$key,
-					"mw-prefsection-$key-"
+				// $this->getHeaderText( $key ) .
+				$this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->text()
+					. $this->displaySection(
+						$val,
+						// ***edited
+						$key,
+						"mw-prefsection-$key-"
 				)
-				. $this->getFooterText($key);
+				. $this->getFooterText( $key );
 
 			$tabPanels[] = new OOUI\TabPanelLayout(
 				'mw-prefsection-' . $key,
 				[
-// ***edited
-// see resources/src/mediawiki.htmlform/autoinfuse.js
-
-			//	'classes' => [ 'mw-htmlform-autoinfuse-lazy' ],
+					// ***edited
+					// see resources/src/mediawiki.htmlform/autoinfuse.js
+					// 'classes' => [ 'mw-htmlform-autoinfuse-lazy' ],
 					'label' => $label,
 					'content' => new OOUI\FieldsetLayout(
 						[
-							'classes' => ['mw-prefs-section-fieldset'],
+							'classes' => [ 'mw-prefs-section-fieldset' ],
 							'id' => "mw-prefsection-$key",
 							'label' => $label,
 							'items' => [
 								new OOUI\Widget(
 									[
-										'content' => new OOUI\HtmlSnippet($content)
+										'content' => new OOUI\HtmlSnippet( $content )
 									]
 								),
 							],
@@ -113,17 +110,17 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 				'infusable' => true,
 				'expanded' => false,
 				'autoFocus' => false,
-				'classes' => ['mw-prefs-tabs'],
+				'classes' => [ 'mw-prefs-tabs' ],
 			]
 		);
-		$indexLayout->addTabPanels($tabPanels);
+		$indexLayout->addTabPanels( $tabPanels );
 
 		$header = $this->formatFormHeader();
 		$form = new OOUI\PanelLayout(
 			[
 				'framed' => true,
 				'expanded' => false,
-				'classes' => ['mw-prefs-tabs-wrapper'],
+				'classes' => [ 'mw-prefs-tabs-wrapper' ],
 				'content' => $indexLayout
 			]
 		);
@@ -131,20 +128,21 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 		return $header . $form;
 	}
 
-
-
-
-
-// see includes/htmlform/HTMLForm.php
-
+	/**
+	 * @see includes/htmlform/HTMLForm.php
+	 * @param array $fields
+	 * @param string $sectionName
+	 * @param string $fieldsetIDPrefix
+	 * @param bool &$hasUserVisibleFields
+	 * @return string
+	 */
 	public function displaySection(
 		$fields,
 		$sectionName = '',
 		$fieldsetIDPrefix = '',
 		&$hasUserVisibleFields = false
-	)
-	{
-		if ($this->mFieldData === null) {
+	) {
+		if ( $this->mFieldData === null ) {
 			throw new LogicException(
 				'HTMLForm::displaySection() called on uninitialized field data. '
 					. 'You probably called displayForm() without calling prepareForm() first.'
@@ -159,39 +157,34 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 
 		// Conveniently, PHP method names are case-insensitive.
 		// For grep: this can call getDiv, getRaw, getInline, getVForm, getOOUI
-		$getFieldHtmlMethod = $displayFormat === 'table' ? 'getTableRow' : ('get' . $displayFormat);
-
-
+		$getFieldHtmlMethod = $displayFormat === 'table' ? 'getTableRow' : ( 'get' . $displayFormat );
 
 		$n = 0;
-		foreach ($fields as $key => $value) {
+		foreach ( $fields as $key => $value ) {
 
+			if ( $value instanceof HTMLFormField ) {
+				$v = array_key_exists( $key, $this->mFieldData ) ? $this->mFieldData[$key] : $value->getDefault();
 
-			if ($value instanceof HTMLFormField) {
-				$v = array_key_exists($key, $this->mFieldData) ? $this->mFieldData[$key] : $value->getDefault();
-
-				$retval = $value->$getFieldHtmlMethod($v);
+				$retval = $value->$getFieldHtmlMethod( $v );
 
 				// check, if the form field should be added to
 				// the output.
-				if ($value->hasVisibleOutput()) {
-
+				if ( $value->hasVisibleOutput() ) {
 
 					// ***edited
 
-					if(!empty($this->html_fragments[$sectionName][$key]['append_html'])) {
+					if ( !empty( $this->html_fragments[$sectionName][$key]['append_html'] ) ) {
 						$retval = $retval . $this->html_fragments[$sectionName][$key]['append_html'];
 					}
 
-					if(!empty($this->html_fragments[$sectionName][$key]['prepend_html'])) {
+					if ( !empty( $this->html_fragments[$sectionName][$key]['prepend_html'] ) ) {
 						$retval = $this->html_fragments[$sectionName][$key]['prepend_html'] . $retval;
 					}
 
-
 					$html[] = $retval;
 
-					$labelValue = trim($value->getLabel());
-					if ($labelValue !== "\u{00A0}" && $labelValue !== '&#160;' && $labelValue !== '') {
+					$labelValue = trim( $value->getLabel() );
+					if ( $labelValue !== "\u{00A0}" && $labelValue !== '&#160;' && $labelValue !== '' ) {
 						$hasLabel = true;
 					}
 
@@ -199,7 +192,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 
 					$n++;
 				}
-			} elseif (is_array($value)) {
+			} elseif ( is_array( $value ) ) {
 				$subsectionHasVisibleFields = false;
 				$section = $this->displaySection(
 					$value,
@@ -209,19 +202,19 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 				);
 				$legend = null;
 
-				if ($subsectionHasVisibleFields === true) {
+				if ( $subsectionHasVisibleFields === true ) {
 					// Display the section with various niceties.
 					$hasUserVisibleFields = true;
 
-					$legend = $this->getLegend($key);
+					$legend = $this->getLegend( $key );
 
-					$section = $this->getHeaderText($key)
+					$section = $this->getHeaderText( $key )
 						. $section
-						. $this->getFooterText($key);
+						. $this->getFooterText( $key );
 
 					$attributes = [];
-					if ($fieldsetIDPrefix) {
-						$attributes['id'] = Sanitizer::escapeIdForAttribute("$fieldsetIDPrefix$key");
+					if ( $fieldsetIDPrefix ) {
+						$attributes['id'] = Sanitizer::escapeIdForAttribute( "$fieldsetIDPrefix$key" );
 					}
 					$subsectionHtml .= $this->wrapFieldSetSection(
 						$legend,
@@ -236,12 +229,10 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 			}
 		}
 
-	
-		$html = $this->formatSection($html, $sectionName, $hasLabel);
+		$html = $this->formatSection( $html, $sectionName, $hasLabel );
 
-
-		if ($subsectionHtml) {
-			if ($this->mSubSectionBeforeFields) {
+		if ( $subsectionHtml ) {
+			if ( $this->mSubSectionBeforeFields ) {
 				return $subsectionHtml . "\n" . $html;
 			} else {
 				return $html . "\n" . $subsectionHtml;
@@ -251,5 +242,3 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm
 		}
 	}
 }
-
-

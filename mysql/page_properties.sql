@@ -1,6 +1,6 @@
 
 
-CREATE TABLE IF NOT EXISTS `page_properties` (
+CREATE TABLE IF NOT EXISTS /*_*/page_properties (
   `page_id` int(11) NOT NULL,
   `display_title` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `language` varchar(64) CHARACTER SET latin1 COLLATE latin1_general_ci DEFAULT NULL,
@@ -13,6 +13,5 @@ CREATE TABLE IF NOT EXISTS `page_properties` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
-ALTER TABLE `page_properties`
+ALTER TABLE /*_*/page_properties
   ADD UNIQUE KEY `index_a` (`page_id`);
-

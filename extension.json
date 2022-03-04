@@ -21,12 +21,13 @@
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php"
 	},
 	"ExtensionMessagesFiles": {
+		"PagePropertiesAlias": "PageProperties.alias.php",
 		"PagePropertiesMagic": "PagePropertiesMagic.i18n.magic.php"
 	},
 	"Hooks": {
 		"LoadExtensionSchemaUpdates": "PageProperties::onLoadExtensionSchemaUpdates",
 		"BeforePageDisplay": "PageProperties::BeforePageDisplay",
-		"SkinTemplateNavigation": "PageProperties::onSkinTemplateNavigation",
+		"SkinTemplateNavigation::Universal": "PageProperties::onSkinTemplateNavigation",
 		"HtmlPageLinkRendererBegin": "PageProperties::onHtmlPageLinkRendererBegin",
 		"SelfLinkBegin": "PageProperties::onSelfLinkBegin",
 		"SMW::Store::BeforeDataUpdateComplete": "PageProperties::onSMWStoreBeforeDataUpdateComplete"
@@ -39,8 +40,8 @@
 			"position": "top",
 			"localBasePath": "resources",
 			"remoteExtPath": "PageProperties/resources",
-			"scripts": [				
-				"tabs.js",		
+			"scripts": [
+				"tabs.js",
 				"dynamictable.js"
 			],
 			"styles": [

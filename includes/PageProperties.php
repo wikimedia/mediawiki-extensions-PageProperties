@@ -22,24 +22,25 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-
 use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\MediaWikiServices;
 
-class PageProperties
-{
+class PageProperties {
 	protected static $cached_page_properties = [];
 	protected static $SMWOptions = null;
 	protected static $SMWApplicationFactory = null;
 	protected static $SMWStore = null;
 	protected static $SMWDataValueFactory = null;
+	/** @var User */
 	private static $User;
 
-
-	// see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
+	/**
+	 * @see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
+	 * @var string[]
+	 */
 	public static $exclude = [
-		//content_group
+		// content_group
 		"_SOBJ",
 		"_ASK",
 		"_MEDIA",
@@ -57,7 +58,7 @@ class PageProperties
 		"_TRANS_SOURCE",
 		"_TRANS_GROUP",
 
-		//declarative
+		// declarative
 		"_TYPE",
 		"_UNIT",
 		"_IMPO",
@@ -74,7 +75,7 @@ class PageProperties
 		"_PEID",
 		"_PEFU",
 
-		//schema
+		// schema
 		"_SCHEMA_TYPE",
 		"_SCHEMA_DEF",
 		"_SCHEMA_DESC",
@@ -84,25 +85,18 @@ class PageProperties
 		"_CONSTRAINT_SCHEMA",
 		"_PROFILE_SCHEMA",
 
-		//classification_group
+		// classification_group
 		"_INST",
 		"_PPGR",
 		"_SUBP",
 		"_SUBC"
 	];
 
-
-	public function __constructStatic()
-	{
-
+	public static function __constructStatic() {
 		self::$User = RequestContext::getMain()->getUser();
-
 	}
 
-
-	public static function initExtension( $credits = [] )
-	{
-
+	public static function initExtension( $credits = [] ) {
 		// see includes/specialpage/SpecialPageFactory.php
 
 		$GLOBALS['wgSpecialPages']['PageProperties'] = [
@@ -116,20 +110,22 @@ class PageProperties
 
 		];
 
-
-
+		// *** important! otherwise Page information (action=info) will display a wrong value
+		$GLOBALS['wgPageLanguageUseDB'] = true;
 	}
 
-	public static function onLoadExtensionSchemaUpdates($updater = null)
-	{
+	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater = null ) {
 		$base = __DIR__;
-
+		$dbType = $updater->getDB()->getType();
 		$array = [
-			['table' => 'page_properties', 'filename' => 'page_properties.sql'],
+			[
+				'table' => 'page_properties',
+				'filename' => '../' . $dbType . '/page_properties.sql'
+			]
 		];
 
-		if ($updater->getDB()->getType() == 'mysql') {
-			foreach ($array as $value) {
+		foreach ( $array as $value ) {
+			if ( file_exists( $base . '/' . $value['filename'] ) ) {
 				$updater->addExtensionUpdate(
 					[
 						'addTable', $value['table'],
@@ -140,11 +136,8 @@ class PageProperties
 		}
 	}
 
-
-
-	public static function onSkinTemplateNavigation(SkinTemplate $skinTemplate, array &$links)
-	{
-		//global $wgTitle;
+	public static function onSkinTemplateNavigation( SkinTemplate $skinTemplate, array &$links ) {
+		// global $wgTitle;
 
 		$user = self::$User;
 
@@ -153,7 +146,7 @@ class PageProperties
 		}
 
 		$title = $skinTemplate->getTitle();
-		
+
 		// display page properties only to authorized editors
 
 		if ( $title->getNamespace() != NS_MAIN ) {
@@ -166,21 +159,19 @@ class PageProperties
 
 		$isAuthorized = \PagePropertiesFunctions::isAuthorized( $user, $title );
 
-
 		if ( $isAuthorized ) {
 			$specialpage = Title::newFromText( 'Special:PageProperties' )->getLocalURL();
-			$links[ 'actions' ][] = [ 'text' => 'Properties', 'href' => $specialpage . '/' . wfEscapeWikiText( $title->getPartialURL() ) ];
+			$links[ 'actions' ][] = [
+				'text' => 'Properties', 'href' => $specialpage . '/' . wfEscapeWikiText( $title->getPartialURL() )
+			];
 		}
 	}
 
-	public static function getPageProperties($page_id, $conds_ = [] )
-	{
-
+	public static function getPageProperties( $page_id, $conds_ = [] ) {
 		// read from cache
 		if ( !empty( $page_id ) && array_key_exists( $page_id, self::$cached_page_properties ) ) {
 			return self::$cached_page_properties[ $page_id ];
 		}
-
 
 		$conds = [];
 
@@ -188,7 +179,7 @@ class PageProperties
 			$conds['page_id'] = $page_id;
 		}
 
-		$dbr = wfGetDB(DB_REPLICA);
+		$dbr = wfGetDB( DB_REPLICA );
 
 // 'page_title ' . $dbr->buildLike( $oldusername->getDBkey() . '/', $dbr->anyString() )
 
@@ -201,7 +192,7 @@ class PageProperties
 
 		$row = (array)$row;
 
-		if ( !$row || $row == [false] ) {
+		if ( !$row || $row == [ false ] ) {
 			return false;
 		}
 
@@ -212,10 +203,11 @@ class PageProperties
 		return $row;
 	}
 
-
-
-	private static function getMergedMetas($title) {
-
+	/**
+	 * @param Title $title
+	 * @return array
+	 */
+	private static function getMergedMetas( $title ) {
 		$page_ancestors = \PagePropertiesFunctions::page_ancestors( $title, false );
 
 		$output = [];
@@ -231,16 +223,11 @@ class PageProperties
 		}
 
 		return $output;
-
 	}
 
-
-
-	public static function BeforePageDisplay(OutputPage $outputPage, Skin $skin)
-	{
+	public static function BeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
 		global $wgSitename;
-		global $wgScriptPath;
-
+		// global $wgScriptPath;
 
 		$title = $outputPage->getTitle();
 
@@ -251,33 +238,31 @@ class PageProperties
 			$mainPage = Title::newMainPage();
 
 			if ( $mainPage->getText() != $title->getText() ) {
-				$page_properties = self::getPageProperties(null, [ 'meta_entire_site' => 1 ]);
+				$page_properties = self::getPageProperties( null, [ 'meta_entire_site' => 1 ] );
 
 				if ( !empty( $page_properties['meta'] ) ) {
 					$meta = $page_properties['meta'];
 				}
-	
+
 			}
 
 			$meta = array_merge( $meta, self::getMergedMetas( $title ) );
 
-
 			if ( !empty( $meta ) ) {
-					
-				$meta = array_map( function( $value ) {
-					return str_replace( ' ', '_', $value );
-				}, $meta );
 
+				$meta_underscored = [];
+				array_walk( $meta, static function ( $value, $key ) use( &$meta_underscored ) {
+					$meta_underscored[ str_replace( ' ', '_', $key ) ] = $value;
+				} );
 
 				if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
 					$seo = new MediaWiki\Extension\WikiSEO\WikiSEO();
-					$seo->setMetadata( $meta );
+					$seo->setMetadata( $meta_underscored );
 					$seo->addMetadataToPage( $outputPage );
-			
-				} else {
-					self::addMetadataToPage( $outputPage, $meta );
-				}
 
+				} else {
+					self::addMetaToPage( $outputPage, $meta_underscored );
+				}
 			}
 
 			$page_title = self::getDisplayTitle( $title );
@@ -295,17 +280,15 @@ class PageProperties
 				$outputPage->setHtmlTitle( $html_title );
 			}
 
-
-			// page_title can be null 
+			// page_title can be null
 			if ( empty( $page_title ) ) {
-				$outputPage->addHeadItem('pageproperties_empty_title', '<style>h1 { border: none; }</style>');
+				$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; }</style>' );
 			}
 
-
-			if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta )  ) {
+			if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
 
 				$html_title = '';
-	
+
 				if ( $wgSitename != $title->getText() ) {
 					$html_title = $title->getText() . ' - ';
 				}
@@ -314,22 +297,23 @@ class PageProperties
 
 				$outputPage->setHTMLTitle( $html_title );
 
-			} else if ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
+			} elseif ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
 				$outputPage->setHTMLTitle( $meta[ 'title' ] );
 			}
 
 		}
-
 	}
 
-
-
-	private static function addMetaToPage( $outputPage, $meta ) 
-	{
-
-// Meta tags already set in the page
+	/**
+	 * @param OutputPage $outputPage
+	 * @param array $meta
+	 * @return void
+	 */
+	private static function addMetaToPage( $outputPage, $meta ) {
+		// Meta tags already set in the page
 		$outputMeta = [];
-		foreach ( $this->outputPage->getMetaTags() as $metaTag ) {
+
+		foreach ( $outputPage->getMetaTags() as $metaTag ) {
 			$outputMeta[ $metaTag[0] ] = $metaTag[1];
 		}
 
@@ -345,13 +329,12 @@ class PageProperties
 							'hreflang' => substr( $k, 9 ),
 						]
 					)
-												
+
 				);
 
 				continue;
 
 			}
-
 
 			if ( strpos( $k, ':' ) === false ) {
 
@@ -361,7 +344,7 @@ class PageProperties
 
 			} else {
 
-				$outputPage->addHeadItem($k, Html::element(
+				$outputPage->addHeadItem( $k, Html::element(
 						'meta', [ 'property' => $k, 'content'  => $url ]
 					)
 				);
@@ -369,11 +352,17 @@ class PageProperties
 			}
 
 		}
-
 	}
 
-
-// https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	/**
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	 * @param LinkRenderer $linkRenderer the LinkRenderer object
+	 * @param LinkTarget $target the LinkTarget that the link is pointing to
+	 * @param string|HtmlArmor &$text the contents that the <a> tag should have
+	 * @param array &$extraAttribs the HTML attributes that the <a> tag should have
+	 * @param string &$query the query string to add to the generated URL
+	 * @param string &$ret the value to return if the hook returns false
+	 */
 	public static function onHtmlPageLinkRendererBegin(
 		LinkRenderer $linkRenderer,
 		LinkTarget $target,
@@ -381,127 +370,132 @@ class PageProperties
 		&$extraAttribs,
 		&$query,
 		&$ret
-	)
-	{
-
+	) {
 		// Do not use DisplayTitle if current page is defined in $wgDisplayTitleExcludes
 		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$request = $config->get('Request');
-		$title = $request->getVal('title');
+		$request = $config->get( 'Request' );
+		$title = $request->getVal( 'title' );
 
 		// ***edited
-		if (isset($GLOBALS['wgDisplayTitleExcludes']) && in_array($title, $GLOBALS['wgDisplayTitleExcludes'])) {
+		if ( isset( $GLOBALS['wgDisplayTitleExcludes'] ) && in_array( $title, $GLOBALS['wgDisplayTitleExcludes'] ) ) {
 			return;
 		}
-
 
 		// ***edited
 		// show standard title in special pages
-		$title_obj = Title::newFromText($title);
+		$title_obj = Title::newFromText( $title );
 
-		if ($title_obj && $title_obj->getNamespace() != NS_MAIN) {
+		if ( $title_obj && $title_obj->getNamespace() != NS_MAIN ) {
 			return;
 		}
 
-		$title = Title::newFromLinkTarget($target);
-		self::handleLink($title, $text, true);
+		$title = Title::newFromLinkTarget( $target );
+		self::handleLink( $title, $text, true );
 	}
 
-
-// https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	/**
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	 * @param Title $nt the Title object of the page
+	 * @param string &$html the HTML of the link text
+	 * @param string &$trail Text after link
+	 * @param string &$prefix Text before link
+	 * @param string &$ret the value to return if the hook returns false
+	 */
 	public static function onSelfLinkBegin(
 		Title $nt,
 		&$html,
 		&$trail,
 		&$prefix,
 		&$ret
-	)
-	{
+	) {
 		// Do not use DisplayTitle if current page is defined in $wgDisplayTitleExcludes
 		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$request = $config->get('Request');
-		$title = $request->getVal('title');
-		if (in_array($title, $GLOBALS['wgDisplayTitleExcludes'])) {
+		$request = $config->get( 'Request' );
+		$title = $request->getVal( 'title' );
+		if ( in_array( $title, $GLOBALS['wgDisplayTitleExcludes'] ) ) {
 			return;
 		}
 
-		self::handleLink($nt, $html, false);
+		self::handleLink( $nt, $html, false );
 	}
 
-
-// https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
-	private static function handleLink(Title $target, &$html, $wrap)
-	{
+	/**
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
+	 * @param Title $target the Title object that the link is pointing to
+	 * @param string|HtmlArmor &$html the HTML of the link text
+	 * @param bool $wrap whether to wrap result in HtmlArmor
+	 */
+	private static function handleLink( Title $target, &$html, $wrap ) {
 		$customized = false;
 
-		if (isset($html)) {
+		if ( isset( $html ) ) {
 			$title = null;
 			$text = null;
-			if (is_string($html)) {
-				$text = str_replace('_', ' ', $html);
-			} elseif (is_int($html)) {
+			if ( is_string( $html ) ) {
+				$text = str_replace( '_', ' ', $html );
+			} elseif ( is_int( $html ) ) {
 				$text = (string)$html;
-			} elseif ($html instanceof HtmlArmor) {
-				$text = str_replace('_', ' ', HtmlArmor::getHtml($html));
+			} elseif ( $html instanceof HtmlArmor ) {
+				$text = str_replace( '_', ' ', HtmlArmor::getHtml( $html ) );
 			}
 
 			// handle named Semantic MediaWiki subobjects (see T275984)
 			// by removing trailing fragment
 			$fragment = $target->getFragment();
-			if ($fragment != '') {
+			if ( $fragment != '' ) {
 				$fragment = '#' . $fragment;
-				$fraglen = strlen($fragment);
-				if (strrpos($text, $fragment) == strlen($text) - $fraglen) {
-					$text = substr($text, 0, 0 - $fraglen);
-					if ($wrap) {
-						$html = new HtmlArmor($text);
+				$fraglen = strlen( $fragment );
+				if ( strrpos( $text, $fragment ) == strlen( $text ) - $fraglen ) {
+					$text = substr( $text, 0, 0 - $fraglen );
+					if ( $wrap ) {
+						$html = new HtmlArmor( $text );
 					}
 				}
 			}
 
-			$customized = ($text !== null
+			$customized = ( $text !== null
 				&& $text != $target->getPrefixedText()
 				&& $text != $target->getText()
 			);
 		}
 
 		if ( !$customized ) {
-			$html_ = self::getDisplayTitle($target);
+			$html_ = self::getDisplayTitle( $target );
 
-			if (!empty($html_)) {
+			if ( !empty( $html_ ) ) {
 				$html = $html_;
 
-				if ($wrap) {
-					$html = new HtmlArmor($html);
+				if ( $wrap ) {
+					$html = new HtmlArmor( $html );
 				}
 			}
 		}
 	}
 
-	public static function getDisplayTitle( $title )
-	{
+	/**
+	 * @param Title $title
+	 * @return mixed
+	 */
+	public static function getDisplayTitle( $title ) {
 		$page_properties = self::getPageProperties( $title->getArticleID() );
 
 		// display title can be null
 		if ( $page_properties !== false ) {
-			return $page_properties['display_title'];			
+			return $page_properties['display_title'];
 		}
-		
+
 		return $title->getText();
 	}
 
-
-
-	public static function shownTitle( $title )
-	{
-		return  \PagePropertiesFunctions::array_last( explode( ",", $title->getText() ) );
+	/**
+	 * @param Title $title
+	 * @return mixed|null
+	 */
+	public static function shownTitle( $title ) {
+		return \PagePropertiesFunctions::array_last( explode( ",", $title->getText() ) );
 	}
 
-
-
-	public static function initSMW()
-	{
-
+	public static function initSMW() {
 		if ( !defined( 'SMW_VERSION' ) ) {
 			return;
 		}
@@ -513,10 +507,7 @@ class PageProperties
 		self::$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
 	}
 
-
-
-	public static function getAnnotatedProperties( Title $title, $user )
-	{
+	public static function getAnnotatedProperties( Title $title, $user ) {
 		$output = [];
 
 		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
@@ -537,48 +528,35 @@ class PageProperties
 		}
 
 		return $output;
-
 	}
 
-
-
-
-	public static function getUnusedProperties( Title $title )
-	{
+	public static function getUnusedProperties( Title $title ) {
 		$properties = self::$SMWStore->getUnusedPropertiesSpecial( self::$SMWOptions );
 
-		if ($properties instanceof SMW\SQLStore\PropertiesCollector) {
+		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
 			// SMW 1.9+
 			$properties = $properties->runCollector();
 		}
 
 		return $properties;
-
 	}
 
-
-
-	public static function getUsedProperties( Title $title )
-	{
+	public static function getUsedProperties( Title $title ) {
 		$properties = self::$SMWStore->getPropertiesSpecial( self::$SMWOptions );
 
-		if ($properties instanceof SMW\SQLStore\PropertiesCollector) {
+		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
 			// SMW 1.9+
 			$properties = $properties->runCollector();
 		}
 
-		return array_map( function($value) {
+		return array_map( static function ( $value ) {
 				return $value[0];
-			}, $properties );
-
+		}, $properties );
 	}
 
-
-
-	public static function getSpecialProperties( Title $title )
-	{
+	public static function getSpecialProperties( Title $title ) {
 		$properties = [];
-		
+
 		$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
 
 		$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
@@ -592,12 +570,9 @@ class PageProperties
 		}
 
 		return $properties;
-
 	}
 
-
-	public static function getSemanticData( Title $title )
-	{
+	public static function getSemanticData( Title $title ) {
 		$subject = new SMW\DIWikiPage( $title, NS_MAIN );
 
 		$semanticData = self::$SMWStore->getSemanticData( $subject );
@@ -609,50 +584,50 @@ class PageProperties
 			if ( in_array( $key, self::$exclude ) ) {
 				continue;
 			}
-				
+
 			$propertyDv = self::$SMWDataValueFactory->newDataValueByItem( $property, null );
 
 			if ( !$property->isUserAnnotable() || !$propertyDv->isVisible() ) {
 				continue;
 			}
 
-			
-			foreach ( $semanticData->getPropertyValues($property) as $dataItem ) {
+			foreach ( $semanticData->getPropertyValues( $property ) as $dataItem ) {
 
-				if ($key !== '_ATTCH_LINK') {
+				if ( $key !== '_ATTCH_LINK' ) {
 
-					$dataValue = self::$SMWDataValueFactory->newDataValueByItem($dataItem, $property);
+					$dataValue = self::$SMWDataValueFactory->newDataValueByItem( $dataItem, $property );
 
 					if ( $dataValue->isValid() ) {
 
-						$dataValue->setOption('no.text.transformation', true);
-						$dataValue->setOption('form/short', true);
+						$dataValue->setOption( 'no.text.transformation', true );
+						$dataValue->setOption( 'form/short', true );
 
-						$output[] = [ $key, $dataValue->getWikiValue() ];	// . $dataValue->getInfolinkText( SMW_OUTPUT_WIKI );
+						$output[] = [ $key, $dataValue->getWikiValue() ];
+						// . $dataValue->getInfolinkText( SMW_OUTPUT_WIKI );
 
 					}
 
 				}
-		
+
 			}
 
 		}
- 
+
 		return $output;
-		
 	}
 
-
-
-// the function onSMWStoreBeforeDataUpdateComplete will be called
-	public static function rebuildSemanticData(Title $title)
-	{
+	/**
+	 * The function onSMWStoreBeforeDataUpdateComplete will be called.
+	 *
+	 * @param Title $title
+	 */
+	public static function rebuildSemanticData( Title $title ) {
 		if ( !defined( 'SMW_VERSION' ) ) {
 			return;
 		}
 
 		$store = \SMW\StoreFactory::getStore();
-		$store->setOption( \SMW\Store::OPT_CREATE_UPDATE_JOB, false);
+		$store->setOption( \SMW\Store::OPT_CREATE_UPDATE_JOB, false );
 
 		$rebuilder = new \SMW\Maintenance\DataRebuilder(
 			$store,
@@ -667,10 +642,7 @@ class PageProperties
 		$rebuilder->rebuild();
 	}
 
-
-
-	public static function onSMWStoreBeforeDataUpdateComplete( $store, $semanticData )
-	{
+	public static function onSMWStoreBeforeDataUpdateComplete( $store, $semanticData ) {
 		$subject = $semanticData->getSubject();
 
 		$title = $subject->getTitle();
@@ -690,8 +662,7 @@ class PageProperties
 			self::$SMWDataValueFactory
 		);
 
-
-// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
+		// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
 		foreach ( $properties as $val ) {
 
 			list( $property, $value ) = $val;
@@ -703,21 +674,15 @@ class PageProperties
 				$subject
 			);
 
-			$semanticData->addDataValue($dataValue);
+			$semanticData->addDataValue( $dataValue );
 
-			//print_r($semanticData->getErrors());
+			// print_r($semanticData->getErrors());
 
 		}
 
 		return true;
 	}
 
-
 }
 
-
-
 PageProperties::__constructStatic();
-
-
-

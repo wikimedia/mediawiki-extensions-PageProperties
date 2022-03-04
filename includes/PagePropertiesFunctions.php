@@ -22,29 +22,25 @@
  * @copyright Copyright ©2021, https://wikisphere.org
  */
 
-
 use MediaWiki\MediaWikiServices;
 
 class PagePropertiesFunctions {
-
 
 	/**
 	 * @var UserGroupManager
 	 */
 	private static $userGroupManager;
 
-
-	public function __constructStatic()
-	{
+	public static function __constructStatic() {
 		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
 	}
 
-
 	/**
+	 * @param User $user
+	 * @param bool $replace_asterisk
 	 * @return array
 	 */
 	public static function getUserGroups( $user, $replace_asterisk = false ) {
-
 		$user_groups = self::$userGroupManager->getUserEffectiveGroups( $user );
 		$user_groups[] = $user->getName();
 
@@ -58,44 +54,47 @@ class PagePropertiesFunctions {
 		}
 
 		return $user_groups;
-
 	}
 
-
-
-	public static function isAuthorized( $user, $title )
-	{
+	/**
+	 * @param User $user
+	 * @param Title $title
+	 * @return bool|int|void
+	 */
+	public static function isAuthorized( $user, $title ) {
 		global $wgPagePropertiesAuthorizedEditors;
 
 		$allowed_groups = [ 'sysop' ];
-		
+
 		if ( is_array( $wgPagePropertiesAuthorizedEditors ) ) {
-			$allowed_groups = array_unique (array_merge ( $allowed_groups, $wgPagePropertiesAuthorizedEditors) );
+			$allowed_groups = array_unique( array_merge( $allowed_groups, $wgPagePropertiesAuthorizedEditors ) );
 		}
 
 		$user_groups = self::getUserGroups( $user );
 
-		$isAuthorized = sizeof( array_intersect( $allowed_groups, $user_groups ) );
+		$isAuthorized = count( array_intersect( $allowed_groups, $user_groups ) );
 
-		if ( !$isAuthorized && $title && class_exists( 'PageOwnership' )) {
+		if ( !$isAuthorized && $title && class_exists( 'PageOwnership' ) ) {
 
 			list( $role, $permissions ) = \PageOwnership::permissionsOfPage( $title, $user );
-			
-			if ( ( $role == 'editor' || $role == 'admin') && in_array( 'manage properties', $permissions ) ) {
+
+			if ( ( $role == 'editor' || $role == 'admin' ) && in_array( 'manage properties', $permissions ) ) {
 				return true;
 			}
 
 		}
 
 		return $isAuthorized;
-
 	}
 
-
-	public static function page_ancestors( $title, $exclude_current = true )
-	{
+	/**
+	 * @param Title $title
+	 * @param bool $exclude_current
+	 * @return array
+	 */
+	public static function page_ancestors( $title, $exclude_current = true ) {
 		$output = [];
-		
+
 		$title_parts = explode( '/', $title->getText() );
 
 		if ( $exclude_current ) {
@@ -113,26 +112,21 @@ class PagePropertiesFunctions {
 
 			} else {
 				$title_ = Title::newFromText( $title_text );
-				if ($title_->isKnown() ) {
+				if ( $title_->isKnown() ) {
 					$output[] = $title_;
 				}
-			
+
 			}
-				
+
 		}
 
 		return $output;
 	}
 
-
-	public static function array_last( $array )
-	{
-		return ( sizeof( $array ) ? $array[ array_key_last( $array ) ] : null );
+	public static function array_last( $array ) {
+		return ( count( $array ) ? $array[ array_key_last( $array ) ] : null );
 	}
-
 
 }
 
 PagePropertiesFunctions::__constructStatic();
-
-

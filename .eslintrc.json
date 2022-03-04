@@ -1,0 +1,19 @@
+{
+	"root": true,
+	"globals": {
+		"mw": false,
+		"$": false
+	},
+	"extends": [
+		"wikimedia/client-es6",
+		"wikimedia/mediawiki"
+	],
+	"rules": {
+		"block-scoped-var": "off",
+		"camelcase": "off",
+		"no-redeclare": "off",
+		"no-undef": "off",
+		"no-var": "off",
+		"prefer-const": "off"
+	}
+}

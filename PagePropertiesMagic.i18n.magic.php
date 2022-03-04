@@ -1,6 +1,5 @@
 <?php
 
-
 /**
  * This file is part of the MediaWiki extension PageProperties.
  *
@@ -23,18 +22,10 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-
-
 $magicWords = [];
-
-
 
 // see here
 // https://www.mediawiki.org/wiki/Manual:Magic_words
 // '0' stands for 'case insensitive'
 
-
-$magicWords['en'] = [	
-];
-
-
+$magicWords['en'] = [];
