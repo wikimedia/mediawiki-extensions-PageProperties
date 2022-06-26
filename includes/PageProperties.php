@@ -519,7 +519,12 @@ class PageProperties
 	{
 		$output = [];
 
-		$page = WikiPage::factory( $title );
+		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
+			// MW 1.36+
+			$page = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
+		} else {
+			$page = WikiPage::factory( $title );
+		}
 
 		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $user ) );
 

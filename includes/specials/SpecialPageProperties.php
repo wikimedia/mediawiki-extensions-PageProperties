@@ -100,7 +100,12 @@ class SpecialPageProperties extends FormSpecialPage
 		
 		$this->title = $title;
 
-		$wikiPage = WikiPage::factory($title);
+		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
+			// MW 1.36+
+			$wikiPage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle($title);
+		} else {
+			$wikiPage = WikiPage::factory($title);
+		}
 
 		$creator_identity = $wikiPage->getCreator();
 
@@ -982,7 +987,12 @@ class SpecialPageProperties extends FormSpecialPage
 		}
 
 		$originalPageName = $title->getPrefixedText();
-		$wikipage = new WikiPage($title);
+		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
+			// MW 1.36+
+			$wikipage = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle($title);
+		} else {
+			$wikipage = new WikiPage($title);
+		}
 		$redirect = false;
 		$redirectTarget = $wikipage->getRedirectTarget();
 		if ($redirectTarget !== null) {
