@@ -26,7 +26,7 @@
 			return '';
 		}
 
-		const num = parseInt( value.match( /\d+/ ) ) + increment;
+		var num = parseInt( value.match( /\d+/ ) ) + increment;
 
 		if ( isNaN( num ) ) {
 			return value + '_' + increment;
