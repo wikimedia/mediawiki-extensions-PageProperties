@@ -100,14 +100,15 @@ class PageProperties {
 		// see includes/specialpage/SpecialPageFactory.php
 
 		$GLOBALS['wgSpecialPages']['PageProperties'] = [
-
 			'class' => \SpecialPageProperties::class,
 			'services' => [
 				'ContentHandlerFactory',
 				'ContentModelChangeFactory',
-				'WikiPageFactory'
+				// MW 1.36+
+				( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
+				// ***whatever other class
+				: 'PermissionManager' )
 			]
-
 		];
 
 		// *** important! otherwise Page information (action=info) will display a wrong value
@@ -517,7 +518,9 @@ class PageProperties {
 			$page = WikiPage::factory( $title );
 		}
 
-		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $user ) );
+		$oldid = null;
+		$noCache = true;
+		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $user ), $oldid, $noCache );
 
 		$parserData = self::$SMWApplicationFactory->newParserData( $title, $parserOutput );
 

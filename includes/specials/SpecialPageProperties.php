@@ -27,7 +27,6 @@ include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
-use MediaWiki\Page\WikiPageFactory;
 
 class SpecialPageProperties extends FormSpecialPage {
 
@@ -41,12 +40,15 @@ class SpecialPageProperties extends FormSpecialPage {
 	/**
 	 * @param IContentHandlerFactory $contentHandlerFactory
 	 * @param ContentModelChangeFactory $contentModelChangeFactory
-	 * @param WikiPageFactory $wikiPageFactory
+	 * @param WikiPageFactory|PermissionManager $wikiPageFactory
 	 */
 	public function __construct(
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
-		WikiPageFactory $wikiPageFactory
+
+		// *** without class name WikiPageFactory, because on
+		// MW < 1.36 we are passing another class (PermissionManager)
+		$wikiPageFactory
 	) {
 		// https://www.mediawiki.org/wiki/Manual:Special_pages
 		$listed = false;
@@ -54,7 +56,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$this->contentHandlerFactory = $contentHandlerFactory;
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
-		$this->wikiPageFactory = $wikiPageFactory;
+		$this->wikiPageFactory = ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? $wikiPageFactory : null );
 	}
 
 	/** @inheritDoc */
@@ -502,7 +504,7 @@ class SpecialPageProperties extends FormSpecialPage {
 				'type' => 'toggle',
 				'label-message' => 'pageproperties-form-meta_entire_wiki-label',
 				'help-message' => 'pageproperties-form-meta_entire_wiki-help',
-				'section' => 'form-section-SEO',
+				'section' => 'form-section-seo',
 				'default' => $this->record['meta_entire_site'],
 			];
 		}
@@ -764,22 +766,41 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @return Status
 	 */
 	protected function changeContentModel( $title, $model ) {
-		$page = $this->wikiPageFactory->newFromTitle( $title );
+		// ***edited
+		//$page = $this->wikiPageFactory->newFromTitle( $title );
+
+		$page = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title ) : new WikiPage( $title ) );
+
+		// ***edited
+		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority() : $this->getUser() );
 
 		$changer = $this->contentModelChangeFactory->newContentModelChange(
-			$this->getContext()->getAuthority(),
+			// ***edited
+			$performer,
 			$page,
 
 			// ***edited
 			$model
 		);
 
-		$permissionStatus = $changer->authorizeChange();
-		if ( !$permissionStatus->isGood() ) {
-			$out = $this->getOutput();
-			$wikitext = $out->formatPermissionStatus( $permissionStatus );
-			// Hack to get our wikitext parsed
-			return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+		// MW 1.36+
+		if ( method_exists( ContentModelChange::class, 'authorizeChange' ) ) {
+			$permissionStatus = $changer->authorizeChange();
+			if ( !$permissionStatus->isGood() ) {
+				$out = $this->getOutput();
+				$wikitext = $out->formatPermissionStatus( $permissionStatus );
+				// Hack to get our wikitext parsed
+				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+			}
+
+		} else {
+			$errors = $changer->checkPermissions();
+			if ( $errors ) {
+				$out = $this->getOutput();
+				$wikitext = $out->formatPermissionsErrorMessage( $errors );
+				// Hack to get our wikitext parsed
+				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+			}
 		}
 
 		// Can also throw a ThrottledError, don't catch it
@@ -927,6 +948,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		} else {
 			$wikipage = new WikiPage( $title );
 		}
+
 		$redirect = false;
 		$redirectTarget = $wikipage->getRedirectTarget();
 		if ( $redirectTarget !== null ) {
