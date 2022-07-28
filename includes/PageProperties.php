@@ -26,6 +26,10 @@ use MediaWiki\Linker\LinkRenderer;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\MediaWikiServices;
 
+if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
+	include_once __DIR__ . '/../vendor/autoload.php';
+}
+
 class PageProperties {
 	protected static $cached_page_properties = [];
 	protected static $SMWOptions = null;
@@ -228,11 +232,30 @@ class PageProperties {
 
 	public static function BeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
 		global $wgSitename;
-		// global $wgScriptPath;
 
 		$title = $outputPage->getTitle();
 
 		if ( $outputPage->isArticle() && $title->isKnown() ) {
+
+			// display JSON-LD from RDF
+			if ( class_exists( '\EasyRdf\Graph' ) && class_exists( '\ML\JsonLD\JsonLD' ) ) {
+
+				$rdf_export = Title::newFromText( 'Special:ExportRDF/' . $title->getText() )->getFullURL();
+
+				$foaf = new \EasyRdf\Graph( $rdf_export );
+				$foaf->load();
+
+				$format = \EasyRdf\Format::getFormat( 'jsonld' );
+				$output = $foaf->serialise( $format );
+
+				// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
+				if ( is_scalar( $output ) ) {
+					$outputPage->addHeadItem( 'json-ld', Html::Element(
+							'script', [ 'type' => 'application/ld+json' ], $output
+						)
+					);
+				}
+			}
 
 			$meta = [];
 
