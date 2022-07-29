@@ -246,7 +246,14 @@ class PageProperties {
 				$foaf->load();
 
 				$format = \EasyRdf\Format::getFormat( 'jsonld' );
-				$output = $foaf->serialise( $format );
+
+				// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
+				$output = $foaf->serialise( $format, [
+					// this will convert
+					// [{"@value":"a"},{"@value":"b"}]
+					// to ["a", "b"]
+					'compact' => true,
+				] );
 
 				// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
 				if ( is_scalar( $output ) ) {
