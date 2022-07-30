@@ -19,7 +19,7 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
-( function () {
+$( document ).ready( function () {
 
 	function increment_name( value, increment ) {
 		if ( !value ) {
@@ -328,4 +328,4 @@
 
 	} );
 
-}() );
+} );

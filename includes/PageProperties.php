@@ -240,15 +240,19 @@ class PageProperties {
 			// display JSON-LD from RDF
 			if ( class_exists( '\EasyRdf\Graph' ) && class_exists( '\ML\JsonLD\JsonLD' ) ) {
 
-				$rdf_export = Title::newFromText( 'Special:ExportRDF/' . $title->getText() )->getFullURL();
+				// @todo use directly the function makeExportDataForSubject
+				// SemanticMediawiki/includes/export/SMW_Exporter.php
+				$rdf_export = Title::newFromText( 'Special:ExportRDF/' . $title->getText() )->getFullURL()
+					. '?recursive=1&backlinks=0';
 
 				$foaf = new \EasyRdf\Graph( $rdf_export );
 				$foaf->load();
 
 				$format = \EasyRdf\Format::getFormat( 'jsonld' );
 
-				// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
 				$output = $foaf->serialise( $format, [
+
+					// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
 					// this will convert
 					// [{"@value":"a"},{"@value":"b"}]
 					// to ["a", "b"]
