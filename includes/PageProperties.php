@@ -242,29 +242,29 @@ class PageProperties {
 
 				// @todo use directly the function makeExportDataForSubject
 				// SemanticMediawiki/includes/export/SMW_Exporter.php
-				$rdf_export = Title::newFromText( 'Special:ExportRDF/' . $title->getText() )->getFullURL()
-					. '?recursive=1&backlinks=0';
+				$export_rdf = SpecialPage::getTitleFor( 'ExportRDF' );
+				if ( $export_rdf->isKnown() ) {
+					$export_url = $export_rdf->getFullURL( [ 'page' => $title->getFullText(), 'recursive' => '1', 'backlinks' => 0 ] );
+					$foaf = new \EasyRdf\Graph( $export_url );
+					$foaf->load();
 
-				$foaf = new \EasyRdf\Graph( $rdf_export );
-				$foaf->load();
+					$format = \EasyRdf\Format::getFormat( 'jsonld' );
 
-				$format = \EasyRdf\Format::getFormat( 'jsonld' );
+					$output = $foaf->serialise( $format, [
+						// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
+						// this will convert
+						// [{"@value":"a"},{"@value":"b"}]
+						// to ["a", "b"]
+						'compact' => true,
+					] );
 
-				$output = $foaf->serialise( $format, [
-
-					// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
-					// this will convert
-					// [{"@value":"a"},{"@value":"b"}]
-					// to ["a", "b"]
-					'compact' => true,
-				] );
-
-				// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
-				if ( is_scalar( $output ) ) {
-					$outputPage->addHeadItem( 'json-ld', Html::Element(
-							'script', [ 'type' => 'application/ld+json' ], $output
-						)
-					);
+					// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
+					if ( is_scalar( $output ) ) {
+						$outputPage->addHeadItem( 'json-ld', Html::Element(
+								'script', [ 'type' => 'application/ld+json' ], $output
+							)
+						);
+					}
 				}
 			}
 
