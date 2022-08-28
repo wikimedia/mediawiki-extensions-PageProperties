@@ -17,7 +17,6 @@
 	"pageproperties_dynamictable_addfield": "Feld hinzufügen",
 
 	"pageproperties-form-meta_entire_wiki-label": "auf das gesamte Wiki anwenden (die gesetzten Werte können von anderen Seiten überschrieben werden)",
-	"pageproperties-form-meta_entire_wiki-help": "*unused*",
 
 	"pageproperties-form-access-label": "access",
 	"pageproperties-form-publish_as-label": "veröffentlichen als",
@@ -45,7 +44,7 @@
 	"pageproperties-form-section-main": "Seite",
 	"pageproperties-form-section-seo": "SEO",
 
-	"pageproperties-form-section-main-label": "*unused*",
+	"pageproperties-form-section-main-label": "&#8203;",
 	"pageproperties-form-section-seo-label": "Hier können beliebige Metadaten für die Seite und ihre Unterseiten angegeben werden. Wenn die Erweiterung <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen.<br /><br />",
 
 	"pageproperties-form-section-main-label-entire-wiki": "Hier können beliebige Metadaten für diese Seite, ihre Unterseiten und sogar das gesamte Wiki angegeben werden. Wenn die Erweiterung <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen. <br /><br />",

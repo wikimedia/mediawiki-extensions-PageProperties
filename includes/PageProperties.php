@@ -22,22 +22,27 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-use MediaWiki\Linker\LinkRenderer;
-use MediaWiki\Linker\LinkTarget;
 use MediaWiki\MediaWikiServices;
 
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
+include_once __DIR__ . '/specials/LoggerPageProperties.php';
+include_once __DIR__ . '/specials/WSSlotsPageProperties.php';
+
 class PageProperties {
 	protected static $cached_page_properties = [];
 	protected static $SMWOptions = null;
 	protected static $SMWApplicationFactory = null;
-	protected static $SMWStore = null;
-	protected static $SMWDataValueFactory = null;
+	/** @var SMW\Store */
+	public static $SMWStore = null;
+	/** @var SMW\DataValueFactory */
+	public static $SMWDataValueFactory = null;
 	/** @var User */
-	private static $User;
+	public static $User;
+	/** @var UserGroupManager */
+	private static $userGroupManager;
 
 	/**
 	 * @see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
@@ -65,6 +70,7 @@ class PageProperties {
 		// declarative
 		"_TYPE",
 		"_UNIT",
+		// imported from
 		"_IMPO",
 		"_CONV",
 		"_SERV",
@@ -96,116 +102,305 @@ class PageProperties {
 		"_SUBC"
 	];
 
-	public static function __constructStatic() {
+	/**
+	 * @return void
+	 */
+	public static function initialize() {
 		self::$User = RequestContext::getMain()->getUser();
+		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
+		self::initSMW();
 	}
 
-	public static function initExtension( $credits = [] ) {
-		// see includes/specialpage/SpecialPageFactory.php
+	/**
+	 * @param Title $title
+	 * @param OutputPage $outputPage
+	 * @return void
+	 */
+	public static function setJsonLD( $title, $outputPage ) {
+		if ( !class_exists( '\EasyRdf\Graph' ) || !class_exists( '\ML\JsonLD\JsonLD' ) ) {
+			return;
+		}
 
-		$GLOBALS['wgSpecialPages']['PageProperties'] = [
-			'class' => \SpecialPageProperties::class,
-			'services' => [
-				'ContentHandlerFactory',
-				'ContentModelChangeFactory',
-				// MW 1.36+
-				( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
-				// ***whatever other class
-				: 'PermissionManager' )
-			]
-		];
+		// @todo use directly the function makeExportDataForSubject
+		// SemanticMediawiki/includes/export/SMW_Exporter.php
+		$export_rdf = SpecialPage::getTitleFor( 'ExportRDF' );
+		if ( $export_rdf->isKnown() ) {
+			$export_url = $export_rdf->getFullURL( [ 'page' => $title->getFullText(), 'recursive' => '1', 'backlinks' => 0 ] );
+			$foaf = new \EasyRdf\Graph( $export_url );
+			$foaf->load();
 
-		// *** important! otherwise Page information (action=info) will display a wrong value
-		$GLOBALS['wgPageLanguageUseDB'] = true;
-	}
+			$format = \EasyRdf\Format::getFormat( 'jsonld' );
+			$output = $foaf->serialise( $format, [
+				// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
+				// this will convert
+				// [{"@value":"a"},{"@value":"b"}]
+				// to ["a", "b"]
+				'compact' => true,
+			] );
 
-	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater = null ) {
-		$base = __DIR__;
-		$dbType = $updater->getDB()->getType();
-		$array = [
-			[
-				'table' => 'page_properties',
-				'filename' => '../' . $dbType . '/page_properties.sql'
-			]
-		];
-
-		foreach ( $array as $value ) {
-			if ( file_exists( $base . '/' . $value['filename'] ) ) {
-				$updater->addExtensionUpdate(
-					[
-						'addTable', $value['table'],
-						$base . '/' . $value['filename'], true
-					]
+			// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
+			if ( is_scalar( $output ) ) {
+				$outputPage->addHeadItem( 'json-ld', Html::Element(
+						'script', [ 'type' => 'application/ld+json' ], $output
+					)
 				);
 			}
 		}
 	}
 
-	public static function onSkinTemplateNavigation( SkinTemplate $skinTemplate, array &$links ) {
-		// global $wgTitle;
+	/**
+	 * @param Title $title
+	 * @param OutputPage $outputPage
+	 * @return void
+	 */
+	public static function setMetaAndTitle( $title, $outputPage ) {
+		global $wgSitename;
+		$meta = [];
+		$mainPage = Title::newMainPage();
 
-		$user = self::$User;
+		// the current page is other than the main page
+		if ( $mainPage->getText() != $title->getText() ) {
+			// null, [ 'meta_entire_site' => 1 ]
+			$page_properties = self::getPageProperties( $mainPage, true );
 
-		if ( !$user->isRegistered() ) {
-			return;
+			if ( !empty( $page_properties['SEO']['entire_site'] ) && !empty( $page_properties['SEO']['meta'] ) ) {
+				$meta = $page_properties['SEO']['meta'];
+			}
 		}
 
-		$title = $skinTemplate->getTitle();
+		// retrieve page properties of all ancestors including
+		// current page
+		$meta = array_merge( $meta, self::getMergedMetas( $title ) );
 
-		// display page properties only to authorized editors
+		if ( !empty( $meta ) ) {
+			$meta_underscored = [];
+			array_walk( $meta, static function ( $value, $key ) use( &$meta_underscored ) {
+				$meta_underscored[ str_replace( ' ', '_', $key ) ] = $value;
+			} );
 
-		if ( $title->getNamespace() != NS_MAIN ) {
-			return;
+			if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
+				$seo = new MediaWiki\Extension\WikiSEO\WikiSEO();
+				$seo->setMetadata( $meta_underscored );
+				$seo->addMetadataToPage( $outputPage );
+
+			} else {
+				self::addMetaToPage( $outputPage, $meta_underscored );
+			}
 		}
 
-		if ( !$title->exists() ) {
-			return;
+		$page_title = self::getDisplayTitle( $title );
+
+		if ( $page_title === false ) {
+			$page_title = $title->getText();
 		}
 
-		$isAuthorized = \PagePropertiesFunctions::isAuthorized( $user, $title );
+		$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
 
-		if ( $isAuthorized ) {
-			$specialpage = Title::newFromText( 'Special:PageProperties' )->getLocalURL();
-			$links[ 'actions' ][] = [
-				'text' => 'Properties', 'href' => $specialpage . '/' . wfEscapeWikiText( $title->getPartialURL() )
-			];
+		if ( $html_title_already_set ) {
+			$html_title = $outputPage->getHtmlTitle();
+		}
+
+		// can be different from the html title
+		$outputPage->setPageTitle( $page_title );
+
+		if ( $html_title_already_set ) {
+			$outputPage->setHtmlTitle( $html_title );
+		}
+
+		// page_title can be null
+		if ( empty( $page_title ) ) {
+			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; }</style>' );
+		}
+
+		if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
+			$html_title = '';
+
+			if ( $wgSitename != $title->getText() ) {
+				$html_title = $title->getText() . ' - ';
+			}
+
+			$html_title .= $wgSitename;
+
+			$outputPage->setHTMLTitle( $html_title );
+
+		} elseif ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
+			$outputPage->setHTMLTitle( $meta[ 'title' ] );
 		}
 	}
 
-	public static function getPageProperties( $page_id, $conds_ = [] ) {
+	/**
+	 * @param Title $title
+	 * @param bool $entire_site
+	 * @return false|array
+	 */
+	public static function getPageProperties( $title, $entire_site = false ) {
+		// ***attention!
+		// $page_id is 0 for newly created pages
+		// $title->getArticleID();
+		$key = $title->getFullText();
+
 		// read from cache
-		if ( !empty( $page_id ) && array_key_exists( $page_id, self::$cached_page_properties ) ) {
-			return self::$cached_page_properties[ $page_id ];
+		if ( array_key_exists( $key, self::$cached_page_properties ) ) {
+			return self::$cached_page_properties[ $key ];
 		}
 
-		$conds = [];
-
-		if ( !empty( $page_id ) ) {
-			$conds['page_id'] = $page_id;
+		if ( !$title->canExist() ) {
+			return false;
 		}
+		self::$cached_page_properties[ $key ] = false;
 
-		$dbr = wfGetDB( DB_REPLICA );
+		$wikiPage = self::getWikiPage( $title );
 
-// 'page_title ' . $dbr->buildLike( $oldusername->getDBkey() . '/', $dbr->anyString() )
-
-		$row = $dbr->selectRow(
-			'page_properties',
-			'*',
-			array_merge( $conds, $conds_ ),
-			__METHOD__
-		);
-
-		$row = (array)$row;
-
-		if ( !$row || $row == [ false ] ) {
+		if ( !$wikiPage ) {
 			return false;
 		}
 
-		$row['meta'] = ( empty( $row['meta'] ) ? [] : json_decode( $row['meta'], true ) );
+		$contents = WSSlotsPageProperties::getSlotContent( $wikiPage, SLOT_ROLE_PAGEPROPERTIES );
+		if ( empty( $contents ) ) {
+			return false;
+		}
 
-		self::$cached_page_properties[ $row['page_id'] ] = $row;
+		$contents = $contents->getNativeData();
 
-		return $row;
+		$ret = json_decode( $contents, true );
+		if ( empty( $contents ) ) {
+			return false;
+		}
+
+		self::$cached_page_properties[ $key ] = $ret;
+		return $ret;
+	}
+
+	/**
+	 * @param SemanticData &$semanticData
+	 * @param string $caller
+	 * @return void
+	 */
+	public static function updateSemanticData( &$semanticData, $caller ) {
+		$subject = $semanticData->getSubject();
+		$title = $subject->getTitle();
+
+		$page_properties = self::getPageProperties( $title );
+
+		// do not retrieve from the onBeforeInitialize hook!
+		$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
+
+		if ( $page_properties === false ) {
+			return;
+		}
+
+		if ( empty( $page_properties['semantic_properties'] ) ) {
+			return;
+		}
+
+		$semantic_properties = $page_properties['semantic_properties'];
+
+		// override annotated properties in property page
+		if ( $title->getNamespace() === SMW_NS_PROPERTY ) {
+			foreach ( $semanticData->getProperties() as $property ) {
+				if ( array_key_exists( $property->getLabel(), $semantic_properties ) ) {
+					$semanticData->removeProperty( $property );
+				}
+			}
+		}
+
+		$valueCaption = false;
+		// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
+		foreach ( $semantic_properties as $label => $value ) {
+			// in property pages we don't allow duplicated property
+			// labels, by constrast in other pages this is allowed
+			// (i.e. properties with multiple values)
+			if ( $title->getNamespace() !== SMW_NS_PROPERTY ) {
+				list( $label, $value ) = $value;
+			}
+
+			$property = SMW\DIProperty::newFromUserLabel( $label );
+			$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, $value, $valueCaption );
+			$semanticData->addDataValue( $dataValue );
+		}
+	}
+
+	/**
+	 * @see includes/api/ApiBase.php
+	 * @param User $user
+	 * @param Title $title
+	 * @return bool
+	 */
+	public static function checkWritePermissions( $user, $title ) {
+		$actions = [ 'edit' ];
+		if ( !$title->exists() ) {
+			$actions[] = 'create';
+		}
+
+		if ( class_exists( 'MediaWiki\Permissions\PermissionStatus' ) ) {
+			$status = new MediaWiki\Permissions\PermissionStatus();
+			foreach ( $actions as $action ) {
+				$user->authorizeWrite( $action, $title, $status );
+			}
+			if ( !$status->isGood() ) {
+				return false;
+			}
+			return true;
+		}
+
+		$PermissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		$errors = [];
+		foreach ( $actions as $action ) {
+			$errors = array_merge(
+				$errors,
+				$PermissionManager->getPermissionErrors( $action, $user, $title )
+			);
+		}
+
+		return ( count( $errors ) === 0 );
+	}
+
+	/**
+	 * @param User $user
+	 * @param Title $title
+	 * @param array $obj
+	 * @param bool $doNullEdit
+	 * @return null|bool
+	 */
+	public static function setPageProperties( $user, $title, $obj, $doNullEdit = true ) {
+		$canWrite = self::checkWritePermissions( $user, $title );
+
+		if ( !$canWrite ) {
+			return false;
+		}
+
+		if ( !empty( $obj['semantic_properties'] ) ) {
+			foreach ( $obj['semantic_properties'] as $key => $val ) {
+				if ( empty( $val[1] ) ) {
+					unset( $obj['semantic_properties'][$key] );
+				}
+			}
+		}
+
+		// unset page properties,
+		// this will remove the related slot
+		if ( !defined( 'SMW_VERSION' ) || $title->getNamespace() !== SMW_NS_PROPERTY ) {
+			if ( !array_key_exists( 'display_title', $obj['page_properties'] )
+					&& empty( $obj['semantic_properties'] )
+					&& empty( $obj['SEO']['meta'] ) ) {
+				$obj = [];
+			}
+		} else {
+			if ( empty( $obj['semantic_properties'] ) ) {
+				$obj = [];
+			}
+		}
+		// previous solution:
+		// cache will be unset through the hook onPageSaveComplete
+		$edit_summary = "PageProperties update";
+		$wikiPage = self::getWikiPage( $title );
+
+		// new solution: update cache
+		// $title->getArticleID();
+		$key = $title->getFullText();
+		self::$cached_page_properties[ $key ] = $obj;
+
+		return WSSlotsPageProperties::editSlot( $user, $wikiPage, json_encode( $obj ), SLOT_ROLE_PAGEPROPERTIES, $edit_summary, false, '', $doNullEdit );
 	}
 
 	/**
@@ -213,130 +408,20 @@ class PageProperties {
 	 * @return array
 	 */
 	private static function getMergedMetas( $title ) {
-		$page_ancestors = \PagePropertiesFunctions::page_ancestors( $title, false );
+		$page_ancestors = self::page_ancestors( $title, false );
 
 		$output = [];
-
 		foreach ( $page_ancestors as $title_ ) {
+			$page_properties_ = self::getPageProperties( $title_ );
 
-			$page_properties_ = self::getPageProperties( $title_->getArticleID() );
-
-			if ( !empty( $page_properties_ ) && ( !empty( $page_properties_['meta_subpages'] ) || $title_->getArticleID() == $title->getArticleID() ) && !empty( $page_properties_['meta'] ) ) {
-				$output = array_merge( $output, $page_properties_['meta'] );
+			if ( !empty( $page_properties_ )
+				 && ( !empty( $page_properties_['SEO']['subpages'] ) || $title_->getArticleID() == $title->getArticleID() )
+				 && !empty( $page_properties_['SEO']['meta'] ) ) {
+				$output = array_merge( $output, $page_properties_['SEO']['meta'] );
 			}
-
 		}
 
 		return $output;
-	}
-
-	public static function BeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
-		global $wgSitename;
-
-		$title = $outputPage->getTitle();
-
-		if ( $outputPage->isArticle() && $title->isKnown() ) {
-
-			// display JSON-LD from RDF
-			if ( class_exists( '\EasyRdf\Graph' ) && class_exists( '\ML\JsonLD\JsonLD' ) ) {
-
-				// @todo use directly the function makeExportDataForSubject
-				// SemanticMediawiki/includes/export/SMW_Exporter.php
-				$export_rdf = SpecialPage::getTitleFor( 'ExportRDF' );
-				if ( $export_rdf->isKnown() ) {
-					$export_url = $export_rdf->getFullURL( [ 'page' => $title->getFullText(), 'recursive' => '1', 'backlinks' => 0 ] );
-					$foaf = new \EasyRdf\Graph( $export_url );
-					$foaf->load();
-
-					$format = \EasyRdf\Format::getFormat( 'jsonld' );
-
-					$output = $foaf->serialise( $format, [
-						// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
-						// this will convert
-						// [{"@value":"a"},{"@value":"b"}]
-						// to ["a", "b"]
-						'compact' => true,
-					] );
-
-					// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
-					if ( is_scalar( $output ) ) {
-						$outputPage->addHeadItem( 'json-ld', Html::Element(
-								'script', [ 'type' => 'application/ld+json' ], $output
-							)
-						);
-					}
-				}
-			}
-
-			$meta = [];
-
-			$mainPage = Title::newMainPage();
-
-			if ( $mainPage->getText() != $title->getText() ) {
-				$page_properties = self::getPageProperties( null, [ 'meta_entire_site' => 1 ] );
-
-				if ( !empty( $page_properties['meta'] ) ) {
-					$meta = $page_properties['meta'];
-				}
-
-			}
-
-			$meta = array_merge( $meta, self::getMergedMetas( $title ) );
-
-			if ( !empty( $meta ) ) {
-
-				$meta_underscored = [];
-				array_walk( $meta, static function ( $value, $key ) use( &$meta_underscored ) {
-					$meta_underscored[ str_replace( ' ', '_', $key ) ] = $value;
-				} );
-
-				if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
-					$seo = new MediaWiki\Extension\WikiSEO\WikiSEO();
-					$seo->setMetadata( $meta_underscored );
-					$seo->addMetadataToPage( $outputPage );
-
-				} else {
-					self::addMetaToPage( $outputPage, $meta_underscored );
-				}
-			}
-
-			$page_title = self::getDisplayTitle( $title );
-
-			$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
-
-			if ( $html_title_already_set ) {
-				$html_title = $outputPage->getHtmlTitle();
-			}
-
-			// can be different from the html title
-			$outputPage->setPageTitle( $page_title );
-
-			if ( $html_title_already_set ) {
-				$outputPage->setHtmlTitle( $html_title );
-			}
-
-			// page_title can be null
-			if ( empty( $page_title ) ) {
-				$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; }</style>' );
-			}
-
-			if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
-
-				$html_title = '';
-
-				if ( $wgSitename != $title->getText() ) {
-					$html_title = $title->getText() . ' - ';
-				}
-
-				$html_title .= $wgSitename;
-
-				$outputPage->setHTMLTitle( $html_title );
-
-			} elseif ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
-				$outputPage->setHTMLTitle( $meta[ 'title' ] );
-			}
-
-		}
 	}
 
 	/**
@@ -353,156 +438,18 @@ class PageProperties {
 		}
 
 		foreach ( $meta as $k => $v ) {
-
 			if ( strpos( $k, 'hreflang' ) !== false ) {
-
-				$outputPage->addHeadItem(
-					$k, Html::element(
-						'link', [
-							'rel' => 'alternate',
-							'href' => $v,
-							'hreflang' => substr( $k, 9 ),
-						]
-					)
-
-				);
-
+				$outputPage->addHeadItem( $k, Html::element( 'link', [ 'rel' => 'alternate', 'href' => $v, 'hreflang' => substr( $k, 9 ) ] ) );
 				continue;
-
 			}
 
 			if ( strpos( $k, ':' ) === false ) {
-
 				if ( !array_key_exists( $k, $outputMeta ) ) {
 					$outputPage->addMeta( $k, $v );
 				}
 
 			} else {
-
-				$outputPage->addHeadItem( $k, Html::element(
-						'meta', [ 'property' => $k, 'content'  => $url ]
-					)
-				);
-
-			}
-
-		}
-	}
-
-	/**
-	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
-	 * @param LinkRenderer $linkRenderer the LinkRenderer object
-	 * @param LinkTarget $target the LinkTarget that the link is pointing to
-	 * @param string|HtmlArmor &$text the contents that the <a> tag should have
-	 * @param array &$extraAttribs the HTML attributes that the <a> tag should have
-	 * @param string &$query the query string to add to the generated URL
-	 * @param string &$ret the value to return if the hook returns false
-	 */
-	public static function onHtmlPageLinkRendererBegin(
-		LinkRenderer $linkRenderer,
-		LinkTarget $target,
-		&$text,
-		&$extraAttribs,
-		&$query,
-		&$ret
-	) {
-		// Do not use DisplayTitle if current page is defined in $wgDisplayTitleExcludes
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$request = $config->get( 'Request' );
-		$title = $request->getVal( 'title' );
-
-		// ***edited
-		if ( isset( $GLOBALS['wgDisplayTitleExcludes'] ) && in_array( $title, $GLOBALS['wgDisplayTitleExcludes'] ) ) {
-			return;
-		}
-
-		// ***edited
-		// show standard title in special pages
-		$title_obj = Title::newFromText( $title );
-
-		if ( $title_obj && $title_obj->getNamespace() != NS_MAIN ) {
-			return;
-		}
-
-		$title = Title::newFromLinkTarget( $target );
-		self::handleLink( $title, $text, true );
-	}
-
-	/**
-	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
-	 * @param Title $nt the Title object of the page
-	 * @param string &$html the HTML of the link text
-	 * @param string &$trail Text after link
-	 * @param string &$prefix Text before link
-	 * @param string &$ret the value to return if the hook returns false
-	 */
-	public static function onSelfLinkBegin(
-		Title $nt,
-		&$html,
-		&$trail,
-		&$prefix,
-		&$ret
-	) {
-		// Do not use DisplayTitle if current page is defined in $wgDisplayTitleExcludes
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		$request = $config->get( 'Request' );
-		$title = $request->getVal( 'title' );
-		if ( in_array( $title, $GLOBALS['wgDisplayTitleExcludes'] ) ) {
-			return;
-		}
-
-		self::handleLink( $nt, $html, false );
-	}
-
-	/**
-	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/DisplayTitle/+/refs/heads/REL1_36/includes/DisplayTitleHooks.php
-	 * @param Title $target the Title object that the link is pointing to
-	 * @param string|HtmlArmor &$html the HTML of the link text
-	 * @param bool $wrap whether to wrap result in HtmlArmor
-	 */
-	private static function handleLink( Title $target, &$html, $wrap ) {
-		$customized = false;
-
-		if ( isset( $html ) ) {
-			$title = null;
-			$text = null;
-			if ( is_string( $html ) ) {
-				$text = str_replace( '_', ' ', $html );
-			} elseif ( is_int( $html ) ) {
-				$text = (string)$html;
-			} elseif ( $html instanceof HtmlArmor ) {
-				$text = str_replace( '_', ' ', HtmlArmor::getHtml( $html ) );
-			}
-
-			// handle named Semantic MediaWiki subobjects (see T275984)
-			// by removing trailing fragment
-			$fragment = $target->getFragment();
-			if ( $fragment != '' ) {
-				$fragment = '#' . $fragment;
-				$fraglen = strlen( $fragment );
-				if ( strrpos( $text, $fragment ) == strlen( $text ) - $fraglen ) {
-					$text = substr( $text, 0, 0 - $fraglen );
-					if ( $wrap ) {
-						$html = new HtmlArmor( $text );
-					}
-				}
-			}
-
-			$customized = ( $text !== null
-				&& $text != $target->getPrefixedText()
-				&& $text != $target->getText()
-			);
-		}
-
-		if ( !$customized ) {
-			$html_ = self::getDisplayTitle( $target );
-
-			if ( !empty( $html_ ) ) {
-				$html = $html_;
-
-				if ( $wrap ) {
-					$html = new HtmlArmor( $html );
-				}
+				$outputPage->addHeadItem( $k, Html::element( 'meta', [ 'property' => $k, 'content'  => $url ] ) );
 			}
 		}
 	}
@@ -512,73 +459,58 @@ class PageProperties {
 	 * @return mixed
 	 */
 	public static function getDisplayTitle( $title ) {
-		$page_properties = self::getPageProperties( $title->getArticleID() );
-
+		$page_properties = self::getPageProperties( $title );
 		// display title can be null
-		if ( $page_properties !== false ) {
-			return $page_properties['display_title'];
+		if ( $page_properties !== false
+			&& !empty( $page_properties['page_properties'] )
+			&& array_key_exists( 'display_title', $page_properties['page_properties'] ) ) {
+				return $page_properties['page_properties']['display_title'];
 		}
-
-		return $title->getText();
+		return false;
 	}
 
 	/**
-	 * @param Title $title
-	 * @return mixed|null
+	 * @return void
 	 */
-	public static function shownTitle( $title ) {
-		return \PagePropertiesFunctions::array_last( explode( ",", $title->getText() ) );
-	}
-
 	public static function initSMW() {
 		if ( !defined( 'SMW_VERSION' ) ) {
 			return;
 		}
-
 		self::$SMWOptions = new \SMWRequestOptions();
 		self::$SMWOptions->limit = 500;
-		self::$SMWApplicationFactory = SMW\ApplicationFactory::getInstance();
 		self::$SMWStore = \SMW\StoreFactory::getStore();
 		self::$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
 	}
 
-	public static function getAnnotatedProperties( Title $title, $user ) {
-		$output = [];
-
+	/**
+	 * @param Title $title
+	 * @return void
+	 */
+	public static function getWikiPage( $title ) {
+		// MW 1.36+
 		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
-			// MW 1.36+
-			$page = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
-		} else {
-			$page = WikiPage::factory( $title );
+			return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 		}
-
-		$oldid = null;
-		$noCache = true;
-		$parserOutput = $page->getParserOutput( ParserOptions::newFromUser( $user ), $oldid, $noCache );
-
-		$parserData = self::$SMWApplicationFactory->newParserData( $title, $parserOutput );
-
-		$semanticData = $parserData->getSemanticData();
-
-		foreach ( $semanticData->getProperties() as $property ) {
-			$output[] = $property->getKey();
-		}
-
-		return $output;
+		return WikiPage::factory( $title );
 	}
 
-	public static function getUnusedProperties( Title $title ) {
+	/**
+	 * @return array
+	 */
+	public static function getUnusedProperties() {
 		$properties = self::$SMWStore->getUnusedPropertiesSpecial( self::$SMWOptions );
 
 		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
 			// SMW 1.9+
 			$properties = $properties->runCollector();
 		}
-
 		return $properties;
 	}
 
-	public static function getUsedProperties( Title $title ) {
+	/**
+	 * @return array
+	 */
+	public static function getUsedProperties() {
 		$properties = self::$SMWStore->getPropertiesSpecial( self::$SMWOptions );
 
 		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
@@ -591,135 +523,234 @@ class PageProperties {
 		}, $properties );
 	}
 
-	public static function getSpecialProperties( Title $title ) {
+	/**
+	 * @return array
+	 */
+	public static function getSpecialProperties() {
 		$properties = [];
-
 		$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
-
 		$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
 
 		foreach ( $propertyList as $key => $property ) {
-
 			if ( !array_key_exists( $key, $typeLabels ) ) {
 				$properties[] = new SMW\DIProperty( $key );
 			}
-
 		}
-
 		return $properties;
 	}
 
-	public static function getSemanticData( Title $title ) {
-		$subject = new SMW\DIWikiPage( $title, NS_MAIN );
+	/**
+	 * @param UserGroupManager $userGroupManager
+	 * @param User $user
+	 * @param bool $replace_asterisk
+	 * @return array
+	 */
+	public static function getUserGroups( $userGroupManager, $user, $replace_asterisk = false ) {
+		$user_groups = $userGroupManager->getUserEffectiveGroups( $user );
 
-		$semanticData = self::$SMWStore->getSemanticData( $subject );
+		if ( array_search( '*', $user_groups ) === false ) {
+			$user_groups[] = '*';
+		}
 
+		if ( $replace_asterisk ) {
+			$key = array_search( '*', $user_groups );
+			$user_groups[ $key ] = 'all';
+		}
+
+		return $user_groups;
+	}
+
+	/**
+	 * @param User $user
+	 * @param Title $title
+	 * @param string $scope
+	 * @return bool|int|void
+	 */
+	public static function isAuthorized( $user, $title, $scope ) {
+		$authorized = ( array_key_exists( '$wgPagePropertiesAuthorized' . $scope, $GLOBALS ) ? $GLOBALS[ '$wgPagePropertiesAuthorized' . $scope ] : null );
+
+		if ( empty( $authorized ) ) {
+			$authorized = [];
+		}
+
+		if ( !is_array( $authorized ) ) {
+			$authorized = preg_split( "/\s*,\s*/", $authorized, -1, PREG_SPLIT_NO_EMPTY );
+		}
+
+		$allowed_groups = [ 'sysop' ];
+		$authorized = array_unique( array_merge( $authorized, [ 'sysop' ] ) );
+
+		$userGroupManager = ( self::$userGroupManager ?? MediaWikiServices::getInstance()->getUserGroupManager() );
+
+		// ***the following avoids that an user
+		// impersonates a group through the username
+		$all_groups = array_merge( $userGroupManager->listAllGroups(), $userGroupManager->listAllImplicitGroups() );
+
+		$authorized_users = array_diff( $authorized, $all_groups );
+		$authorized_groups = array_intersect( $authorized, $all_groups );
+
+		$user_groups = self::getUserGroups( $userGroupManager, $user );
+
+		$isAuthorized = count( array_intersect( $authorized_groups, $user_groups ) );
+
+		if ( !$isAuthorized ) {
+			$isAuthorized = in_array( $user->getName(), $authorized_users );
+		}
+
+		if ( !$isAuthorized && $title && class_exists( 'PageOwnership' ) ) {
+			list( $role, $permissions ) = \PageOwnership::permissionsOfPage( $title, $user );
+
+			if ( ( $role == 'editor' || $role == 'admin' ) && in_array( 'manage properties', $permissions ) ) {
+				return true;
+			}
+		}
+
+		return $isAuthorized;
+	}
+
+	/**
+	 * @param Title $title
+	 * @param bool $exclude_current
+	 * @return array
+	 */
+	public static function page_ancestors( $title, $exclude_current = true ) {
 		$output = [];
 
-		foreach ( $semanticData->getProperties() as $property ) {
-																																										$key = $property->getKey();
-			if ( in_array( $key, self::$exclude ) ) {
-				continue;
-			}
+		$title_parts = explode( '/', $title->getText() );
 
-			$propertyDv = self::$SMWDataValueFactory->newDataValueByItem( $property, null );
+		if ( $exclude_current ) {
+			array_pop( $title_parts );
+		}
 
-			if ( !$property->isUserAnnotable() || !$propertyDv->isVisible() ) {
-				continue;
-			}
+		$path = [];
 
-			foreach ( $semanticData->getPropertyValues( $property ) as $dataItem ) {
+		foreach ( $title_parts as $value ) {
+			$path[] = $value;
+			$title_text = implode( '/', $path );
 
-				if ( $key !== '_ATTCH_LINK' ) {
+			if ( $title->getText() == $title_text ) {
+				$output[] = $title;
 
-					$dataValue = self::$SMWDataValueFactory->newDataValueByItem( $dataItem, $property );
-
-					if ( $dataValue->isValid() ) {
-
-						$dataValue->setOption( 'no.text.transformation', true );
-						$dataValue->setOption( 'form/short', true );
-
-						$output[] = [ $key, $dataValue->getWikiValue() ];
-						// . $dataValue->getInfolinkText( SMW_OUTPUT_WIKI );
-
-					}
-
+			} else {
+				$title_ = Title::newFromText( $title_text );
+				if ( $title_->isKnown() ) {
+					$output[] = $title_;
 				}
-
 			}
-
 		}
 
 		return $output;
 	}
 
 	/**
-	 * The function onSMWStoreBeforeDataUpdateComplete will be called.
-	 *
-	 * @param Title $title
+	 * @param array $array
+	 * @return string|null
 	 */
-	public static function rebuildSemanticData( Title $title ) {
-		if ( !defined( 'SMW_VERSION' ) ) {
-			return;
-		}
-
-		$store = \SMW\StoreFactory::getStore();
-		$store->setOption( \SMW\Store::OPT_CREATE_UPDATE_JOB, false );
-
-		$rebuilder = new \SMW\Maintenance\DataRebuilder(
-			$store,
-			self::$SMWApplicationFactory->newTitleFactory()
-		);
-
-		$rebuilder->setOptions(
-			// Tell SMW to only rebuild the current page
-			new \SMW\Options( [ 'page' => $title ] )
-		);
-
-		$rebuilder->rebuild();
+	public static function array_last( $array ) {
+		return ( count( $array ) ? $array[ array_key_last( $array ) ] : null );
 	}
 
-	public static function onSMWStoreBeforeDataUpdateComplete( $store, $semanticData ) {
-		$subject = $semanticData->getSubject();
+	/**
+	 * @see specials/SpecialPrefixindex.php -> showPrefixChunk
+	 * @param string $prefix
+	 * @param int $namespace
+	 * @return array
+	 */
+	public static function getPagesWithPrefix( $prefix, $namespace = NS_MAIN ) {
+		$dbr = wfGetDB( DB_REPLICA );
 
-		$title = $subject->getTitle();
+		$conds = [
+			'page_namespace' => $namespace,
+			'page_is_redirect' => 0,
+			'page_title' . $dbr->buildLike( $prefix, $dbr->anyString() )
+		];
 
-		$page_properties = self::getPageProperties( $title->getArticleID() );
-
-		if ( empty( $page_properties['properties'] ) ) {
-			return;
-		}
-
-		$properties = json_decode( $page_properties['properties'] );
-
-		$valueCaption = false;
-
-		$annotationProcessor = new \SMW\Parser\AnnotationProcessor(
-			$semanticData,
-			self::$SMWDataValueFactory
+		$res = $dbr->select(
+			'page',
+			[ 'page_namespace', 'page_title' ],
+			$conds,
+			__METHOD__,
+			[
+				// see here https://doc.wikimedia.org/mediawiki-core/
+				'USE INDEX' => ( version_compare( MW_VERSION, '1.36', '<' ) ? 'name_title' : 'page_name_title' ),
+			]
 		);
 
-		// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
-		foreach ( $properties as $val ) {
-
-			list( $property, $value ) = $val;
-
-			$dataValue = $annotationProcessor->newDataValueByText(
-				$property,
-				$value,
-				$valueCaption,
-				$subject
-			);
-
-			$semanticData->addDataValue( $dataValue );
-
-			// print_r($semanticData->getErrors());
-
+		if ( !$res->numRows() ) {
+			return [];
 		}
 
-		return true;
+		$ret = [];
+
+		foreach ( $res as $row ) {
+			$title = Title::newFromRow( $row );
+
+			if ( !$title->isKnown() ) {
+				continue;
+			}
+
+			$ret[] = $title;
+		}
+
+		return $ret;
 	}
 
+	/**
+	 * @see api/ApiMove.php => MovePage
+	 * @param User $user
+	 * @param Title $from
+	 * @param Title $to
+	 * @param string|null $reason
+	 * @param bool $createRedirect
+	 * @param array $changeTags
+	 * @return Status
+	 */
+	public static function movePage( $user, Title $from, Title $to, $reason = null, $createRedirect = false, $changeTags = [] ) {
+		$movePageFactory = MediaWikiServices::getInstance()->getMovePageFactory();
+		$mp = $movePageFactory->newMovePage( $from, $to );
+		$valid = $mp->isValidMove();
+
+		if ( !$valid->isOK() ) {
+			return $valid;
+		}
+		// ***edited
+		$permStatus = $mp->authorizeMove( $user, $reason );
+
+		if ( !$permStatus->isOK() ) {
+			return $permStatus;
+		}
+
+		// Check suppressredirect permission
+		//if ( !$this->getAuthority()->isAllowed( 'suppressredirect' ) ) {
+		//	$createRedirect = true;
+		//}
+
+		// ***edited
+		$status = $mp->move( $user, $reason, $createRedirect, $changeTags );
+
+		if ( $status->isOK() ) {
+			// update cache
+			if ( array_key_exists( $from->getFullText(), self::$cached_page_properties ) ) {
+				self::$cached_page_properties[ $to->getFullText() ] = self::$cached_page_properties[ $from->getFullText() ];
+				unset( self::$cached_page_properties[ $from->getFullText() ] );
+			}
+		}
+
+		return $status;
+	}
+
+	/**
+	 * @param Wikipage $wikipage
+	 * @param User $user
+	 * @param string $reason
+	 * @return void
+	 */
+	public static function deletePage( $wikipage, $user, $reason ) {
+		if ( version_compare( MW_VERSION, '1.35', '<' ) ) {
+			$error = '';
+			$wikipage->doDeleteArticle( $reason, false, null, null, $error, $user );
+		} else {
+			$wikipage->doDeleteArticleReal( $reason, $user );
+		}
+	}
 }
-
-PageProperties::__constructStatic();

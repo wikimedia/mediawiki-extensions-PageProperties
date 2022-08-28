@@ -23,7 +23,6 @@
  */
 
 class OOUIHTMLFormTabs extends OOUIHTMLForm {
-
 	protected $html_fragments = [];
 
 	/**
@@ -32,20 +31,15 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	 */
 	public function __construct( $descriptor, $context = null, $messagePrefix = '' ) {
 		// ***edited
-
 		$symbols = [ 'append_html', 'prepend_html' ];
 
 		foreach ( $descriptor as $key => $value ) {
-
 			foreach ( $symbols as $symbol ) {
-
 				if ( !empty( $value[$symbol] ) ) {
 					$this->html_fragments[$value['section']][$key][$symbol] = $value[$symbol];
 					unset( $value[$symbol] );
 				}
-
 			}
-
 		}
 
 		parent::__construct( $descriptor, $context, $messagePrefix );
@@ -58,6 +52,16 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	 * @return string
 	 */
 	function getBody() {
+		if ( count( $this->mFieldTree ) == 1 ) {
+			$key = key( $this->mFieldTree );
+			$val = reset( $this->mFieldTree );
+			$html = $this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->parse()
+				. $this->displaySection( $val, $key, "mw-prefsection-$key-" )
+				. $this->getFooterText( $key );
+
+			return $this->formatFormHeader() . $html;
+		}
+
 		$tabPanels = [];
 		foreach ( $this->mFieldTree as $key => $val ) {
 			if ( !is_array( $val ) ) {
@@ -65,11 +69,10 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				continue;
 			}
 			$label = $this->getLegend( $key );
-
 			$content =
 				// ***edited
 				// $this->getHeaderText( $key ) .
-				$this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->text()
+				$this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->parse()
 					. $this->displaySection(
 						$val,
 						// ***edited
@@ -161,7 +164,6 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 		$n = 0;
 		foreach ( $fields as $key => $value ) {
-
 			if ( $value instanceof HTMLFormField ) {
 				$v = array_key_exists( $key, $this->mFieldData ) ? $this->mFieldData[$key] : $value->getDefault();
 
@@ -172,7 +174,6 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				if ( $value->hasVisibleOutput() ) {
 
 					// ***edited
-
 					if ( !empty( $this->html_fragments[$sectionName][$key]['append_html'] ) ) {
 						$retval = $retval . $this->html_fragments[$sectionName][$key]['append_html'];
 					}
@@ -196,7 +197,10 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				$subsectionHasVisibleFields = false;
 				$section = $this->displaySection(
 					$value,
-					"mw-htmlform-$key",
+
+					// ***edited
+					// "mw-htmlform-$key",
+					"$sectionName/$key",
 					"$fieldsetIDPrefix$key-",
 					$subsectionHasVisibleFields
 				);
@@ -207,7 +211,6 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 					$hasUserVisibleFields = true;
 
 					$legend = $this->getLegend( $key );
-
 					$section = $this->getHeaderText( $key )
 						. $section
 						. $this->getFooterText( $key );

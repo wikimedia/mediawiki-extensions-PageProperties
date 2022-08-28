@@ -2,6 +2,22 @@
 	"@metadata": {
 		"authors": []
 	},
+
+	"pageproperties-label": "A label message",
+	"specialpages-group-": "A label message",
+	"pageproperties-inner-section": "A label message",
+	"properties-navigation": "A label message",
+	"pageproperties-form-section-semantic-manage-properties-label": "A label message",
+	"pageproperties-js-alert-2": "A label message",
+	"pageproperties-tracking-category": "A label message",
+	"pageproperties-form-seo_entire_wiki-label": "A label message",
+	"pageproperties-form-seo_entire_wiki-help": "A label message",
+	"pageproperties-form-seo_subpages-label": "A label message",
+	"pageproperties-form-seo_subpages-help_": "A label message",
+	"pageproperties_form-displaytitle-option-default": "A label message",
+	"pageproperties_form-displaytitle-option-override": "A label message",
+	"pageproperties-js-alert-1": "A label message",
+
 	"pageproperties": "The name of the extension",
 	"pageproperties-extension-desc": "{{desc|name=PageProperties|url=https://www.mediawiki.org/wiki/Extension:PageProperties}}",
 	"pageproperties-form-fieldset-language": "A label message",
@@ -14,9 +30,6 @@
 
 	"pageproperties-form-meta_googlebot_notranslate-label": "A label message",
 	"pageproperties_dynamictable_addfield": "A label message",
-
-	"pageproperties-form-meta_entire_wiki-label": "A label message",
-	"pageproperties-form-meta_entire_wiki-help": "A label message",
 
 	"pageproperties-form-access-label": "A label message",
 	"pageproperties-form-publish_as-label": "A label message",
@@ -37,8 +50,6 @@
 	"pageproperties-form-meta_robots-label": "A label message",
 	"pageproperties-form-meta_robots-help": "A label message",
 
-	"pageproperties-form-meta_subpages-label": "A label message",
-	"pageproperties-form-meta_subpages-help_": "A label message",
 	"pageproperties-return": "A label message",
 
 	"pageproperties-form-section-main": "A label message",
@@ -56,6 +67,7 @@
 
 	"pageproperties-form-section-semantic-properties-label": "A label message",
 
-	"pageproperties-form-section-semantic-properties-label_": "A label message",
-	"pageproperties-form-section-semantic-properties": "A label message"
+	"pageproperties-form-section-semantic-properties": "A label message",
+
+	"pageproperties-form-section-semantic-manage-properties": "A label message"
 }

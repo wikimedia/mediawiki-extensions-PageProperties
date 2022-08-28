@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.0.3",
+	"version": "1.1.0",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -14,27 +14,40 @@
 			"i18n"
 		]
 	},
-	"callback": "PageProperties::initExtension",
+	"callback": "PagePropertiesHooks::initExtension",
 	"AutoloadClasses": {
 		"PageProperties": "includes/PageProperties.php",
-		"PagePropertiesFunctions": "includes/PagePropertiesFunctions.php",
-		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php"
+		"PagePropertiesHooks": "includes/PagePropertiesHooks.php",
+		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
+		"PagePropertiesJob": "includes/specials/PagePropertiesJob.php"
 	},
 	"ExtensionMessagesFiles": {
 		"PagePropertiesAlias": "PageProperties.alias.php",
 		"PagePropertiesMagic": "PagePropertiesMagic.i18n.magic.php"
 	},
 	"Hooks": {
-		"LoadExtensionSchemaUpdates": "PageProperties::onLoadExtensionSchemaUpdates",
-		"BeforePageDisplay": "PageProperties::BeforePageDisplay",
-		"SkinTemplateNavigation::Universal": "PageProperties::onSkinTemplateNavigation",
-		"HtmlPageLinkRendererBegin": "PageProperties::onHtmlPageLinkRendererBegin",
-		"SelfLinkBegin": "PageProperties::onSelfLinkBegin",
-		"SMW::Store::BeforeDataUpdateComplete": "PageProperties::onSMWStoreBeforeDataUpdateComplete"
+		"BeforeInitialize": "PagePropertiesHooks::onBeforeInitialize",
+		"MediaWikiServices": "PagePropertiesHooks::onMediaWikiServices",
+		"MultiContentSave": "PagePropertiesHooks::onMultiContentSave",
+		"OutputPageParserOutput": "PagePropertiesHooks::onOutputPageParserOutput",
+		"EditPage::showEditForm:initial": "PagePropertiesHooks::onEditPageshowEditForminitial",
+		"ContentAlterParserOutput": "PagePropertiesHooks::onContentAlterParserOutput",
+		"ParserAfterTidy": "PagePropertiesHooks::onParserAfterTidy",
+		"BeforePageDisplay": "PagePropertiesHooks::onBeforePageDisplay",
+		"SkinBuildSidebar": "PagePropertiesHooks::onSkinBuildSidebar",
+		"SidebarBeforeOutput": "PagePropertiesHooks::onSidebarBeforeOutput",
+		"SkinTemplateNavigation::Universal": "PagePropertiesHooks::onSkinTemplateNavigation",
+		"SMW::Store::BeforeDataUpdateComplete": "PagePropertiesHooks::onSMWStoreBeforeDataUpdateComplete",
+		"LinkerMakeExternalLink": "PagePropertiesHooks::onLinkerMakeExternalLink"
 	},
 	"SpecialPages": {
 		"PageProperties": "SpecialPageProperties"
 	},
+	"JobClasses": {
+		"PageProperties": "PagePropertiesJob"
+	},
+	"namespaces": [
+	],
 	"ResourceModules": {
 		"ext.PageProperties": {
 			"position": "top",

@@ -2,3 +2,20 @@
 	/* stylelint-disable-next-line declaration-property-unit-disallowed-list */
 	width: 50%;
 }
+
+.pageproperties_dynamictable_row {
+	vertical-align: top;
+}
+
+.pageproperties_dynamictable_row .oo-ui-fieldLayout:before,
+.oo-ui-fieldLayout:after {
+	display: inline;
+}
+
+.oo-ui-comboBoxInputWidget-field {
+	border-spacing: 0;
+}
+
+.pageproperties_dynamictable td {
+	padding-top: 4px;
+}
