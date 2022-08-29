@@ -3,10 +3,14 @@
 		"authors": []
 	},
 
+	"pageproperties": "A label message",
+	"pageproperties-section": "A label message",
 	"pageproperties-label": "A label message",
+	"manageproperties-label": "A label messages",
 	"specialpages-group-": "A label message",
 	"pageproperties-inner-section": "A label message",
 	"properties-navigation": "A label message",
+
 	"pageproperties-form-section-semantic-manage-properties-label": "A label message",
 	"pageproperties-js-alert-2": "A label message",
 	"pageproperties-tracking-category": "A label message",
@@ -18,7 +22,6 @@
 	"pageproperties_form-displaytitle-option-override": "A label message",
 	"pageproperties-js-alert-1": "A label message",
 
-	"pageproperties": "The name of the extension",
 	"pageproperties-extension-desc": "{{desc|name=PageProperties|url=https://www.mediawiki.org/wiki/Extension:PageProperties}}",
 	"pageproperties-form-fieldset-language": "A label message",
 	"pageproperties-form-fieldset-publishing": "A label message",

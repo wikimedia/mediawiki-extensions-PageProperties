@@ -2,7 +2,22 @@
 	"@metadata": {
 		"authors": []
 	},
-	"pageproperties": "Page Properties",
+	"pageproperties": "Manage Properties",
+	"pageproperties-section": "Page Properties",
+	"pageproperties-label": "Page properties",
+	"manageproperties-label": "Manage properties",
+	"specialpages-group-": "Page Properties",
+	"pageproperties-inner-section": "&#8203;",
+	"properties-navigation": "Properties",
+
+	"pageproperties-form-section-semantic-manage-properties-label": "Here you can create, edit, remove and rename properties without to deal with property pages. Renamed properties already annotated will be automatically updated in all the pages which make use of them. To use the [https://schema.org/docs/full.html schema.org] vocabulary in your wiki add in [[MediaWiki:Smw_import_schema|this page]] a subset of the [https://www.semantic-mediawiki.org/wiki/MediaWiki:Smw_import_schema following list]. [https://www.semantic-mediawiki.org/wiki/Help:Import_vocabulary Check here] to find out more.<br /><br />",
+
+	"pageproperties-form-section-semantic-properties-label": "Here you can set semantic properties without having to manually annotate them on the page. Same properties can be used multiple times. Attention: the values of properties both manually annotated on the page or set through forms, and set here, will be merged together. To create/edit properties definition [[Special:PageProperties|go here]].<br /><br />",
+
+	"pageproperties-js-alert-2": "Submitting the form will delete stored semantic properties, continue?",
+
+	"pageproperties-tracking-category": "Pages with PageProperties",
+
 	"pageproperties-extension-desc": "Page Properties (Seitenattribute) ermöglicht es, Anzeigetitel, Sprache und Inhaltsmodell einer Seite einfach zu verändern. Darüber hinaus können semantische Attribute hinzugefügt werden (soferne Semantic MediaWiki installiert ist) und es können Meta Tags für Suchmaschinen für das ganze Wiki oder einzelne Seiten gesetzt werden.",
 
 	"pageproperties-form-fieldset-language": "Sprache",
@@ -53,8 +68,6 @@
 	"pageproperties-form-displaytitle-help": "kann leer bleiben",
 
 	"pageproperties-form-model-label": "Inhaltsmodell",
-
-	"pageproperties-form-section-semantic-properties-label": "Hier können alle semantischen Attribute gesetzt werden, die nicht bereits auf der Seite annotiert wurden. (Alle bereits auf der Seite händisch oder über eine Vorlage gesetzten, haben Vorrang vor den hier gesetzten, um Inkonsistenzen zu vermeiden.) Das \"vordefinierte\" Auswahlfeld enthält alle erlaubten <a target=\"_blank\" href=\"https://www.semantic-mediawiki.org/wiki/Help:Special_properties/annotable\">annotierbaren Spezialattribute</a>. Gleiche Attribute können mehrfach verwendet werden.<br><br>",
 
 	"pageproperties-form-section-semantic-properties-label_": "Hier können semantische Attribute gesetzt werden, ohne dass man diese händisch auf der Seite annotieren, oder über Formulare oder Vorlagen definieren muss. Achtung: Attribute, die hier gesetzt werden, überschreiben Werte derselben Attribute, die über Formulare oder Annotationen gesetzt wurden!",
 	"pageproperties-form-section-semantic-properties": "Semantische Attribute"

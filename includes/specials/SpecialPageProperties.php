@@ -136,6 +136,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		$context->getOutput()->enableOOUI();
 
 		if ( $title ) {
+			$out->setPageTitle( $this->msg( 'pageproperties-section' )->text() );
 			$this->getFormValues();
 		}
 

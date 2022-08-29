@@ -2,8 +2,10 @@
 	"@metadata": {
 		"authors": []
 	},
-	"pageproperties": "Manage properties",
+	"pageproperties": "Manage Properties",
+	"pageproperties-section": "Page Properties",
 	"pageproperties-label": "Page properties",
+	"manageproperties-label": "Manage properties",
 	"specialpages-group-": "Page Properties",
 	"pageproperties-inner-section": "",
 	"properties-navigation": "Properties",

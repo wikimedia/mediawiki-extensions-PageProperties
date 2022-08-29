@@ -223,8 +223,8 @@ class PagePropertiesHooks {
 
 		$isAuthorized = \PageProperties::isAuthorized( $user, null, 'Admins' );
 		if ( $isAuthorized ) {
-			$bar[ wfMessage( 'pageproperties-label' )->text() ][] = [
-				'text'   => wfMessage( 'pageproperties' )->text(),
+			$bar[ wfMessage( 'pageproperties-section' )->text() ][] = [
+				'text'   => wfMessage( 'manageproperties-label' )->text(),
 				'href'   => $specialpage_title->getLocalURL()
 			];
 		}
@@ -243,7 +243,7 @@ class PagePropertiesHooks {
 			$isAuthorized = \PageProperties::isAuthorized( $user, null, 'Editors' );
 
 			if ( $isAuthorized ) {
-				$bar[ wfMessage( 'pageproperties-label' )->text() ][] = [
+				$bar[ wfMessage( 'pageproperties-section' )->text() ][] = [
 					'text'   => wfMessage( 'pageproperties-label' )->text(),
 					'href'   => $specialpage = $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
 				];
