@@ -1458,6 +1458,7 @@ class SpecialPageProperties extends FormSpecialPage {
 			}
 		}
 
+		$user_id = $this->user->getId();
 		if ( count( $update_pages ) ) {
 			$jobs = [];
 			foreach ( $update_pages as $title_text => $values ) {
