@@ -118,14 +118,13 @@ class PagePropertiesHooks {
 			if ( !$revision ) {
 				return;
 			}
-			self::$SlotsParserOutput[ $key ] = [];
 
 			$slots = $revision->getSlots()->getSlots();
 			if ( !array_key_exists( SLOT_ROLE_PAGEPROPERTIES, $slots ) ) {
 				return;
 			}
 
-			self::$SlotsParserOutput[ $key ]['content'] = $revision->getSlots()->getContent( SLOT_ROLE_PAGEPROPERTIES );
+			self::$SlotsParserOutput[ $key ] = [ 'content' => $revision->getSlots()->getContent( SLOT_ROLE_PAGEPROPERTIES ) ];
 		}
 
 		if ( !array_key_exists( 'content', self::$SlotsParserOutput[$key] ) ) {
