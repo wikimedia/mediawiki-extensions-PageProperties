@@ -396,7 +396,7 @@ $( document ).ready( function () {
 	$( '#pageproperties-form' ).submit( function () {
 		var $input = $( 'input[name=confirm_delete_semantic_properties]' );
 
-		if ( $input.get( 0 ) && $input.val() === 1 ) {
+		if ( $input.get( 0 ) && $input.val() === '1' ) {
 			// eslint-disable-next-line no-alert
 			if ( !confirm( msg2 ) ) {
 				return false;
