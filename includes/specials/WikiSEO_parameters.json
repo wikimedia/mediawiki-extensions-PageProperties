@@ -3,39 +3,29 @@
 	"title": "title",
 	"title mode": "title mode",
 	"title separator": "title separator",
-	"Metatag generator": {
-		"robots": "robots",
-		"googlebot": "googlebot",
-		"hreflang xx-xx": "hreflang xx-xx"
-	},
-	"OpenGraph / Twitter generator": {
-		"type": "type",
-		"image": "image",
-		"image width": "image width",
-		"image height": "image height",
-		"image alt": "image alt",
-		"locale": "locale",
-		"site name": "site name"
-	},
-	"OpenGraph with type article": {
-		"author": "author",
-		"section": "section",
-		"published time": "published time"
-	},
-	"Twitter generator": {
-		"twitter site": "twitter site"
-	},
-	"Citation generator": {
-		"citation type": "citation type",
-		"citation name": "citation name",
-		"citation headline": "citation headline",
-		"citation date published": "citation date published",
-		"citation date created": "citation date created",
-		"citation page start": "citation page start",
-		"citation doi": "citation doi",
-		"citation author": "citation author",
-		"citation publisher": "citation publisher",
-		"citation license": "citation license",
-		"citation volume": "citation volume"
-	}
+	"Metatag generator:robots": "robots",
+	"Metatag generator:googlebot": "googlebot",
+	"Metatag generator:hreflang xx-xx": "hreflang xx-xx",
+	"OpenGraph / Twitter generator:type": "type",
+	"OpenGraph / Twitter generator:image": "image",
+	"OpenGraph / Twitter generator:image width": "image width",
+	"OpenGraph / Twitter generator:image height": "image height",
+	"OpenGraph / Twitter generator:image alt": "image alt",
+	"OpenGraph / Twitter generator:locale": "locale",
+	"OpenGraph / Twitter generator:site name": "site name",
+	"OpenGraph with type article:author": "author",
+	"OpenGraph with type article:section": "section",
+	"OpenGraph with type article:published time": "published time",
+	"Twitter generator:twitter site": "twitter site",
+	"Citation generator:citation type": "citation type",
+	"Citation generator:citation name": "citation name",
+	"Citation generator:citation headline": "citation headline",
+	"Citation generator:citation date published": "citation date published",
+	"Citation generator:citation date created": "citation date created",
+	"Citation generator:citation page start": "citation page start",
+	"Citation generator:citation doi": "citation doi",
+	"Citation generator:citation author": "citation author",
+	"Citation generator:citation publisher": "citation publisher",
+	"Citation generator:citation license": "citation license",
+	"Citation generator:citation volume": "citation volume"
 }
