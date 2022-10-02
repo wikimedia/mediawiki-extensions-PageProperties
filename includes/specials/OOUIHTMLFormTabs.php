@@ -1,20 +1,20 @@
 <?php
 
 /**
- * This file is part of the MediaWiki extension PageOwnership.
+ * This file is part of the MediaWiki extension PageProperties.
  *
- * PageOwnership is free software: you can redistribute it and/or modify
+ * PageProperties is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
  *
- * PageOwnership is distributed in the hope that it will be useful,
+ * PageProperties is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with PageOwnership.  If not, see <http://www.gnu.org/licenses/>.
+ * along with PageProperties.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
  * @ingroup extensions
@@ -132,6 +132,41 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	}
 
 	/**
+	 * @ see includes/specials/forms/PreferencesFormOOUI.php
+	 * @return string
+	 */
+	public function getButtons() {
+		// *** edited
+		// if ( !$this->areOptionsEditable() && !$this->isPrivateInfoEditable() ) {
+		//	return '';
+		// }
+
+		$html = parent::getButtons();
+
+		// *** edited
+		// if ( $this->areOptionsEditable() ) {
+		// ***set to true to enable sticky footer
+		// @phpcs:ignore Generic.CodeAnalysis.UnconditionalIfStatement.Found
+		if ( false ) {
+			$t = $this->getTitle()->getSubpage( 'reset' );
+
+			$html .= new OOUI\ButtonWidget( [
+				'infusable' => true,
+				'id' => 'mw-prefs-restoreprefs',
+				// *** edited
+				// 'label' => $this->msg( 'restoreprefs' )->text(),
+				'href' => $t->getLinkURL(),
+				'flags' => [ 'destructive' ],
+				'framed' => false,
+			] );
+
+			$html = Xml::tags( 'div', [ 'class' => 'mw-prefs-buttons' ], $html );
+		}
+
+		return $html;
+	}
+
+	/**
 	 * @see includes/htmlform/HTMLForm.php
 	 * @param array $fields
 	 * @param string $sectionName
@@ -167,21 +202,25 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 			if ( $value instanceof HTMLFormField ) {
 				$v = array_key_exists( $key, $this->mFieldData ) ? $this->mFieldData[$key] : $value->getDefault();
 
-				$retval = $value->$getFieldHtmlMethod( $v );
+				// ***edited
+				$retval = '';
+
+				if ( !empty( $this->html_fragments[$sectionName][$key]['prepend_html'] ) ) {
+					$retval = $this->html_fragments[$sectionName][$key]['prepend_html'];
+				}
 
 				// check, if the form field should be added to
 				// the output.
 				if ( $value->hasVisibleOutput() ) {
+					$retval .= (string)$value->$getFieldHtmlMethod( $v );
+				}
 
-					// ***edited
-					if ( !empty( $this->html_fragments[$sectionName][$key]['append_html'] ) ) {
-						$retval = $retval . $this->html_fragments[$sectionName][$key]['append_html'];
-					}
+				if ( !empty( $this->html_fragments[$sectionName][$key]['append_html'] ) ) {
+					$retval .= $this->html_fragments[$sectionName][$key]['append_html'];
+				}
 
-					if ( !empty( $this->html_fragments[$sectionName][$key]['prepend_html'] ) ) {
-						$retval = $this->html_fragments[$sectionName][$key]['prepend_html'] . $retval;
-					}
-
+				// ***edited
+				if ( !empty( $retval ) ) {
 					$html[] = $retval;
 
 					$labelValue = trim( $value->getLabel() );
@@ -193,6 +232,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 					$n++;
 				}
+
 			} elseif ( is_array( $value ) ) {
 				$subsectionHasVisibleFields = false;
 				$section = $this->displaySection(

@@ -14,14 +14,16 @@ module.exports = function ( grunt ) {
 			all: [
 				'**/*.{js,json}',
 				'!node_modules/**',
-				'!vendor/**'
+				'!vendor/**',
+				'!resources/datatables/**'
 			]
 		},
 		stylelint: {
 			all: [
 				'**/*.{css,less}',
 				'!node_modules/**',
-				'!vendor/**'
+				'!vendor/**',
+				'!resources/datatables/**'
 			]
 		},
 		banana: conf.MessagesDirs

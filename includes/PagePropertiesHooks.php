@@ -26,6 +26,7 @@ use MediaWiki\MediaWikiServices;
 
 define( 'SLOT_ROLE_PAGEPROPERTIES', 'pageproperties' );
 define( 'CONTENT_MODEL_PAGEPROPERTIES', 'json' );
+define( 'CONTENT_MODEL_PAGEPROPERTIES_HTML', 'html' );
 
 class PagePropertiesHooks {
 	/**
@@ -51,8 +52,20 @@ class PagePropertiesHooks {
 				: 'PermissionManager' )
 			]
 		];
+		// $GLOBALS['wgSpecialPages']['ManageProperties'] = [
+		// 	'class' => \SpecialManageProperties::class,
+		// 	'services' => [
+		// 		// MW 1.36+
+		// 		( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
+		// 		// ***whatever other class
+		// 		: 'PermissionManager' )
+		// 	]
+		// ];
+
 		// *** important! otherwise Page information (action=info) will display a wrong value
 		$GLOBALS['wgPageLanguageUseDB'] = true;
+		$GLOBALS['wgAllowDisplayTitle'] = true;
+		$GLOBALS['wgRestrictDisplayTitle'] = false;
 	}
 
 	/**
@@ -72,6 +85,55 @@ class PagePropertiesHooks {
 	}
 
 	/**
+	 * @see https://github.com/SemanticMediaWiki/SemanticMediaWiki/blob/master/docs/examples/hook.property.initproperties.md
+	 * @param SMW\PropertyRegistry $propertyRegistry
+	 * @return void
+	 */
+	public static function onSMWPropertyinitProperties( SMW\PropertyRegistry $propertyRegistry ) {
+		$defs = [
+			'__pageproperties_preferred_input' => [
+				'label' => 'Preferred input',
+				'type' => '_txt',
+				// MW message key
+				'alias' => 'pageproperties-property-preferred-input',
+				'viewable' => true,
+				'annotable' => true
+			],
+			'__pageproperties_allows_multiple_values' => [
+				'label' => 'Allows multiple values',
+				'type' => '_boo',
+				// MW message key
+				'alias' => 'pageproperties-property-allows-multiple-values',
+				'viewable' => true,
+				'annotable' => true
+			]
+		];
+
+		foreach ( $defs as $propertyId => $definition ) {
+			$propertyRegistry->registerProperty(
+				$propertyId,
+				$definition['type'],
+				$definition['label'],
+				$definition['viewable'],
+				$definition['annotable']
+			);
+
+			$propertyRegistry->registerPropertyAlias(
+				$propertyId,
+				wfMessage( $definition['alias'] )->text()
+			);
+
+			$propertyRegistry->registerPropertyAliasByMsgKey(
+				$propertyId,
+				$definition['alias']
+			);
+
+		}
+
+		return true;
+	}
+
+	/**
 	 * @param Title &$title
 	 * @param null $unused
 	 * @param OutputPage $output
@@ -82,6 +144,57 @@ class PagePropertiesHooks {
 	 */
 	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, \MediaWiki $mediaWiki ) {
 		\PageProperties::initialize();
+
+		if ( !empty( $GLOBALS['wgPagePropertiesShowSlotsNavigation'] ) && isset( $_GET['slot'] ) ) {
+			$slot = $_GET['slot'];
+			$slots = \PageProperties::getSlots( $title );
+
+			// set content model of active slot
+			$model = $slots[ $slot ]->getModel();
+			$title->setContentModel( $model );
+		}
+	}
+
+	/**
+	 * @param Content $content
+	 * @param Title $title
+	 * @param int $revId
+	 * @param ParserOptions $options
+	 * @param bool $generateHtml
+	 * @param ParserOutput &$output
+	 * @return void
+	 */
+	public static function onContentGetParserOutput( $content, $title, $revId, $options, $generateHtml, &$output ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesShowSlotsNavigation'] ) && isset( $_GET['slot'] ) ) {
+			$slot = $_GET['slot'];
+			$slots = \PageProperties::getSlots( $title );
+
+			$content = $slots[ $slot ]->getContent();
+			$model = $content->getModel();
+			$contentHandler = $content->getContentHandler();
+
+			// see includes/content/AbstractContent.php
+			$cpoParams = new MediaWiki\Content\Renderer\ContentParseParams( $title, $revId, $options, $generateHtml );
+			$contentHandler->fillParserOutputInternal( $content, $cpoParams, $output );
+
+			// this will prevent includes/content/AbstractContent.php
+			// fillParserOutput from running
+			return false;
+		}
+	}
+
+	/**
+	 * called before onPageSaveComplete
+	 * @see https://gerrit.wikimedia.org/g/mediawiki/core/+/master/includes/Storage/PageUpdater.php
+	 * @param WikiPage $wikiPage
+	 * @param MediaWiki\Revision\RevisionRecord $rev
+	 * @param int $originalRevId
+	 * @param User $user
+	 * @param array &$tags
+	 * @return void
+	 */
+	public static function onRevisionFromEditComplete( $wikiPage, $rev, $originalRevId, $user, &$tags ) {
+		\PageProperties::emptySlotsCache( $wikiPage->getTitle() );
 	}
 
 	/**
@@ -95,53 +208,42 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		// *** the following hack only seems necessary
-		// on 1.38/SMW 4.0.2, on versions 1.35 - 1.37 it could be reduced to the
-		// following
-		// $semanticData = $parserOutput->getExtensionData( \SMW\ParserData::DATA_ID );
-		//	if ( ( $semanticData instanceof \SMW\SemanticData ) ) {
-		//		// *** this creates an issue on move property page
-		//		\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
-		//		$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, $semanticData );
-		//	}
+		if ( !method_exists( ParserOutput::class, 'mergeMapStrategy' ) ) {
+			$semanticData = $parserOutput->getExtensionData( \SMW\ParserData::DATA_ID );
+			if ( ( $semanticData instanceof \SMW\SemanticData ) ) {
+				\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
+				$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, $semanticData );
+			}
+			return;
+		}
+
+		// *** this is an hack to prevent the error "Cannot use object of type SMW\SemanticData as array"
+			// includes/parser/ParserOutput.php(2297) function mergeMapStrategy
+			// includes/parser/ParserOutput.php(2163): ParserOutput::mergeMapStrategy()
+			// includes/Revision/RevisionRenderer.php(271): ParserOutput->mergeHtmlMetaDataFrom()
+			// includes/Revision/RevisionRenderer.php(158): MediaWiki\Revision\RevisionRenderer->combineSlotOutput()
+		// *** it is only necessary from 1.38 and higher versions
+		// *** remove SemanticData from the first slot(s) and
+		// *** attach in the pageproperties slot (it will be merged in the combined output)
 
 		$key = $title->getFullText();
-		// @todo move to an appropriate hook ?
 		if ( !array_key_exists( $key, self::$SlotsParserOutput ) ) {
-			$wikiPage = \PageProperties::getWikiPage( $title );
+			$slots = \PageProperties::getSlots( $title );
 
-			if ( !$wikiPage ) {
-				return;
-			}
-			$revision = $wikiPage->getRevisionRecord();
-
-			if ( !$revision ) {
+			if ( !$slots ) {
 				return;
 			}
 
-			$slots = $revision->getSlots()->getSlots();
 			if ( !array_key_exists( SLOT_ROLE_PAGEPROPERTIES, $slots ) ) {
 				return;
 			}
 
-			self::$SlotsParserOutput[ $key ] = [ 'content' => $revision->getSlots()->getContent( SLOT_ROLE_PAGEPROPERTIES ) ];
+			self::$SlotsParserOutput[ $key ] = [ 'content' => $slots[SLOT_ROLE_PAGEPROPERTIES]->getContent() ];
 		}
 
-		if ( !array_key_exists( 'content', self::$SlotsParserOutput[$key] ) ) {
-			return;
-		}
-
-		// *** remove SemanticData from the first slot(s) and
-		// attach in the pageproperties slot (it will be merged in the combined output)
-		// *** this is an hack to prevent the error "Cannot use object of type SMW\SemanticData as array"
-		// includes/parser/ParserOutput.php(2297)
-		// includes/parser/ParserOutput.php(2163): ParserOutput::mergeMapStrategy()
-		// includes/Revision/RevisionRenderer.php(271): ParserOutput->mergeHtmlMetaDataFrom()
-		// includes/Revision/RevisionRenderer.php(158): MediaWiki\Revision\RevisionRenderer->combineSlotOutput()
 		if ( !self::$SlotsParserOutput[ $key ][ 'content' ]->equals( $content ) ) {
 			$semanticData = $parserOutput->getExtensionData( \SMW\ParserData::DATA_ID );
 			if ( ( $semanticData instanceof \SMW\SemanticData ) ) {
-				// *** this creates an issue on move property page
 				\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
 				self::$SlotsParserOutput[ $key ]['data'] = $semanticData;
 				$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, null );
@@ -163,10 +265,9 @@ class PagePropertiesHooks {
 		if ( !$title->canExist() ) {
 			return;
 		}
-
 		$page_properties = \PageProperties::getPageProperties( $title );
 
-		if ( !empty( $page_properties ) ) {
+		if ( !empty( $page_properties ) && !empty( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
 			$parser->addTrackingCategory( 'pageproperties-tracking-category' );
 		}
 	}
@@ -182,9 +283,8 @@ class PagePropertiesHooks {
 	 */
 	public static function onMultiContentSave( MediaWiki\Revision\RenderedRevision $renderedRevision, MediaWiki\User\UserIdentity $user, CommentStoreComment $summary, $flags, Status $hookStatus ) {
 		$revision = $renderedRevision->getRevision();
-		// *** since 1.36
-		//$title = $revision->getPage();
 		$title = Title::newFromLinkTarget( $revision->getPageAsLinkTarget() );
+
 		$displaytitle = \PageProperties::getDisplayTitle( $title );
 
 		// this will store displaytitle in the page_props table
@@ -196,6 +296,18 @@ class PagePropertiesHooks {
 			} else {
 				$out->setProperty( 'displaytitle', $displaytitle );
 			}
+		}
+	}
+
+	/**
+	 * @param string &$confstr
+	 * @param User $user
+	 * @param array &$forOptions
+	 * @return void
+	 */
+	public static function onPageRenderingHash( &$confstr, User $user, &$forOptions ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesShowSlotsNavigation'] ) && isset( $_GET['slot'] ) ) {
+			$confstr .= '!' . $_GET['slot'];
 		}
 	}
 
@@ -214,41 +326,7 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSkinBuildSidebar( $skin, &$bar ) {
-		if ( !defined( 'SMW_VERSION' ) ) {
-			return;
-		}
-
-		$user = $skin->getUser();
-		$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
-
-		$isAuthorized = \PageProperties::isAuthorized( $user, null, 'Admins' );
-		if ( $isAuthorized ) {
-			$bar[ wfMessage( 'pageproperties-section' )->text() ][] = [
-				'text'   => wfMessage( 'manageproperties-label' )->text(),
-				'href'   => $specialpage_title->getLocalURL()
-			];
-		}
-		$title = $skin->getTitle();
-
-		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
-			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );
-			$title = Title::newFromText( $par, NS_MAIN );
-
-			if ( !$title || !$title->isKnown() ) {
-				return;
-			}
-		}
-
-		if ( $title->canExist() && $title->getNamespace() !== SMW_NS_PROPERTY ) {
-			$isAuthorized = \PageProperties::isAuthorized( $user, null, 'Editors' );
-
-			if ( $isAuthorized ) {
-				$bar[ wfMessage( 'pageproperties-section' )->text() ][] = [
-					'text'   => wfMessage( 'pageproperties-label' )->text(),
-					'href'   => $specialpage = $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
-				];
-			}
-		}
+		// *** reintroduce for SpecialPage ManageProperties
 	}
 
 	/**
@@ -257,19 +335,15 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSidebarBeforeOutput( $skin, &$sidebar ) {
-		if ( defined( 'SMW_VERSION' ) ) {
-			return;
-		}
-
 		$title = $skin->getTitle();
 		if ( !$title->canExist() ) {
 			return;
 		}
 
 		$user = $skin->getUser();
-		$isAuthorized = \PageProperties::isAuthorized( $user, null, 'Editors' );
+		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditproperties' ) || $user->isAllowed( 'pageproperties-canmanageproperties' ) );
 
-		if ( !$isAuthorized ) {
+		if ( !$is_allowed ) {
 			return;
 		}
 
@@ -297,31 +371,56 @@ class PagePropertiesHooks {
 	 */
 	public static function onSkinTemplateNavigation( SkinTemplate $skinTemplate, array &$links ) {
 		$user = $skinTemplate->getUser();
-
-		if ( !$user->isRegistered() ) {
-			return;
-		}
-
 		$title = $skinTemplate->getTitle();
 
 		if ( !$title->canExist() ) {
 			return;
 		}
 
-		// display page properties only to authorized editors
-		$isAuthorized = \PageProperties::isAuthorized( $user, $title, 'Editors' );
+		if ( !empty( $GLOBALS['wgPagePropertiesShowSlotsNavigation'] ) ) {
+			$slots = \PageProperties::getSlots( $title );
+			if ( $slots ) {
+				$namespaces = $links['namespaces'];
+				$links['namespaces'] = [];
+				$selectedSlot = ( isset( $_GET['slot'] ) ? $_GET['slot'] : null );
 
-		if ( $isAuthorized ) {
-			$title_ = SpecialPage::getTitleFor( 'PageProperties' );
-			$links[ 'actions' ][] = [
-				'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . ( !defined( 'SMW_VERSION' ) || $title->getNamespace() !== SMW_NS_PROPERTY ? '/' . wfEscapeWikiText( $title->getPrefixedURL() ) : '' )
-			];
+				foreach ( $slots as $role => $slot ) {
+					$selected = ( ( !$selectedSlot && $role === MediaWiki\Revision\SlotRecord::MAIN ) || $role === $selectedSlot );
+
+					$links['namespaces'][] = [
+						'text' => ( $role === 'main' ? $namespaces[ array_key_first( $namespaces ) ]['text'] : wfMessage( 'pageproperties-slot-label-' . $role )->text() ),
+						'class' => ( $selected ? 'selected' : '' ),
+						'context' => 'subject',
+						'exists' => 1,
+						'primary' => 1,
+						// see includes/skins/SkinTemplate.php -> buildContentNavigationUrls()
+						'id' => 'ca-nstab-' . $role,
+						'href' => ( $role !== MediaWiki\Revision\SlotRecord::MAIN ? wfAppendQuery( $title->getLocalURL(), 'slot=' . $role ) : $title->getLocalURL() ),
+					];
+				}
+
+				foreach ( $namespaces as $value ) {
+					if ( $value['context'] !== 'subject' ) {
+						$links['namespaces'][] = $value;
+					}
+				}
+			}
 		}
+
+		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditproperties' ) || $user->isAllowed( 'pageproperties-canmanageproperties' ) );
+
+		if ( !$is_allowed ) {
+			return;
+		}
+
+		$title_ = SpecialPage::getTitleFor( 'PageProperties' );
+		$links[ 'actions' ][] = [
+			'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . ( !defined( 'SMW_VERSION' ) || $title->getNamespace() !== SMW_NS_PROPERTY ? '/' . wfEscapeWikiText( $title->getPrefixedURL() ) : '' )
+		];
 	}
 
 	/**
-	 * // *** here we could alter page title through OutputPage
-	 * // *** but it seems preferable to leave the original page title
+	 * @todo replace the editor for alternate slots
 	 * @param EditPage $editPage
 	 * @param OutputPage $output
 	 * @return void
@@ -335,6 +434,7 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onBeforePageDisplay( OutputPage $outputPage, Skin $skin ) {
+		// @todo use resources messages and replace dynamictable.js (use OOUI widgets instead)
 		$outputPage->addJsConfigVars( [
 			'pageproperties-js-alert-1' => wfMessage( 'pageproperties-js-alert-1' )->text(),
 			'pageproperties-js-alert-2' => wfMessage( 'pageproperties-js-alert-2' )->text()
@@ -344,7 +444,9 @@ class PagePropertiesHooks {
 
 		$title = $outputPage->getTitle();
 		if ( $outputPage->isArticle() && $title->canExist() ) {
-			\PageProperties::setJsonLD( $title, $outputPage );
+			if ( empty( $GLOBALS['wgPagePropertiesDisableJsonLD'] ) ) {
+				\PageProperties::setJsonLD( $title, $outputPage );
+			}
 			\PageProperties::setMetaAndTitle( $title, $outputPage );
 		}
 	}
@@ -359,7 +461,7 @@ class PagePropertiesHooks {
 	}
 
 	/**
-	 * // open external links in a new window
+	 * *** open external links in a new window
 	 * @param string &$url
 	 * @param string &$text
 	 * @param string &$link

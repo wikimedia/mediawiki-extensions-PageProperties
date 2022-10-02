@@ -107,29 +107,29 @@ class MigrateProperties extends Maintenance {
 	 */
 	private function savePagePropertiesDB( $title, $row ) {
 		$page_properties = [
-			'page_properties' => [
-				'display_title' => $row['display_title'],
+			'page-properties' => [
+				'display-title' => $row['display_title'],
 				'language' => $row['language'],
 			],
-			'semantic_properties' => ( empty( $row['properties'] ) ? [] : json_decode( $row['properties'], true ) ),
+			'semantic-properties' => ( empty( $row['properties'] ) ? [] : json_decode( $row['properties'], true ) ),
 			'SEO' => [
 				'subpages' => $row['meta_subpages'],
-				'entire_site' => $row['meta_entire_site'],
+				'entire-site' => $row['meta_entire_site'],
 				'meta' => ( empty( $row['meta'] ) ? [] : json_decode( $row['meta'], true ) ),
 			]
 		];
 
 		// do more adjustements
-		if ( $this->langCode === $page_properties['page_properties']['language'] ) {
-			unset( $page_properties['page_properties']['language'] );
+		if ( $this->langCode === $page_properties['page-properties']['language'] ) {
+			unset( $page_properties['page-properties']['language'] );
 		}
 
-		if ( $title->getText() === $page_properties['page_properties']['display_title'] ) {
-			unset( $page_properties['page_properties']['display_title'] );
+		if ( $title->getText() === $page_properties['page-properties']['display-title'] ) {
+			unset( $page_properties['page-properties']['display-title'] );
 		}
 
-		foreach ( $page_properties['semantic_properties'] as $key_ => $value_ ) {
-			$page_properties['semantic_properties'][$key_][0] = Title::makeTitleSafe( SMW_NS_PROPERTY, $value_[0] )->getText();
+		foreach ( $page_properties['semantic-properties'] as $key_ => $value_ ) {
+			$page_properties['semantic-properties'][$key_][0] = Title::makeTitleSafe( SMW_NS_PROPERTY, $value_[0] )->getText();
 		}
 
 		// print_r($page_properties);

@@ -1,3 +1,22 @@
+
+.ItemWidget {
+	padding: 12px 0;
+	display: block;
+}
+
+.InnerItemWidget {
+	padding-bottom: 8px;
+	display: block;
+}
+
+.mw-prefs-buttons {
+	z-index: 10;
+}
+
+.pageproperties_dynamictable label {
+	display: inline;
+}
+
 .pageproperties_dynamictable_key_cell {
 	/* stylelint-disable-next-line declaration-property-unit-disallowed-list */
 	width: 50%;
@@ -18,4 +37,37 @@
 
 .pageproperties_dynamictable td {
 	padding-top: 4px;
+}
+
+/* stylelint-disable selector-max-id */
+#semantic-properties-wrapper #pageproperties-datatable tr td {
+	cursor: pointer;
+}
+
+#semantic-properties-wrapper .pageproperties-datatable-left {
+	float: left;
+}
+
+#semantic-properties-wrapper .pageproperties-datatable-right {
+	float: right;
+}
+
+#semantic-properties-wrapper .oo-ui-panelLayout-expanded {
+	position: relative;
+}
+
+#semantic-properties-wrapper .oo-ui-actionFieldLayout-button {
+	vertical-align: top;
+}
+
+#pageproperties-form .oo-ui-panelLayout-scrollable {
+	overflow: visible;
+}
+
+#semantic-properties-wrapper [ class*='inputName-mw.widgets.DateInputWidget' ] {
+	max-width: 24em;
+}
+
+#semantic-properties-wrapper .PanelProperties {
+	min-height: 160px;
 }

@@ -39,17 +39,12 @@ class PagePropertiesJob extends Job {
 	 */
 	function run() {
 		// T279090
-		$current_user = User::newFromId( $this->params['user_id'] );
-/*
-		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
-		if ( !$permissionManager->userCan(
-			'replacetext', $current_user, $this->title
-		) ) {
-			$this->error = 'replacetext: permission no longer valid';
-			// T279090#6978214
-			return true;
+		$user = User::newFromId( $this->params['user_id'] );
+
+		if ( !$user->isAllowed( 'pageproperties-caneditproperties' ) && !$user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
-*/
+
 		if ( isset( $this->params['session'] ) ) {
 			$callback = RequestContext::importScopedSession( $this->params['session'] );
 			$this->addTeardownCallback( static function () use ( &$callback ) {
@@ -63,42 +58,34 @@ class PagePropertiesJob extends Job {
 		}
 
 		$title = $this->title;
-		$isAuthorized = \PageProperties::isAuthorized( $current_user, $title, 'Admins' );
 
-		if ( !$isAuthorized ) {
-			$this->error = 'PageProperties: not authorized';
-			return false;
-		}
-
-		if ( !array_key_exists( 'values', $this->params ) || !array_key_exists( 'new_values', $this->params ) ) {
+		if ( !array_key_exists( 'values', $this->params ) ) {
 			$this->error = 'PageProperties: internal error';
 			return false;
 		}
 
 		$page_properties = \PageProperties::getPageProperties( $title );
 		$values = $this->params['values'];
-		$new_values = $this->params['new_values'];
 
-		if ( $page_properties === false || empty( $page_properties[ 'semantic_properties' ] ) ) {
+		if ( $page_properties === false || empty( $page_properties[ 'semantic-properties' ] ) ) {
 			$this->error = 'PageProperties: nothing to update';
 			return false;
 		}
 
-		foreach ( $page_properties[ 'semantic_properties' ] as $key_ => $value_ ) {
-			// $value_[0] is the property label
-			if ( array_key_exists( $value_[0], $values ) ) {
-				$action = $values[ $value_[0] ];
-				switch ( $action ) {
-					case 'rename':
-						$page_properties[ 'semantic_properties' ][ $key_ ][0] = $new_values[ $value_[0] ];
-						break;
-					case 'delete':
-						unset( $page_properties[ 'semantic_properties' ][ $key_ ] );
-						break;
-				}
+		foreach ( $values as $label => $newLabel ) {
+			// not found
+			if ( !array_key_exists( $label, $page_properties[ 'semantic-properties' ] ) ) {
+				continue;
 			}
+
+			if ( !empty( $newLabel ) ) {
+				$page_properties[ 'semantic-properties' ][$newLabel] = $page_properties[ 'semantic-properties' ][ $label ];
+			}
+
+			unset( $page_properties[ 'semantic-properties' ][ $label ] );
 		}
-		\PageProperties::setPageProperties( $current_user, $title, $page_properties );
+
+		\PageProperties::setPageProperties( $user, $title, $page_properties );
 
 		return true;
 	}
