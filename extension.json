@@ -126,7 +126,7 @@
 			"position": "top",
 			"scripts": [
 				"datatables/datatables.min.js",
-				"manageProperties.js",
+				"ManageProperties.js",
 				"PageProperties.js"
 			],
 			"styles": [

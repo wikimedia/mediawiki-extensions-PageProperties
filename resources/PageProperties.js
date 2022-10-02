@@ -31,12 +31,16 @@ const PageProperties = ( function () {
 	var DataTable;
 	var myStack;
 
+	function inArray( val, arr ) {
+		return ( jQuery.inArray( val, arr ) !== -1 );
+	}
+
 	function inputNameFromLabel( inputName ) {
 		var ret = inputName;
 		var parts = ret.split( ' ' );
 		if ( parts.length > 1 ) {
 			// eslint-disable-next-line no-useless-escape
-			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/, '' );
+			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/g, '' );
 		}
 		return ret;
 	}
@@ -99,14 +103,14 @@ const PageProperties = ( function () {
 			value: value
 		};
 
-		if ( jQuery.inArray( inputName, ManageProperties.multiselectInputs ) ) {
+		if ( inArray( inputName, ManageProperties.multiselectInputs ) ) {
 			config.selected = value;
 			config.allowArbitrary = true;
 		}
 
 		// see here https://www.semantic-mediawiki.org/wiki/Help:Special_property_Allows_value
 		// SemanticMediaWiki/src/DataValues/ValueValidator/AllowsListConstraintValueValidator.php
-		if ( jQuery.inArray( inputName, ManageProperties.optionsInputs ) ) {
+		if ( inArray( inputName, ManageProperties.optionsInputs ) ) {
 			if ( '_PVAL' in SemanticProperties[ property ].properties ) {
 				config.options = ManageProperties.createInputOptions(
 					// eslint-disable-next-line no-underscore-dangle
@@ -179,7 +183,7 @@ const PageProperties = ( function () {
 					// override the value of the existing input
 					if (
 						prefix ||
-						jQuery.inArray( inputName, ManageProperties.multiselectInputs )
+						inArray( inputName, ManageProperties.multiselectInputs )
 					) {
 						var inputEl = $( ":input[name='" + ( inputNameAttr + i ) + "']" );
 						var inputVal = Array.isArray( inputValue ) ?
@@ -200,7 +204,7 @@ const PageProperties = ( function () {
 
 					// create inputs for all other values
 					if (
-						jQuery.inArray( inputName, ManageProperties.multiselectInputs ) &&
+						inArray( inputName, ManageProperties.multiselectInputs ) &&
 						inputValue.length > 1
 					) {
 						for ( var ii = 1; ii < inputValue.length; ii++ ) {
@@ -435,7 +439,7 @@ const PageProperties = ( function () {
 			Properties[ config.property ] = [ '' ];
 		}
 
-		if ( !jQuery.inArray( inputName, ManageProperties.multiselectInputs ) ) {
+		if ( !inArray( inputName, ManageProperties.multiselectInputs ) ) {
 			for ( var i in Properties[ config.property ] ) {
 				optionsList.addItems( [
 					new InnerItemWidget( {
@@ -871,7 +875,7 @@ const PageProperties = ( function () {
 				value.typeLabel,
 				'_IMPO' in value.properties ?
 					// eslint-disable-next-line no-underscore-dangle
-					value.properties._IMPO.slice( -1 ) :
+					value.properties._IMPO.slice( -1 )[ 0 ] :
 					'',
 				value.description
 			] );
