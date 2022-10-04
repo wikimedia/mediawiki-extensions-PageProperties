@@ -129,6 +129,14 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		$property = SMW\DIProperty::newFromUserLabel( $label );
 		$ret = \PageProperties::getSemanticProperties( $property, $pageproperties['semantic-properties'] );
 
+		// @todo modify and use the ApiResult -> getResultData function
+		// or use the following ApiResult::META_BC_BOOLS = $bools;
+		array_walk_recursive( $ret, static function ( &$value ) {
+			if ( is_bool( $value ) ) {
+				$value = (int)$value;
+			}
+		} );
+
 		// see https://www.mediawiki.org/wiki/API:JSON_version_2
 		if ( method_exists( $this->getResult(), 'setPreserveKeysList' ) ) {
 			foreach ( $ret as $key => $value ) {
