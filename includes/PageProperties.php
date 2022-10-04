@@ -781,6 +781,7 @@ class PageProperties {
 						}
 
 						$ret[ $label ][ 'properties' ][ $key_ ] = array_map( static function ( $value ) {
+							// @todo return value depending on the datatype
 							return $value->getWikiValue();
 						}, $dataValues );
 					}
@@ -1100,8 +1101,13 @@ class PageProperties {
 		if ( !$valid->isOK() ) {
 			return $valid;
 		}
+
 		// ***edited
-		$permStatus = $mp->authorizeMove( $user, $reason );
+		if ( method_exists( MovePage::class, 'authorizeMove' ) ) {
+			$permStatus = $mp->authorizeMove( $user, $reason );
+		} else {
+			$permStatus = $mp->checkPermissions( $user, $reason );
+		}
 
 		if ( !$permStatus->isOK() ) {
 			return $permStatus;
@@ -1117,9 +1123,10 @@ class PageProperties {
 
 		if ( $status->isOK() ) {
 			// update cache
-			if ( array_key_exists( $from->getFullText(), self::$cached_page_properties ) ) {
-				self::$cached_page_properties[ $to->getFullText() ] = self::$cached_page_properties[ $from->getFullText() ];
-				unset( self::$cached_page_properties[ $from->getFullText() ] );
+			$from_text = $from->getFullText();
+			if ( array_key_exists( $from_text, self::$cached_page_properties ) ) {
+				self::$cached_page_properties[ $to->getFullText() ] = self::$cached_page_properties[ $from_text ];
+				unset( self::$cached_page_properties[ $from_text ] );
 			}
 		}
 

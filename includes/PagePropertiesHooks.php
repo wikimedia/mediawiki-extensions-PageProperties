@@ -169,14 +169,20 @@ class PagePropertiesHooks {
 			$slot = $_GET['slot'];
 			$slots = \PageProperties::getSlots( $title );
 
-			$content = $slots[ $slot ]->getContent();
-			$model = $content->getModel();
-			$contentHandler = $content->getContentHandler();
+			$slot_content = $slots[ $slot ]->getContent();
+			$contentHandler = $slot_content->getContentHandler();
 
-			// see includes/content/AbstractContent.php
-			$cpoParams = new MediaWiki\Content\Renderer\ContentParseParams( $title, $revId, $options, $generateHtml );
-			$contentHandler->fillParserOutputInternal( $content, $cpoParams, $output );
+			// @todo: find a more reliable method
+			if ( class_exists( 'MediaWiki\Content\Renderer\ContentParseParams' ) ) {
+				// see includes/content/AbstractContent.php
+				$cpoParams = new MediaWiki\Content\Renderer\ContentParseParams( $title, $revId, $options, $generateHtml );
+				$contentHandler->fillParserOutputInternal( $slot_content, $cpoParams, $output );
 
+			} else {
+				// @todo: find a more reliable method
+				$output = MediaWikiServices::getInstance()->getParser()
+					->parse( $slot_content->getText(), $title, $options, true, true, $revId );
+			}
 			// this will prevent includes/content/AbstractContent.php
 			// fillParserOutput from running
 			return false;
@@ -335,6 +341,10 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSidebarBeforeOutput( $skin, &$sidebar ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesDisableSidebarLink'] ) ) {
+			return;
+		}
+
 		$title = $skin->getTitle();
 		if ( !$title->canExist() ) {
 			return;
@@ -370,6 +380,9 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSkinTemplateNavigation( SkinTemplate $skinTemplate, array &$links ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesDisableNavigationLink'] ) ) {
+			return;
+		}
 		$user = $skinTemplate->getUser();
 		$title = $skinTemplate->getTitle();
 

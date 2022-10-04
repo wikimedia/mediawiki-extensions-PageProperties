@@ -435,7 +435,7 @@ const PageProperties = ( function () {
 
 		Model[ config.property ] = {};
 
-		if ( !( config.property in Properties ) ) {
+		if ( !( config.property in Properties ) || !Properties[ config.property ].length ) {
 			Properties[ config.property ] = [ '' ];
 		}
 
@@ -814,6 +814,7 @@ const PageProperties = ( function () {
 
 	function updatePropertiesPanel( data ) {
 		Properties = getModel();
+
 		switch ( data[ 'result-action' ] ) {
 			case 'update':
 				SemanticProperties = jQuery.extend(
@@ -1080,19 +1081,40 @@ $( document ).ready( function () {
 										'pageproperties-jsmodule-pageproperties-outdated-version'
 									)
 								),
+								// *** this does not work before ooui v0.43.0
 								showClose: true
 							} );
-							messageWidget.on( 'close', function () {
+							var closeFunction = function () {
 								var three_days = 3 * 86400;
 								mw.cookie.set( 'pageproperties-check-latest-version', true, {
 									path: '/',
 									expires: three_days
 								} );
 								$( messageWidget.$element ).parent().remove();
-							} );
+							};
+							messageWidget.on( 'close', closeFunction );
 							$( '#pageproperties-form' ).prepend(
 								$( '<div><br/></div>' ).prepend( messageWidget.$element )
 							);
+							if (
+								!messageWidget.$element.hasClass(
+									'oo-ui-messageWidget-showClose'
+								)
+							) {
+								messageWidget.$element.addClass(
+									'oo-ui-messageWidget-showClose'
+								);
+								var closeButton = new OO.ui.ButtonWidget( {
+									classes: [ 'oo-ui-messageWidget-close' ],
+									framed: false,
+									icon: 'close',
+									label: OO.ui.msg( 'ooui-popup-widget-close-button-aria-label' ),
+									invisibleLabel: true
+								} );
+								closeButton.on( 'click', closeFunction );
+								messageWidget.$element.append( closeButton.$element );
+							}
+
 						}
 					}
 				} );

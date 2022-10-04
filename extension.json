@@ -116,7 +116,8 @@
 			],
 			"dependencies": [
 				"oojs-ui-core",
-				"oojs-ui-widgets"
+				"oojs-ui-widgets",
+				"mediawiki.storage"
 			],
 			"messages": [
 				"prefs-tabs-navigation-hint"
@@ -133,8 +134,10 @@
 				"datatables/datatables.min.css"
 			],
 			"dependencies": [
+				"mediawiki.cookie",
 				"oojs-ui-core",
 				"oojs-ui-widgets",
+				"oojs-ui.styles.icons-interactions",
 				"oojs-ui.styles.icons-editing-core",
 				"oojs-ui-toolbars",
 				"oojs-ui-windows",

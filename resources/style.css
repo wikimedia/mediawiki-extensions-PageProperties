@@ -56,6 +56,7 @@
 	position: relative;
 }
 
+.pageproperties-ooui-window .oo-ui-actionFieldLayout-button,
 #semantic-properties-wrapper .oo-ui-actionFieldLayout-button {
 	vertical-align: top;
 }
@@ -70,4 +71,14 @@
 
 #semantic-properties-wrapper .PanelProperties {
 	min-height: 160px;
+}
+
+.oo-ui-messageWidget.oo-ui-messageWidget-block.oo-ui-messageWidget-showClose {
+	padding-right: 56px;
+}
+
+.oo-ui-messageWidget.oo-ui-messageWidget-block > .oo-ui-messageWidget-close {
+	position: absolute;
+	top: 8px;
+	right: 8px;
 }

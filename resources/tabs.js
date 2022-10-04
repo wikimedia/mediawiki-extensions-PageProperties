@@ -2,7 +2,6 @@
  * JavaScript for Special:Preferences: Tab navigation.
  */
 ( function () {
-
 	$( function () {
 		let tabs, previousTab, switchingNoHash;
 
@@ -12,7 +11,8 @@
 		// Make sure the accessibility tip is focussable so that keyboard users take notice,
 		// but hide it by default to reduce visual clutter.
 		// Make sure it becomes visible when focused.
-		$( '<div>' ).addClass( 'mw-navigation-hint' )
+		$( '<div>' )
+			.addClass( 'mw-navigation-hint' )
 			.text( mw.msg( 'prefs-tabs-navigation-hint' ) )
 			.attr( {
 				tabIndex: 0
@@ -73,15 +73,18 @@
 		// This function is called onload and onhashchange.
 		function detectHash() {
 			let hash = location.hash,
-				matchedElement, $parentSection;
+				matchedElement,
+				$parentSection;
 			if ( hash.match( /^#mw-prefsection-[\w]+$/ ) ) {
-				mw.storage.session.remove( 'mwpreferences-prevTab' );
+				// mw.storage.session.remove( 'mwpreferences-prevTab' );
 				switchPrefTab( hash.slice( 1 ) );
 			} else if ( hash.match( /^#mw-[\w-]+$/ ) ) {
 				matchedElement = document.getElementById( hash.slice( 1 ) );
-				$parentSection = $( matchedElement ).closest( '.mw-prefs-section-fieldset' );
+				$parentSection = $( matchedElement ).closest(
+					'.mw-prefs-section-fieldset'
+				);
 				if ( $parentSection.length ) {
-					mw.storage.session.remove( 'mwpreferences-prevTab' );
+					// mw.storage.session.remove( 'mwpreferences-prevTab' );
 					// Switch to proper tab and scroll to selected item.
 					switchPrefTab( $parentSection.attr( 'id' ), true );
 					matchedElement.scrollIntoView();
@@ -89,33 +92,37 @@
 			}
 		}
 
-		$( window ).on( 'hashchange', function () {
+		// ***edited
+		// eslint-disable-next-line no-constant-condition
+		if ( false ) {
+			$( window )
+				.on( 'hashchange', function () {
 
-			// ***edited
-			return;
-			// eslint-disable-next-line no-unreachable
-			const hash = location.hash;
-			if ( hash.match( /^#mw-[\w-]+/ ) ) {
-				detectHash();
-			} else if ( hash === '' ) {
-				switchPrefTab( 'mw-prefsection-personal', true );
-			}
-		} )
-			// Run the function immediately to select the proper tab on startup.
-			.trigger( 'hashchange' );
+					const hash = location.hash;
+					if ( hash.match( /^#mw-[\w-]+/ ) ) {
+						detectHash();
+					} else if ( hash === '' ) {
+						switchPrefTab( 'mw-prefsection-personal', true );
+					}
+				} )
+				// Run the function immediately to select the proper tab on startup.
+				.trigger( 'hashchange' );
+		}
 
 		// Restore the active tab after saving the preferences
-		previousTab = mw.storage.session.get( 'mwpreferences-prevTab' );
+		// ***edited
+		previousTab = mw.storage.session.get( 'pageproperties-prevTab' );
 		if ( previousTab ) {
 			switchPrefTab( previousTab, true );
 			// Deleting the key, the tab states should be reset until we press Save
-			mw.storage.session.remove( 'mwpreferences-prevTab' );
+			mw.storage.session.remove( 'pageproperties-prevTab' );
 		}
 
-		$( '#mw-prefs-form' ).on( 'submit', function () {
+		// ***edited
+		$( '#pageproperties-form' ).on( 'submit', function () {
 			const value = tabs.getCurrentTabPanelName();
-			mw.storage.session.set( 'mwpreferences-prevTab', value );
+			// ***edited
+			mw.storage.session.set( 'pageproperties-prevTab', value );
 		} );
-
 	} );
 }() );

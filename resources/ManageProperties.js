@@ -46,7 +46,7 @@ const ManageProperties = ( function () {
 		'mw.widgets.CategoryMultiselectWidget'
 	];
 
-	var windowManager = new OO.ui.WindowManager();
+	var windowManager = new OO.ui.WindowManager( { classes: [ 'pageproperties-ooui-window' ] } );
 	$( document.body ).append( windowManager.$element );
 
 	function inArray( val, arr ) {
@@ -189,7 +189,7 @@ const ManageProperties = ( function () {
 
 			// code
 			case '_cod':
-				ret = [ 'OO.ui.TextInputWidget' ];
+				ret = [ 'OO.ui.TextInputWidget', 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget' ];
 				break;
 
 			// telephone
