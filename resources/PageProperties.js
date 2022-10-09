@@ -32,7 +32,28 @@ const PageProperties = ( function () {
 	var myStack;
 
 	function inArray( val, arr ) {
-		return ( jQuery.inArray( val, arr ) !== -1 );
+		return jQuery.inArray( val, arr ) !== -1;
+	}
+
+	function isMultiselect( inputName ) {
+		// return inArray(inputName, ManageProperties.multiselectInputs))
+		return inputName.indexOf( 'Multiselect' ) !== -1;
+	}
+
+	function getPropertyValue( property ) {
+		if ( property in Model ) {
+			var ret = [];
+			for ( var i in Model[ property ] ) {
+				var inputWidget = Model[ property ][ i ];
+				var value = inputWidget.getValue();
+				if ( Array.isArray( value ) ) {
+					return value;
+				}
+				ret.push( value );
+			}
+			return ret;
+		}
+		return Properties[ property ];
 	}
 
 	function inputNameFromLabel( inputName ) {
@@ -85,11 +106,19 @@ const PageProperties = ( function () {
 				if ( value[ i ].trim() === '' ) {
 					delete value[ i ];
 				} else if ( inputName === 'mw.widgets.UsersMultiselectWidget' ) {
+					// @todo, use localized namespace
 					value[ i ] = value[ i ].replace( /^User:/, '' );
 				}
 			}
 		} else if ( inputName === 'mw.widgets.UserInputWidget' ) {
+			// @todo, use localized namespace
 			value = value.replace( /^User:/, '' );
+		}
+
+		switch ( inputName ) {
+			case 'OO.ui.ToggleSwitchWidget':
+				value = value === '1';
+				break;
 		}
 
 		var config = {
@@ -103,7 +132,7 @@ const PageProperties = ( function () {
 			value: value
 		};
 
-		if ( inArray( inputName, ManageProperties.multiselectInputs ) ) {
+		if ( isMultiselect( inputName ) ) {
 			config.selected = value;
 			config.allowArbitrary = true;
 		}
@@ -122,27 +151,11 @@ const PageProperties = ( function () {
 			}
 		}
 
-		var inputWidget = ManageProperties.inputInstanceFromName( inputName, config );
-
-		/*
-		if (Array.isArray(value)) {
-			// see mw.widgets.TitlesMultiselectWidget.js
-			// is that required ?
-
-			// does not work
-			//inputWidget.addItems(value)
-			var $hiddenInput = inputWidget.$element.find("textarea").eq(0);
-			$hiddenInput.prop("defaultValue", value.join("\n"));
-		}
-
-*/
-		return inputWidget;
+		return ManageProperties.inputInstanceFromName( inputName, config );
 	}
 
 	function getModel( submit ) {
 		var ret = {};
-
-		// OoUiTagMultiselectWidget
 
 		for ( var property in Model ) {
 			ret[ property ] = [];
@@ -161,6 +174,11 @@ const PageProperties = ( function () {
 					// OoUiTagMultiselectWidget => OO.ui.TagMultiselectWidget
 					// MwWidgetsUsersMultiselectWidget => mw.widgets.UsersMultiselectWidget
 
+					var inputNameAttr =
+						'semantic-properties-input-' + encodeURIComponent( property ) + '-';
+
+					var inputEl = $( ":input[name='" + ( inputNameAttr + i ) + "']" );
+
 					var inputName = Model[ property ][ i ].constructor.name
 						.replace( /^OoUi/, 'OO.ui.' )
 						.replace( /^MwWidgets/, 'mw.widgets.' );
@@ -169,44 +187,37 @@ const PageProperties = ( function () {
 					switch ( inputName ) {
 						case 'mw.widgets.UsersMultiselectWidget':
 						case 'mw.widgets.UserInputWidget':
+							// @todo, use localized namespace
 							prefix = 'User:';
 							break;
+					}
+
+					if ( typeof value === 'boolean' ) {
+						value = value ? 1 : 0;
 					}
 
 					var inputValue = Array.isArray( value ) ?
 						value.map( ( x ) => prefix + x ) :
 						prefix + value;
 
-					var inputNameAttr =
-						'semantic-properties-input-' + encodeURIComponent( property ) + '-';
+					var inputVal = Array.isArray( inputValue ) ? inputValue[ 0 ] : inputValue;
 
-					// override the value of the existing input
-					if (
-						prefix ||
-						inArray( inputName, ManageProperties.multiselectInputs )
-					) {
-						var inputEl = $( ":input[name='" + ( inputNameAttr + i ) + "']" );
-						var inputVal = Array.isArray( inputValue ) ?
-							inputValue[ 0 ] :
-							inputValue;
-						if ( !inputEl.get( 0 ) ) {
-							$( '<input>' )
-								.attr( {
-									type: 'hidden',
-									name: inputNameAttr + i,
-									value: inputVal
-								} )
-								.appendTo( '#pageproperties-form' );
-						} else {
-							inputEl.val( inputVal );
-						}
+					if ( !inputEl.get( 0 ) ) {
+						$( '<input>' )
+							.attr( {
+								type: 'hidden',
+								name: inputNameAttr + i,
+								value: inputVal
+							} )
+							.appendTo( '#pageproperties-form' );
+
+						// override the value of the existing input
+					} else if ( prefix || isMultiselect( inputName ) ) {
+						inputEl.val( inputVal );
 					}
 
 					// create inputs for all other values
-					if (
-						inArray( inputName, ManageProperties.multiselectInputs ) &&
-						inputValue.length > 1
-					) {
+					if ( isMultiselect( inputName ) && inputValue.length > 1 ) {
 						for ( var ii = 1; ii < inputValue.length; ii++ ) {
 							$( '<input>' )
 								.attr( {
@@ -422,7 +433,6 @@ const PageProperties = ( function () {
 		var multiple = false;
 		if (
 			!ManageProperties.disableMultipleFields( propertyObj.type, inputName ) &&
-
 			'__pageproperties_allows_multiple_values' in propertyObj.properties &&
 			// eslint-disable-next-line no-underscore-dangle
 			propertyObj.properties.__pageproperties_allows_multiple_values
@@ -433,20 +443,28 @@ const PageProperties = ( function () {
 		var optionsList = new ListWidget();
 		this.optionsList = optionsList;
 
-		Model[ config.property ] = {};
-
-		if ( !( config.property in Properties ) || !Properties[ config.property ].length ) {
+		if (
+			!( config.property in Properties ) ||
+			!Properties[ config.property ].length
+		) {
 			Properties[ config.property ] = [ '' ];
 		}
 
-		if ( !inArray( inputName, ManageProperties.multiselectInputs ) ) {
-			for ( var i in Properties[ config.property ] ) {
+		var values = getPropertyValue( config.property );
+
+		// if (!(config.property in Model)) {
+		Model[ config.property ] = {};
+		// }
+
+		if ( !isMultiselect( inputName ) ) {
+			for ( var i in values ) {
 				optionsList.addItems( [
 					new InnerItemWidget( {
 						classes: [ 'InnerItemWidget' ],
 						property: config.property,
 						inputName: inputName,
-						value: Properties[ config.property ][ i ],
+						// Properties[ config.property ][ i ],
+						value: values[ i ],
 						parentWidget: this,
 						index: optionsList.items.length
 					} )
@@ -458,7 +476,8 @@ const PageProperties = ( function () {
 					classes: [ 'InnerItemWidget' ],
 					property: config.property,
 					inputName: inputName,
-					value: Properties[ config.property ],
+					// Properties[ config.property ],
+					value: values,
 					parentWidget: this,
 					index: optionsList.items.length
 				} )
@@ -1114,7 +1133,6 @@ $( document ).ready( function () {
 								closeButton.on( 'click', closeFunction );
 								messageWidget.$element.append( closeButton.$element );
 							}
-
 						}
 					}
 				} );

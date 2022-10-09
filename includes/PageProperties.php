@@ -102,7 +102,10 @@ class PageProperties {
 		"_INST",
 		"_PPGR",
 		"_SUBP",
-		"_SUBC"
+		"_SUBC",
+
+		"__pageproperties_preferred_input",
+		"__pageproperties_allows_multiple_values",
 	];
 
 	/**
@@ -489,16 +492,19 @@ class PageProperties {
 			foreach ( $obj['semantic-properties'] as $key => $val ) {
 				if ( is_array( $val ) ) {
 					foreach ( $val as $k => $v ) {
-						if ( empty( $v ) ) {
+						if ( trim( $v ) === "" ) {
 							unset( $obj['semantic-properties'][$key][$k] );
 						}
 					}
-
 					if ( count( $obj['semantic-properties'][$key] ) === 1 ) {
 						$obj['semantic-properties'][$key] = current( $obj['semantic-properties'][$key] );
 					}
 				}
-				if ( empty( $obj['semantic-properties'][$key] ) ) {
+				if ( is_array( $obj['semantic-properties'][$key] ) ) {
+					if ( empty( $obj['semantic-properties'][$key] ) ) {
+						unset( $obj['semantic-properties'][$key] );
+					}
+				} elseif ( trim( $obj['semantic-properties'][$key] ) === "" ) {
 					unset( $obj['semantic-properties'][$key] );
 				}
 			}
@@ -584,7 +590,7 @@ class PageProperties {
 				}
 
 			} else {
-				$outputPage->addHeadItem( $k, Html::element( 'meta', [ 'property' => $k, 'content'  => $url ] ) );
+				$outputPage->addHeadItem( $k, Html::element( 'meta', [ 'property' => $k, 'content'  => $v ] ) );
 			}
 		}
 	}

@@ -46,12 +46,18 @@ const ManageProperties = ( function () {
 		'mw.widgets.CategoryMultiselectWidget'
 	];
 
-	var windowManager = new OO.ui.WindowManager( { classes: [ 'pageproperties-ooui-window' ] } );
+	var windowManager = new OO.ui.WindowManager( {
+		classes: [ 'pageproperties-ooui-window' ]
+	} );
 	$( document.body ).append( windowManager.$element );
 
 	function inArray( val, arr ) {
-		return ( jQuery.inArray( val, arr ) !== -1 );
+		return jQuery.inArray( val, arr ) !== -1;
 	}
+
+	// function getKeyByValue(obj, value) {
+	//    return Object.keys(obj).find(key => obj[key] === value);
+	// }
 
 	function disableMultipleFields( propertyType, inputLabel ) {
 		var singleValues = [ '_boo' ];
@@ -113,7 +119,7 @@ const ManageProperties = ( function () {
 		"OO.ui.CheckboxInputWidget",
 		"OO.ui.DropdownInputWidget",
 		"mw.widgets.DateInputWidget",
-		"mw.widgets.DateTimeInputWidget",
+		"mw.widgets.datetime.DateTimeInputWidget",
 		"mw.widgets.CategoryMultiselectWidget",
 		"mw.widgets.TitleInputWidget",
 		"mw.widgets.TitlesMultiselectWidget",
@@ -189,7 +195,11 @@ const ManageProperties = ( function () {
 
 			// code
 			case '_cod':
-				ret = [ 'OO.ui.TextInputWidget', 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget' ];
+				ret = [
+					'OO.ui.TextInputWidget',
+					'OO.ui.TextInputWidget (number)',
+					'OO.ui.NumberInputWidget'
+				];
 				break;
 
 			// telephone
@@ -206,7 +216,7 @@ const ManageProperties = ( function () {
 				ret = [
 					'mw.widgets.DateInputWidget (precision day)',
 					'mw.widgets.DateInputWidget (precision month)',
-					'mw.widgets.DateTimeInputWidget'
+					'mw.widgets.datetime.DateTimeInputWidget'
 				];
 				break;
 
@@ -227,26 +237,6 @@ const ManageProperties = ( function () {
 					'mw.widgets.CategoryMultiselectWidget'
 				];
 		}
-
-		/*
-		var listProperties = [
-			// Allows value
-			"_PVAL",
-			// Allows value list
-			"_PVALI"
-		];
-		var found = false;
-
-		for (var property of listProperties) {
-			var value = getPropertyValue(property)
-			if ( (Array.isArray(value) && value.length )|| value !== "") {
-				found = true;
-				break;
-			}
-		}
-
-		if (found) {
-*/
 
 		var filter = [ '_boo', '_wpg' ];
 		if ( !inArray( dataType, filter ) ) {
@@ -364,7 +354,7 @@ const ManageProperties = ( function () {
 			'_PVAP', // Allows pattern
 			'_PVUC', // Has uniqueness constraint - only true
 			'_PREC', // Display precision of
-			'_SUBP', // // Subproperty of - because the input type
+			// "_SUBP", // Subproperty of - because the input type
 			'_PVALI', // Allows value list
 			'__pageproperties_preferred_input',
 			'__pageproperties_allows_multiple_values'
@@ -455,6 +445,11 @@ const ManageProperties = ( function () {
 	}
 
 	function inputInstanceFromName( inputName, config ) {
+		switch ( inputName ) {
+			case 'mw.widgets.datetime.DateTimeInputWidget':
+				return new mw.widgets.datetime.DateTimeInputWidget( config );
+		}
+
 		var arr = inputName.split( '.' );
 		if ( arr.length === 4 ) {
 			var value = arr.pop();
@@ -479,28 +474,35 @@ const ManageProperties = ( function () {
 				break;
 		}
 
-		if ( inputName.indexOf( 'OO.ui' ) === 0 ) {
-			return new OO.ui[ arr[ 2 ] ]( config );
+		var constructor = ( inputName.indexOf( 'OO.ui' ) === 0 ? OO.ui[ arr[ 2 ] ] : mw.widgets[ arr[ 2 ] ] );
+
+		// fallback
+		if ( typeof constructor !== 'function' ) {
+			return new OO.ui.TextInputWidget( config );
 		}
-		return new mw.widgets[ arr[ 2 ] ]( config );
+
+		return new constructor( config );
 	}
 
 	function getPropertyValue( property ) {
 		var allowsMultipleValues = propertyAllowsMultipleValues( property );
 
 		if ( property in Model ) {
-			var propertyValue = Model[ property ];
-			if ( allowsMultipleValues ) {
+			if ( allowsMultipleValues && property !== '_SUBP' ) {
 				var values = [];
-				for ( var i in propertyValue ) {
-					var value = propertyValue[ i ].getValue().trim();
+				for ( var i in Model[ property ] ) {
+					var value = Model[ property ][ i ].getValue().trim();
 					if ( value !== '' ) {
 						values.push( value );
 					}
 				}
 				return values;
 			}
-			return propertyValue.getValue();
+			return Model[ property ].getValue();
+		}
+
+		if ( property === '_TYPE' ) {
+			return SelectedProperty.type;
 		}
 
 		if ( !( property in SelectedProperty.properties ) ) {
@@ -517,10 +519,7 @@ const ManageProperties = ( function () {
 	}
 
 	function createInputOptions( array, config ) {
-		var config = jQuery.extend(
-			{ key: 'key', value: 'value' },
-			config || {}
-		);
+		var config = jQuery.extend( { key: 'key', value: 'value' }, config || {} );
 		var ret = [];
 		for ( var i in array ) {
 			ret.push( {
@@ -530,21 +529,6 @@ const ManageProperties = ( function () {
 		}
 		return ret;
 	}
-
-	// *** see here !!
-	// https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
-
-	// see https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs
-	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.Window
-	// https://doc.wikimedia.org/oojs-ui/master/demos/tutorials/collection/basics2/contents.html
-	// https://datatables.net/reference/option/
-	// https://www.mediawiki.org/wiki/OOUI/Windows/Window_managers
-	// https://doc.wikimedia.org/oojs-ui/master/demos/?page=icons&theme=wikimediaui&direction=ltr&platform=desktop
-
-	// https://www.mediawiki.org/wiki/OOUI/Windows/Window_managers
-	// myFactory = new OO.Factory();
-
-	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.ProcessDialog
 
 	var InnerItemWidget = function ( config ) {
 		config = config || {};
@@ -746,13 +730,6 @@ const ManageProperties = ( function () {
 		// eslint-disable-next-line no-underscore-dangle
 		Model._TYPE = typesInput;
 
-		/*
-				var dropdownInputWidget = new OO.ui.DropdownInputWidget({
-					value: imported,
-					options: importedVocabulariesOptions,
-				});
-*/
-
 		ImportedVocabulariesWidget.setValue( getPropertyValue( '_IMPO' ) );
 
 		// eslint-disable-next-line no-underscore-dangle
@@ -799,13 +776,13 @@ const ManageProperties = ( function () {
 			} )
 		] );
 
-		var content = new OO.ui.PanelLayout( {
+		this.content = new OO.ui.PanelLayout( {
 			$content: fieldset.$element,
 			padded: true,
 			expanded: false
 		} );
 
-		this.$element.append( content.$element );
+		this.$element.append( this.content.$element );
 	}
 	OO.inheritClass( PageOneLayout, OO.ui.PageLayout );
 	PageOneLayout.prototype.setupOutlineItem = function () {
@@ -848,7 +825,6 @@ const ManageProperties = ( function () {
 				'<b>' +
 					PropertyLabels[ property ] +
 					'</b> <br />' +
-
 					// eslint-disable-next-line mediawiki/msg-doc
 					mw.msg(
 						'pageproperties-jsmodule-manageproperties-' + property.toLowerCase()
@@ -862,7 +838,10 @@ const ManageProperties = ( function () {
 
 			var propertyValue = getPropertyValue( property );
 			var items;
-			if ( Array.isArray( propertyValue ) ) {
+
+			var inputName = inputNameOfProperty( property );
+
+			if ( Array.isArray( propertyValue ) && inputName.indexOf( 'Multiselect' ) === -1 ) {
 				let optionsList = new ListWidget();
 
 				if ( !( property in Model ) ) {
@@ -910,24 +889,27 @@ const ManageProperties = ( function () {
 					addOption
 				];
 			} else {
-				var inputName = inputNameOfProperty( property );
-				var inputWidget = inputInstanceFromName( inputName, {
-					name: 'pageproperties-input-' + property,
-					value: propertyValue,
+				if ( property === '_SUBP' ) {
+					// @todo, use localized namespace
+					propertyValue = propertyValue.map( ( x ) => x.replace( /^Property:/, '' ) );
+				}
 
-					// required by OO.ui.MenuTagMultiselectWidget
-					selected: propertyValue
-				} );
+				var config = {
+					name: 'pageproperties-input-' + property,
+					value: propertyValue
+				};
 
 				if ( Array.isArray( propertyValue ) ) {
-					// see mw.widgets.TitlesMultiselectWidget.js
-					// is that required ?
-
-					// does not work
-					// inputWidget.addItems(value)
-					var $hiddenInput = inputWidget.$element.find( 'textarea' ).eq( 0 );
-					$hiddenInput.prop( 'defaultValue', propertyValue.join( '\n' ) );
+					config.selected = propertyValue;
 				}
+
+				var inputWidget = inputInstanceFromName( inputName, config );
+
+				// if (Array.isArray(propertyValue)) {
+				// // see mw.widgets.TitlesMultiselectWidget.js
+				// var $hiddenInput = inputWidget.$element.find("textarea").eq(0);
+				// $hiddenInput.prop("defaultValue", propertyValue.join("\n"));
+				// }
 
 				Model[ property ] = inputWidget;
 
@@ -947,9 +929,7 @@ const ManageProperties = ( function () {
 	}
 	OO.inheritClass( ProcessDialog, OO.ui.ProcessDialog );
 
-	// Specify a name for .addWindows()
 	ProcessDialog.static.name = 'myDialog';
-	// Specify a static title and actions.
 	ProcessDialog.static.title = mw.msg(
 		'pageproperties-jsmodule-manageproperties-define-property'
 	);
@@ -972,12 +952,10 @@ const ManageProperties = ( function () {
 		}
 	];
 
-	// Use the initialize() method to add content to the dialog's $body,
-	// to initialize widgets, and to set up event handlers.
 	ProcessDialog.prototype.initialize = function () {
 		ProcessDialog.super.prototype.initialize.apply( this, arguments );
 
-		var page1 = new PageOneLayout( 'one', {} );
+		this.page1 = new PageOneLayout( 'one', {} );
 		this.page2 = new PageTwoLayout( 'two', {} );
 
 		var booklet = new OO.ui.BookletLayout( {
@@ -985,7 +963,7 @@ const ManageProperties = ( function () {
 			expanded: true
 		} );
 
-		booklet.addPages( [ page1, this.page2 ] );
+		booklet.addPages( [ this.page1, this.page2 ] );
 		booklet.setPage( 'one' );
 
 		this.$body.append( booklet.$element );
@@ -1013,7 +991,6 @@ const ManageProperties = ( function () {
 				if (
 					// eslint-disable-next-line no-underscore-dangle
 					( obj._PVAL.length || obj._PVALI !== '' ) &&
-
 					// eslint-disable-next-line no-underscore-dangle
 					!inArray( obj.__pageproperties_preferred_input, optionsInputs )
 				) {
@@ -1027,7 +1004,6 @@ const ManageProperties = ( function () {
 				} else if (
 					// eslint-disable-next-line no-underscore-dangle
 					inArray( obj.__pageproperties_preferred_input, optionsInputs ) &&
-
 					// eslint-disable-next-line no-underscore-dangle
 					!obj._PVAL.length && obj._PVALI === ''
 				) {
@@ -1094,7 +1070,7 @@ const ManageProperties = ( function () {
 	 */
 	ProcessDialog.prototype.getBodyHeight = function () {
 		// see here https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs
-		// this.panel.$element.outerHeight( true );
+		// this.page1.content.$element.outerHeight( true );
 		return window.innerHeight - 100;
 	};
 
@@ -1176,10 +1152,8 @@ const ManageProperties = ( function () {
 			size: 'larger'
 		} );
 
-		// Add windows to window manager using the addWindows() method.
 		windowManager.addWindows( [ processDialog ] );
 
-		// Open the window.
 		windowManager.openWindow( processDialog );
 
 		// windowManager.openWindow( 'myDialog', { size: 'larger' } );
