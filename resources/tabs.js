@@ -120,9 +120,11 @@
 
 		// ***edited
 		$( '#pageproperties-form' ).on( 'submit', function () {
-			const value = tabs.getCurrentTabPanelName();
+			const currentTab = tabs.getCurrentTabPanelName();
 			// ***edited
-			mw.storage.session.set( 'pageproperties-prevTab', value );
+			if ( currentTab ) {
+				mw.storage.session.set( 'pageproperties-prevTab', currentTab );
+			}
 		} );
 	} );
 }() );

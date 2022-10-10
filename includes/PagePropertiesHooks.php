@@ -200,7 +200,10 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onRevisionFromEditComplete( $wikiPage, $rev, $originalRevId, $user, &$tags ) {
-		\PageProperties::emptySlotsCache( $wikiPage->getTitle() );
+		// *** this shouldn't be anymore necessary, since
+		// we update the slots cache *while* the new slot contents are saved
+		// and we delete the cache if the update fails
+		// \PageProperties::emptySlotsCache( $wikiPage->getTitle() );
 	}
 
 	/**

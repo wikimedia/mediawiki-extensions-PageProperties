@@ -217,6 +217,16 @@ class PageProperties {
 
 	/**
 	 * @param Title $title
+	 * @param array $slots
+	 * @return void
+	 */
+	public static function setSlots( $title, $slots ) {
+		$key = $title->getFullText();
+		self::$slotsCache[$key] = $slots;
+	}
+
+	/**
+	 * @param Title $title
 	 * @param OutputPage $outputPage
 	 * @return void
 	 */
@@ -537,7 +547,9 @@ class PageProperties {
 
 		$ret = WSSlotsPageProperties::editSlot( $user, $wikiPage, ( !empty( $obj ) ? json_encode( $obj ) : '' ), SLOT_ROLE_PAGEPROPERTIES, $edit_summary, false, '', $doNullEdit );
 
-		if ( $ret ) {
+		// the slot cache was preventively populated with the planned revision
+		// (see WSSlotsPageProperties.php)
+		if ( !$ret ) {
 			self::emptySlotsCache( $title );
 		}
 

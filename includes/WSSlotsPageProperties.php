@@ -159,6 +159,13 @@ class WSSlotsPageProperties {
 		$logger->debug( 'Calling saveRevision on PageUpdater' );
 
 		// ***edited
+		// *** this ensures that onContentAlterParserOutput relies
+		// on updated data
+		$derivedDataUpdater = $pageUpdater->prepareUpdate();
+		$slots = $derivedDataUpdater->getSlots()->getSlots();
+		\PageProperties::setSlots( $titleObject, $slots );
+
+		// ***edited
 		$ret = $pageUpdater->saveRevision( $comment, $flags );
 		$logger->debug( 'Finished calling saveRevision on PageUpdater' );
 
@@ -173,7 +180,7 @@ class WSSlotsPageProperties {
 			$comment = CommentStoreComment::newUnsavedComment( "" );
 
 			// ***edited
-			$ret = $pageUpdater = $wikiPage->newPageUpdater( $user );
+			$ret_ = $pageUpdater = $wikiPage->newPageUpdater( $user );
 			$pageUpdater->saveRevision( $comment, EDIT_SUPPRESS_RC | EDIT_AUTOSUMMARY );
 		}
 
