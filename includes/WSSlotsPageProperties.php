@@ -161,9 +161,11 @@ class WSSlotsPageProperties {
 		// ***edited
 		// *** this ensures that onContentAlterParserOutput relies
 		// on updated data
-		$derivedDataUpdater = $pageUpdater->prepareUpdate();
-		$slots = $derivedDataUpdater->getSlots()->getSlots();
-		\PageProperties::setSlots( $titleObject, $slots );
+		if ( method_exists( $pageUpdater, 'prepareUpdate' ) ) {
+			$derivedDataUpdater = $pageUpdater->prepareUpdate();
+			$slots = $derivedDataUpdater->getSlots()->getSlots();
+			\PageProperties::setSlots( $titleObject, $slots );
+		}
 
 		// ***edited
 		$ret = $pageUpdater->saveRevision( $comment, $flags );
