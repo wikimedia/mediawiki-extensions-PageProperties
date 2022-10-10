@@ -549,7 +549,7 @@ class PageProperties {
 
 		// the slot cache was preventively populated with the planned revision
 		// (see WSSlotsPageProperties.php)
-		if ( !$ret ) {
+		if ( !$ret || !method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
 			self::emptySlotsCache( $title );
 		}
 
