@@ -161,7 +161,7 @@ class WSSlotsPageProperties {
 		// ***edited
 		// *** this ensures that onContentAlterParserOutput relies
 		// on updated data
-		if ( method_exists( $pageUpdater, 'prepareUpdate' ) ) {
+		if ( method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
 			$derivedDataUpdater = $pageUpdater->prepareUpdate();
 			$slots = $derivedDataUpdater->getSlots()->getSlots();
 			\PageProperties::setSlots( $titleObject, $slots );
