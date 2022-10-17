@@ -208,7 +208,7 @@ class PagePropertiesHooks {
 
 		if ( !empty( $page_properties['page-properties']['categories'] ) ) {
 			foreach ( $page_properties['page-properties']['categories'] as $category ) {
-				$parserOutput->addCategory( str_replace( ' ', '_', $category ), $parserOutput->getProperty( 'defaultsort' ) );
+				$parserOutput->addCategory( str_replace( ' ', '_', $category ), ( version_compare( MW_VERSION, '1.38', '<' ) ? $parserOutput->getProperty( 'defaultsort' ) : null ) );
 			}
 		}
 
