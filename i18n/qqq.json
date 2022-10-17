@@ -3,6 +3,7 @@
 		"authors": []
 	},
 	"pageproperties": "A label message",
+	"manageproperties": "A label message",
 	"pageproperties-label": "A label message",
 	"specialpages-group-": "A label message",
 	"properties-navigation": "A label message",
@@ -11,6 +12,20 @@
 	"pageproperties-property-preferred-input": "A label message",
 	"pageproperties-property-allows-multiple-values": "A label message",
 	"apierror-pageproperties-permissions-error": "A label message",
+
+	"pageproperties-form-section-properties": "A label message",
+	"pageproperties-form-section-categories": "A label message",
+	"pageproperties-form-section-import": "A label message",
+	"pageproperties-form-section-properties-label": "A label message",
+	"pageproperties-form-section-categories-label": "A label message",
+	"pageproperties-form-section-import-label": "A label message",
+	"manageproperties-label": "A label message",
+	"pageproperties-jsmodule-manageproperties-define-category": "A label message",
+	"pageproperties-jsmodule-pageproperties-create-category": "A label message",
+	"pageproperties-jsmodule-pageproperties-columns-categories": "A label message",
+	"apihelp-pageproperties-manageproperties-savecategory-example-1": "A label message",
+	"apihelp-pageproperties-manageproperties-savecategory-summary": "A label message",
+	"pageproperties-form-categories-label": "A label message",
 
 	"right-pageproperties-canmanageproperties": "A label message",
 	"right-pageproperties-caneditproperties": "A label message",

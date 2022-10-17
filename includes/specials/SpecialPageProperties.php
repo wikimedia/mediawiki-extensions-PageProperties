@@ -23,6 +23,7 @@
  */
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
+include_once __DIR__ . '/HTMLCategoriesMultiselectField.php';
 
 use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\MediaWikiServices;
@@ -108,6 +109,11 @@ class SpecialPageProperties extends FormSpecialPage {
 			return;
 		}
 
+		if ( !defined( 'SMW_VERSION' ) && $title->getNamespace() === NS_CATEGORY ) {
+			$this->displayRestrictionError();
+			return;
+		}
+
 		$this->wikiPage = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title ) : WikiPage::factory( $title ) );
 
 		$this->canEditProperties = $user->isAllowed( 'pageproperties-caneditproperties' );
@@ -127,9 +133,10 @@ class SpecialPageProperties extends FormSpecialPage {
 		$context->getOutput()->enableOOUI();
 
 		$out->setPageTitle( $this->msg( 'pageproperties' )->text() );
-		$this->getFormValues();
+		$this->getFormValues( $out );
 
 		$out->addModules( 'ext.PageProperties' );
+		// $out->addModules( 'ext.PageProperties.CategoryMultiselectWidgetPageProperties' );
 
 		$out->addModuleStyles(
 			[
@@ -165,8 +172,9 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 
-		$return_title = \PageProperties::array_last( explode( "/", $title->getText() ) );
-		$out->addWikiMsg( 'pageproperties-return', $title->getText(), $return_title );
+		$return_title = \PageProperties::array_last( explode( "/", $title->getFullText() ) );
+
+		$out->addWikiMsg( 'pageproperties-return', $title->getFullText(), $return_title );
 		$out->addHTML( '<br>' );
 
 		// @see includes/htmlform/HTMLForm.php
@@ -214,9 +222,10 @@ class SpecialPageProperties extends FormSpecialPage {
 	}
 
 	/**
+	 * @param OutputPage $out
 	 * @return void
 	 */
-	private function getFormValues() {
+	private function getFormValues( $out ) {
 		$request = $this->getRequest();
 
 		// page properties
@@ -235,6 +244,8 @@ class SpecialPageProperties extends FormSpecialPage {
 			}
 
 			$page_properties['page-properties']['model'] = $request->getVal( 'page_properties_model' );
+
+			$page_properties['page-properties']['categories'] = preg_split( "/[\r\n]+/", $_POST['page_properties_categories'], -1, PREG_SPLIT_NO_EMPTY );
 
 			$meta = [];
 			if ( array_key_exists( 'SEO_meta', $dynamic_values ) ) {
@@ -255,6 +266,7 @@ class SpecialPageProperties extends FormSpecialPage {
 					// 'display_title' => null,
 					// 'language' => $page_language,
 					'model' => $this->title->getContentModel(),
+					'categories' => $this->getCategories(),
 				],
 				'semantic-properties' => [],
 				'SEO' => [
@@ -320,6 +332,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		$out->addJsConfigVars( [
+			'pageproperties-managePropertiesSpecialPage' => false,
 			'pageproperties-canManageProperties' => $this->canManageProperties,
 			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
 			'pageproperties-properties' => json_encode( $pageProperties, true )
@@ -333,7 +346,8 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @return array
 	 */
 	public static function getSemanticData( Title $title ) {
-		$subject = new SMW\DIWikiPage( $title, NS_MAIN );
+		// $subject = new SMW\DIWikiPage( $title, NS_MAIN );
+		$subject = SMW\DIWikiPage::newFromTitle( $title );
 		$semanticData = \PageProperties::$SMWStore->getSemanticData( $subject );
 		$ret = [];
 
@@ -366,6 +380,18 @@ class SpecialPageProperties extends FormSpecialPage {
 			}
 		}
 
+		return $ret;
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getCategories() {
+		$ret = [];
+		$TitleArray = $this->wikiPage->getCategories();
+		foreach ( $TitleArray as $title ) {
+			$ret[] = $title->getText();
+		}
 		return $ret;
 	}
 
@@ -406,9 +432,25 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$formDescriptor = [];
 
-		///////////////// display title /////////////////
+		///////////////// main /////////////////
 
-		// select
+		HTMLForm::$typeMappings['categoriesmultiselect'] = \HTMLCategoriesMultiselectField::class;
+
+		// $categories = $this->getCategories();
+
+		$formDescriptor['page_properties_categories'] = [
+			'label-message' => 'pageproperties-form-categories-label',
+			'type' => 'categoriesmultiselect',
+			// 'type' => 'titlesmultiselect',
+			// 'namespace' => NS_CATEGORY,
+			'name' => 'page_properties_categories',
+			'id' => 'page_properties_categories_input',
+			// this produces an error client-side with the standard categories input
+			'default' => implode( "\n", $pageProperties['categories'] ),
+			'allowArbitrary' => true,
+			'section' => 'form-section-main',
+		];
+
 		$default_of_display_title = $default = ( !array_key_exists( 'display-title', $pageProperties ) ? 'default' : 'override' );
 		$display_title_default = ( array_key_exists( 'display-title', $pageProperties ) ? $pageProperties[ 'display-title' ] : "" );
 
@@ -436,8 +478,6 @@ class SpecialPageProperties extends FormSpecialPage {
 			'section' => 'form-section-main',
 			'default' => $display_title_default,
 		];
-
-		///////////////// language /////////////////
 
 		$default_of_language = $default = ( !array_key_exists( 'language', $pageProperties ) ? 'default' : 'override' );
 
@@ -476,8 +516,6 @@ class SpecialPageProperties extends FormSpecialPage {
 			'default' => $default,
 		];
 
-		///////////////// content model /////////////////
-
 		$options = $this->getOptionsForTitle( $this->title );
 
 		$formDescriptor['page_properties_model'] = [
@@ -504,7 +542,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		///////////////// semantic properties /////////////////
 
 		if ( defined( 'SMW_VERSION' ) ) {
-			$formDescriptor['name'] = [
+			$formDescriptor['semantic_properties'] = [
 				'section' => 'form-section-semantic-properties',
 				'type' => 'hidden',
 				'append_html' => '<div id="semantic-properties-wrapper"></div>'

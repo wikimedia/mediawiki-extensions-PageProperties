@@ -15,7 +15,8 @@ module.exports = function ( grunt ) {
 				'**/*.{js,json}',
 				'!node_modules/**',
 				'!vendor/**',
-				'!resources/datatables/**'
+				'!resources/datatables/**',
+				'!resources/intl-tel-input/**'
 			]
 		},
 		stylelint: {
@@ -23,7 +24,8 @@ module.exports = function ( grunt ) {
 				'**/*.{css,less}',
 				'!node_modules/**',
 				'!vendor/**',
-				'!resources/datatables/**'
+				'!resources/datatables/**',
+				'!resources/intl-tel-input/**'
 			]
 		},
 		banana: conf.MessagesDirs

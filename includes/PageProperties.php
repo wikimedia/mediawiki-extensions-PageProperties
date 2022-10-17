@@ -286,7 +286,7 @@ class PageProperties {
 
 		// page_title can be null
 		if ( empty( $page_title ) ) {
-			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; }</style>' );
+			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; } .mw-body .firstHeading { border-bottom: none; margin-bottom: 0; } </style>' );
 		}
 
 		if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
@@ -526,6 +526,10 @@ class PageProperties {
 			}
 		}
 
+		if ( empty( implode( $obj['page-properties']['categories'] ) ) ) {
+			unset( $obj['page-properties']['categories'] );
+		}
+
 		$keys = [ 'page-properties', 'SEO', 'semantic-properties' ];
 
 		// if $obj is empty the related slot will be removed
@@ -656,7 +660,6 @@ class PageProperties {
 	 * @return void
 	 */
 	public static function getPropertyDataValues( $property, $key ) {
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
 		$prop = new SMW\DIProperty( $key );
 		$values = self::$SMWStore->getPropertyValues( $property->getDiWikiPage(), $prop );
 
@@ -664,6 +667,7 @@ class PageProperties {
 			return null;
 		}
 
+		$dataValueFactory = SMW\DataValueFactory::getInstance();
 		return array_map( static function ( $value ) use( $dataValueFactory, $prop ) {
 			return $dataValueFactory->newDataValueByItem( $value, $prop );
 		}, $values );
@@ -899,10 +903,10 @@ class PageProperties {
 
 			$ret[ $vocabulary_label ] = [];
 			foreach ( $typelist as $key => $value ) {
-				if ( $value !== 'Category' && $value !== 'Type:Category' ) {
+				// if ( $value !== 'Category' && $value !== 'Type:Category' ) {
 					$label_value = $namespace . ':' . $key;
 					$ret[ $vocabulary_label ][ $label_value ] = str_replace( 'Type:', '', $value );
-				}
+				// }
 			}
 		}
 

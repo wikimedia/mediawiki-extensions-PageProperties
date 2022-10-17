@@ -26,10 +26,12 @@ const ManageProperties = ( function () {
 		PropertyLabels,
 		TypeLabels,
 		ImportedVocabulariesWidget,
+		ImportedVocabulariesWidgetCategories,
 		SelectedProperty;
 	var processDialog;
 	var DataLoaded = false;
 	var DataLoading = false;
+	var DataTable;
 
 	var optionsInputs = [
 		'OO.ui.DropdownInputWidget',
@@ -204,7 +206,7 @@ const ManageProperties = ( function () {
 
 			// telephone
 			case '_tel':
-				ret = [ 'OO.ui.TextInputWidget (tel)' ];
+				ret = [ 'intl-tel-input', 'OO.ui.TextInputWidget (tel)' ];
 				break;
 
 			// boolean
@@ -448,6 +450,8 @@ const ManageProperties = ( function () {
 		switch ( inputName ) {
 			case 'mw.widgets.datetime.DateTimeInputWidget':
 				return new mw.widgets.datetime.DateTimeInputWidget( config );
+			case 'intl-tel-input':
+				return new PagePropertiesintlTelInput( config );
 		}
 
 		var arr = inputName.split( '.' );
@@ -474,7 +478,8 @@ const ManageProperties = ( function () {
 				break;
 		}
 
-		var constructor = ( inputName.indexOf( 'OO.ui' ) === 0 ? OO.ui[ arr[ 2 ] ] : mw.widgets[ arr[ 2 ] ] );
+		var constructor =
+			inputName.indexOf( 'OO.ui' ) === 0 ? OO.ui[ arr[ 2 ] ] : mw.widgets[ arr[ 2 ] ];
 
 		// fallback
 		if ( typeof constructor !== 'function' ) {
@@ -841,7 +846,10 @@ const ManageProperties = ( function () {
 
 			var inputName = inputNameOfProperty( property );
 
-			if ( Array.isArray( propertyValue ) && inputName.indexOf( 'Multiselect' ) === -1 ) {
+			if (
+				Array.isArray( propertyValue ) &&
+				inputName.indexOf( 'Multiselect' ) === -1
+			) {
 				let optionsList = new ListWidget();
 
 				if ( !( property in Model ) ) {
@@ -1019,7 +1027,6 @@ const ManageProperties = ( function () {
 						action
 					);
 				}
-
 			// eslint-disable no-fallthrough
 			case 'delete':
 				mw.loader.using( 'mediawiki.api', function () {
@@ -1074,18 +1081,34 @@ const ManageProperties = ( function () {
 		return window.innerHeight - 100;
 	};
 
+	// https://stackoverflow.com/questions/5072136/javascript-filter-for-objects
+	Object.filter = ( obj, predicate ) =>
+		Object.keys( obj )
+			.filter( ( key ) => predicate( obj[ key ] ) )
+			// eslint-disable-next-line no-sequences
+			.reduce( ( res, key ) => ( ( res[ key ] = obj[ key ] ), res ), {} );
+
 	function initManagePropertiesData( data ) {
 		var importedVocabularies = data.importedVocabularies;
+
 		PropertyLabels = data.propertyLabels;
 		TypeLabels = data.typeLabels;
 
 		var options = createInputOptions( {
 			'': 'none'
 		} );
+
 		for ( var namespace in importedVocabularies ) {
+			// eslint-disable-next-line no-underscore-dangle
+			var obj_ = Object.filter(
+				importedVocabularies[ namespace ],
+				( x ) => x !== 'Category' && x !== 'Class'
+			);
+
 			options.push( { optgroup: namespace } );
 			options = options.concat(
-				createInputOptions( importedVocabularies[ namespace ], {
+
+				createInputOptions( obj_, {
 					value: 'key'
 				} )
 			);
@@ -1094,6 +1117,76 @@ const ManageProperties = ( function () {
 		ImportedVocabulariesWidget = new OO.ui.DropdownInputWidget( {
 			options: options
 		} );
+
+		var options = createInputOptions( {
+			'': 'none'
+		} );
+
+		for ( var namespace in importedVocabularies ) {
+			// eslint-disable-next-line no-underscore-dangle
+			var obj_ = Object.filter(
+				importedVocabularies[ namespace ],
+				( x ) => x === 'Category' || x === 'Class'
+			);
+
+			options.push( { optgroup: namespace } );
+			options = options.concat(
+
+				createInputOptions( obj_, {
+					value: 'key'
+				} )
+			);
+		}
+
+		ImportedVocabulariesWidgetCategories = new OO.ui.DropdownInputWidget( {
+			options: options
+		} );
+	}
+
+	function getImportedVocabulariesWidgetCategories() {
+		return ImportedVocabulariesWidgetCategories;
+	}
+
+	function createToolbar() {
+		var toolFactory = new OO.ui.ToolFactory();
+		var toolGroupFactory = new OO.ui.ToolGroupFactory();
+
+		var toolbar = new OO.ui.Toolbar( toolFactory, toolGroupFactory, {
+			actions: true
+		} );
+
+		var onSelect = function () {
+			var toolName = this.getName();
+
+			switch ( toolName ) {
+				case 'createproperty':
+					openDialog();
+					break;
+			}
+
+			this.setActive( false );
+		};
+
+		var toolGroup = [
+			[
+				'createproperty',
+				'add',
+				mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
+				onSelect
+			]
+		];
+		PagePropertiesFunctions.createToolGroup( toolFactory, 'group', toolGroup );
+
+		toolbar.setup( [
+			{
+				// name: "format",
+				// type: "bar",
+				// label: "Create property",
+				include: [ { group: 'group' } ]
+			}
+		] );
+
+		return toolbar;
 	}
 
 	function loadData( semanticProperties, callback, callbackArgs ) {
@@ -1130,6 +1223,85 @@ const ManageProperties = ( function () {
 		} );
 	}
 
+	function initializeDataTable() {
+		var data = [];
+
+		for ( var i in SemanticProperties ) {
+			var value = SemanticProperties[ i ];
+			data.push( [
+				i,
+				value.typeLabel,
+				'_IMPO' in value.properties ?
+					// eslint-disable-next-line no-underscore-dangle
+					value.properties._IMPO.slice( -1 )[ 0 ] :
+					'',
+				value.description
+			] );
+		}
+
+		DataTable = $( '#pageproperties-datatable' ).DataTable( {
+			order: 1,
+			pageLength: 20,
+
+			// https://datatables.net/reference/option/dom
+			dom: '<"pageproperties-datatable-left"f><"pageproperties-datatable-right"l>rtip',
+
+			lengthMenu: [ 10, 20, 50, 100, 200 ],
+			// lengthChange: false,
+			data: data,
+			stateSave: true,
+			columns: mw
+				.msg( 'pageproperties-jsmodule-pageproperties-columns' )
+				.split( /\s*,\s*/ )
+				.map( function ( x ) {
+					return { title: x };
+				} )
+		} );
+
+		DataTable.on( 'click', 'tr', function () {
+			var index = DataTable.row( this ).index();
+			var label = data[ index ][ 0 ];
+
+			openDialog( label );
+		} );
+	}
+
+	function initialize( semanticProperties, managePropertiesSpecialPage ) {
+		Model = {};
+
+		if ( arguments.length ) {
+			SemanticProperties = semanticProperties;
+		}
+
+		if ( managePropertiesSpecialPage ) {
+			$( '#semantic-properties-wrapper' ).empty();
+
+			var toolbar = createToolbar();
+
+			var contentFrame = new OO.ui.PanelLayout( {
+				$content: $(
+					'<table id="pageproperties-datatable" class="display" width="100%"></table>'
+				),
+				expanded: false,
+				padded: true
+			} );
+
+			var frame = new OO.ui.PanelLayout( {
+				$content: [ toolbar.$element, contentFrame.$element ],
+				expanded: false,
+				framed: true,
+				data: { name: 'manageproperties' }
+			} );
+
+			$( '#semantic-properties-wrapper' ).append( frame.$element );
+
+			toolbar.initialize();
+			toolbar.emit( 'updateState' );
+		}
+
+		initializeDataTable();
+	}
+
 	function openDialog( label ) {
 		if ( !label ) {
 			SelectedProperty = { label: '', type: '_wpg', properties: [] };
@@ -1160,6 +1332,8 @@ const ManageProperties = ( function () {
 	}
 
 	return {
+		initialize,
+		createToolbar,
 		createInputOptions,
 		getAvailableInputs,
 		inputInstanceFromName,
@@ -1167,6 +1341,7 @@ const ManageProperties = ( function () {
 		openDialog,
 		disableMultipleFields,
 		optionsInputs,
-		multiselectInputs
+		multiselectInputs,
+		getImportedVocabulariesWidgetCategories
 	};
 }() );
