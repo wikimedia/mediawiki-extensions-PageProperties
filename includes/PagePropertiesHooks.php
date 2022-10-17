@@ -52,15 +52,6 @@ class PagePropertiesHooks {
 				: 'PermissionManager' )
 			]
 		];
-		// $GLOBALS['wgSpecialPages']['ManageProperties'] = [
-		// 	'class' => \SpecialManageProperties::class,
-		// 	'services' => [
-		// 		// MW 1.36+
-		// 		( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
-		// 		// ***whatever other class
-		// 		: 'PermissionManager' )
-		// 	]
-		// ];
 
 		// *** important! otherwise Page information (action=info) will display a wrong value
 		$GLOBALS['wgPageLanguageUseDB'] = true;
@@ -213,6 +204,14 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onContentAlterParserOutput( Content $content, Title $title, ParserOutput &$parserOutput ) {
+		$page_properties = \PageProperties::getPageProperties( $title );
+
+		if ( !empty( $page_properties['page-properties']['categories'] ) ) {
+			foreach ( $page_properties['page-properties']['categories'] as $category ) {
+				$parserOutput->addCategory( str_replace( ' ', '_', $category ), $parserOutput->getProperty( 'defaultsort' ) );
+			}
+		}
+
 		if ( !defined( 'SMW_VERSION' ) ) {
 			return;
 		}
@@ -335,7 +334,35 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSkinBuildSidebar( $skin, &$bar ) {
-		// *** reintroduce for SpecialPage ManageProperties
+		if ( !empty( $GLOBALS['wgPagePropertiesDisableSidebarLink'] ) ) {
+			return;
+		}
+		if ( !defined( 'SMW_VERSION' ) ) {
+			return;
+		}
+		$user = $skin->getUser();
+		if ( $user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+			$specialpage_title = SpecialPage::getTitleFor( 'ManageProperties' );
+			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
+				'text'   => wfMessage( 'manageproperties-label' )->text(),
+				'href'   => $specialpage_title->getLocalURL()
+			];
+		}
+		$title = $skin->getTitle();
+		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
+			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );
+			$title = Title::newFromText( $par, NS_MAIN );
+			if ( !$title || !$title->isKnown() || !$title->isContentPage() ) {
+				return;
+			}
+		}
+		if ( $user->isAllowed( 'pageproperties-caneditproperties' ) ) {
+			$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
+			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
+				'text'   => wfMessage( 'pageproperties-label' )->text(),
+				'href'   => $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+			];
+		}
 	}
 
 	/**
@@ -347,7 +374,9 @@ class PagePropertiesHooks {
 		if ( !empty( $GLOBALS['wgPagePropertiesDisableSidebarLink'] ) ) {
 			return;
 		}
-
+		if ( defined( 'SMW_VERSION' ) ) {
+			return;
+		}
 		$title = $skin->getTitle();
 		if ( !$title->canExist() ) {
 			return;
@@ -423,15 +452,28 @@ class PagePropertiesHooks {
 			}
 		}
 
+		if ( !defined( 'SMW_VERSION' ) && $title->getNamespace() === NS_CATEGORY ) {
+			return;
+		}
+
 		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditproperties' ) || $user->isAllowed( 'pageproperties-canmanageproperties' ) );
 
 		if ( !$is_allowed ) {
 			return;
 		}
 
+		if ( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) {
+			$title_ = SpecialPage::getTitleFor( 'ManageProperties' );
+			$links[ 'actions' ][] = [
+				'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+			];
+
+			return;
+		}
+
 		$title_ = SpecialPage::getTitleFor( 'PageProperties' );
 		$links[ 'actions' ][] = [
-			'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . ( !defined( 'SMW_VERSION' ) || $title->getNamespace() !== SMW_NS_PROPERTY ? '/' . wfEscapeWikiText( $title->getPrefixedURL() ) : '' )
+			'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
 		];
 	}
 

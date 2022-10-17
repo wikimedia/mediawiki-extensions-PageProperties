@@ -28,8 +28,8 @@ const PageProperties = ( function () {
 
 	var Model;
 	var PanelProperties;
-	var DataTable;
 	var myStack;
+	var ManagePropertiesSpecialPage;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -64,21 +64,6 @@ const PageProperties = ( function () {
 			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/g, '' );
 		}
 		return ret;
-	}
-
-	function sortObjectByKeys( object ) {
-		var ret = {};
-		Object.keys( object )
-			.sort()
-			.forEach( function ( key ) {
-				ret[ key ] = object[ key ];
-			} );
-		return ret;
-	}
-
-	// https://stackoverflow.com/questions/4647817/javascript-object-rename-key
-	function renameObjectKey( o, oldKey, newKey ) {
-		delete jQuery.extend( o, { [ newKey ]: o[ oldKey ] } )[ oldKey ];
 	}
 
 	function inputIsEmpty( inputWidget ) {
@@ -211,8 +196,9 @@ const PageProperties = ( function () {
 							} )
 							.appendTo( '#pageproperties-form' );
 
-						// override the value of the existing input
-					} else if ( prefix || isMultiselect( inputName ) ) {
+					// override the value of the existing input
+					// } else if ( prefix || isMultiselect( inputName ) ) {
+					} else {
 						inputEl.val( inputVal );
 					}
 
@@ -557,60 +543,9 @@ const PageProperties = ( function () {
 		this.emit( 'delete' );
 	};
 
-	function createTool(
-		group,
-		name,
-		icon,
-		title,
-		onSelect,
-		flags,
-		narrowConfig,
-		init,
-		// eslint-disable-next-line no-unused-vars
-		displayBothIconAndLabel
-	) {
-		var Tool = function () {
-			Tool.super.apply( this, arguments );
-			this.toggled = false;
-			if ( init ) {
-				init.call( this );
-			}
-		};
-
-		OO.inheritClass( Tool, OO.ui.Tool );
-
-		Tool.prototype.onSelect = function () {
-			if ( onSelect ) {
-				onSelect.call( this );
-			} else {
-				this.toggled = !this.toggled;
-				this.setActive( this.toggled );
-			}
-			// toolbars[ toolbar ].emit( 'updateState' );
-		};
-		Tool.prototype.onUpdateState = function () {};
-
-		Tool.static.name = name;
-		Tool.static.group = group;
-		Tool.static.icon = icon;
-		Tool.static.title = title;
-		Tool.static.flags = flags;
-		Tool.static.narrowConfig = narrowConfig;
-		Tool.static.displayBothIconAndLabel = true; // !!displayBothIconAndLabel;
-		return Tool;
-	}
-
-	function createToolGroup( toolFactory, name, tools ) {
-		tools.forEach( function ( tool ) {
-			var args = tool.slice();
-			args.splice( 0, 0, name );
-			toolFactory.register( createTool.apply( null, args ) );
-		} );
-	}
-
 	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.Toolbar
 
-	function createToolbarA() {
+	function createToolbar() {
 		var toolFactory = new OO.ui.ToolFactory();
 		var toolGroupFactory = new OO.ui.ToolGroupFactory();
 
@@ -639,7 +574,7 @@ const PageProperties = ( function () {
 			return accelerator[ name ];
 		};
 
-		createToolGroup( toolFactory, 'groupA', toolGroup );
+		PagePropertiesFunctions.createToolGroup( toolFactory, 'groupA', toolGroup );
 
 		var onSelect = function () {
 			var toolName = this.getName();
@@ -662,7 +597,7 @@ const PageProperties = ( function () {
 					onSelect
 				]
 			];
-			createToolGroup( toolFactory, 'groupB', toolGroup );
+			PagePropertiesFunctions.createToolGroup( toolFactory, 'groupB', toolGroup );
 		}
 
 		// Finally define which tools and in what order appear in the toolbar. Each tool may only be
@@ -689,48 +624,6 @@ const PageProperties = ( function () {
 			include: [ { group: 'editorSwitchTools' } ]
 		},
 */
-		] );
-
-		return toolbar;
-	}
-
-	function createToolbarB() {
-		var toolFactory = new OO.ui.ToolFactory();
-		var toolGroupFactory = new OO.ui.ToolGroupFactory();
-
-		var toolbar = new OO.ui.Toolbar( toolFactory, toolGroupFactory, {
-			actions: true
-		} );
-
-		var onSelect = function () {
-			var toolName = this.getName();
-
-			switch ( toolName ) {
-				case 'createproperty':
-					ManageProperties.openDialog();
-					break;
-			}
-
-			this.setActive( false );
-		};
-
-		var toolGroup = [
-			[
-				'createproperty',
-				'add',
-				mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
-				onSelect
-			]
-		];
-		createToolGroup( toolFactory, 'group', toolGroup );
-
-		toolbar.setup( [
-			{
-				// name: "format",
-				// type: "bar",
-				// label: "Create property",
-				include: [ { group: 'group' } ]
-			}
 		] );
 
 		return toolbar;
@@ -771,7 +664,7 @@ const PageProperties = ( function () {
 			]
 			// ["forms", "null", "Forms", onSelectSwitch],
 		];
-		createToolGroup( toolFactory, 'selectSwitch', toolGroup );
+		PagePropertiesFunctions.createToolGroup( toolFactory, 'selectSwitch', toolGroup );
 
 		toolbar.setup( [
 			// see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
@@ -809,7 +702,7 @@ const PageProperties = ( function () {
 	PanelLayout.prototype.populateFieldset = function () {
 		this.optionsList.clearItems();
 
-		Properties = sortObjectByKeys( Properties );
+		Properties = PagePropertiesFunctions.sortObjectByKeys( Properties );
 
 		for ( var i in Properties ) {
 			this.optionsList.addItems( [
@@ -857,7 +750,7 @@ const PageProperties = ( function () {
 					SemanticProperties,
 					data[ 'semantic-properties' ]
 				);
-				SemanticProperties = sortObjectByKeys( SemanticProperties );
+				SemanticProperties = PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
 				break;
 
 			case 'rename':
@@ -868,9 +761,9 @@ const PageProperties = ( function () {
 					SemanticProperties,
 					data[ 'semantic-properties' ]
 				);
-				SemanticProperties = sortObjectByKeys( SemanticProperties );
+				SemanticProperties = PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
 				if ( data[ 'previous-label' ] in Properties ) {
-					renameObjectKey( Properties, data[ 'previous-label' ], data.label );
+					PagePropertiesFunctions.renameObjectKey( Properties, data[ 'previous-label' ], data.label );
 				}
 				break;
 		}
@@ -880,57 +773,19 @@ const PageProperties = ( function () {
 		// PanelProperties.populateFieldset();
 
 		ManageProperties.loadData( SemanticProperties );
-		initialize();
+
+		if ( !ManagePropertiesSpecialPage ) {
+			initialize();
+
+		} else {
+			ManageProperties.initialize( SemanticProperties, true );
+		}
 
 		return true;
 	}
 
-	function initializeDataTable() {
-		var data = [];
-
-		for ( var i in SemanticProperties ) {
-			var value = SemanticProperties[ i ];
-			data.push( [
-				i,
-				value.typeLabel,
-				'_IMPO' in value.properties ?
-					// eslint-disable-next-line no-underscore-dangle
-					value.properties._IMPO.slice( -1 )[ 0 ] :
-					'',
-				value.description
-			] );
-		}
-
-		DataTable = $( '#pageproperties-datatable' ).DataTable( {
-			order: 1,
-			pageLength: 20,
-
-			// https://datatables.net/reference/option/dom
-			dom: '<"pageproperties-datatable-left"f><"pageproperties-datatable-right"l>rtip',
-
-			lengthMenu: [ 10, 20, 50, 100, 200 ],
-			// lengthChange: false,
-			data: data,
-			stateSave: true,
-			columns: mw
-				.msg( 'pageproperties-jsmodule-pageproperties-columns' )
-				.split( /\s*,\s*/ )
-				.map( function ( x ) {
-					return { title: x };
-				} )
-			// buttons: ["copy", "excel", "pdf"],
-			// select: true,
-		} );
-
-		DataTable.on( 'click', 'tr', function () {
-			var index = DataTable.row( this ).index();
-			var label = data[ index ][ 0 ];
-
-			ManageProperties.openDialog( label );
-		} );
-	}
-
-	function initialize( canManageProperties, semanticProperties, properties ) {
+	// eslint-disable-next-line max-len
+	function initialize( managePropertiesSpecialPage, canManageProperties, semanticProperties, properties ) {
 		var selectedPanelName = null;
 		Model = {};
 
@@ -940,9 +795,14 @@ const PageProperties = ( function () {
 		}
 
 		if ( arguments.length ) {
+			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
 			CanManageProperties = canManageProperties;
 			SemanticProperties = semanticProperties;
 			Properties = properties;
+		}
+
+		if ( ManagePropertiesSpecialPage ) {
+			return;
 		}
 
 		PanelProperties = new PanelLayout( {
@@ -951,7 +811,7 @@ const PageProperties = ( function () {
 			classes: [ 'PanelProperties' ]
 		} );
 
-		var toolbarA = createToolbarA();
+		var toolbarA = createToolbar();
 
 		var frameA = new OO.ui.PanelLayout( {
 			$content: [ toolbarA.$element, PanelProperties.$element ],
@@ -962,7 +822,7 @@ const PageProperties = ( function () {
 
 		// https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/layouts.js
 
-		var toolbarB = createToolbarB();
+		var toolbarB = ManageProperties.createToolbar();
 
 		var contentFrameB = new OO.ui.PanelLayout( {
 			$content: $(
@@ -1008,7 +868,7 @@ const PageProperties = ( function () {
 		toolbarB.initialize();
 		toolbarB.emit( 'updateState' );
 
-		initializeDataTable();
+		ManageProperties.initialize( SemanticProperties, false );
 	}
 
 	return {
@@ -1020,6 +880,15 @@ const PageProperties = ( function () {
 }() );
 
 $( document ).ready( function () {
+	var managePropertiesSpecialPage = mw.config.get( 'pageproperties-managePropertiesSpecialPage' );
+	// console.log("managePropertiesSpecialPage", managePropertiesSpecialPage);
+
+	var categories = JSON.parse( mw.config.get( 'pageproperties-categories' ) );
+	// console.log("categories", categories);
+
+	// var selectedPage = mw.config.get( 'pageproperties-selectedPage' );
+	// console.log("selectedPage", selectedPage);
+
 	var semanticProperties = JSON.parse(
 		mw.config.get( 'pageproperties-semanticProperties' )
 	);
@@ -1033,10 +902,21 @@ $( document ).ready( function () {
 	// console.log(properties);
 
 	PageProperties.initialize(
+		managePropertiesSpecialPage,
 		canManageProperties,
 		semanticProperties,
 		properties
 	);
+
+	if ( managePropertiesSpecialPage ) {
+		ManageProperties.initialize(
+			semanticProperties, true
+		);
+
+		Categories.initialize(
+			categories
+		);
+	}
 
 	if ( canManageProperties ) {
 		ManageProperties.loadData( semanticProperties );

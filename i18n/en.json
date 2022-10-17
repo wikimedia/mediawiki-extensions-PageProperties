@@ -3,6 +3,16 @@
 		"authors": []
 	},
 	"pageproperties": "Page Properties",
+	"manageproperties": "Manage Properties",
+
+	"pageproperties-form-section-properties": "properties",
+	"pageproperties-form-section-categories": "categories",
+	"pageproperties-form-section-import": "import",
+	"pageproperties-form-section-properties-label": "",
+	"pageproperties-form-section-categories-label": "",
+	"pageproperties-form-section-import-label": "",
+
+	"manageproperties-label": "Manage properties",
 	"pageproperties-label": "Page properties",
 	"specialpages-group-": "Page Properties",
 	"properties-navigation": "Properties",
@@ -50,6 +60,7 @@
 	"pageproperties-jsmodule-manageproperties-options": "Options",
 	"pageproperties-jsmodule-manageproperties-help-page": "help page",
 	"pageproperties-jsmodule-manageproperties-define-property": "Define property",
+	"pageproperties-jsmodule-manageproperties-define-category": "Define category",
 	"pageproperties-jsmodule-manageproperties-save": "Save",
 	"pageproperties-jsmodule-manageproperties-cancel": "Cancel",
 	"pageproperties-jsmodule-manageproperties-delete": "Delete",
@@ -57,11 +68,13 @@
 
 	"pageproperties-jsmodule-pageproperties-delete-confirm": "Are you sure you want to delete this field ?",
 	"pageproperties-jsmodule-pageproperties-create-property": "Create property",
+	"pageproperties-jsmodule-pageproperties-create-category": "Create category",
 	"pageproperties-jsmodule-pageproperties-add-property": "Add property",
 	"pageproperties-jsmodule-pageproperties-page-properties": "Page properties",
 	"pageproperties-jsmodule-pageproperties-manage-properties": "Manage properties",
 	"pageproperties-jsmodule-pageproperties-no-properties": "<strong>No properties associated to this page</strong><br>To add/create properties use the buttons above",
 	"pageproperties-jsmodule-pageproperties-columns": "name,type,vocabulary,description",
+	"pageproperties-jsmodule-pageproperties-columns-categories": "name,vocabulary",
 	"pageproperties-jsmodule-pageproperties-outdated-version": "This version of PageProperties is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageProperties\">Update</a>",
 
 	"apihelp-pageproperties-manageproperties-load-data-example-1": "Load manage properties data",
@@ -70,6 +83,8 @@
 	"apihelp-pageproperties-check-latest-version-summary": "check extension's latest version",
 	"apihelp-pageproperties-manageproperties-saveproperty-example-1": "save property",
 	"apihelp-pageproperties-manageproperties-saveproperty-summary": "save property",
+	"apihelp-pageproperties-manageproperties-savecategory-example-1": "save category",
+	"apihelp-pageproperties-manageproperties-savecategory-summary": "save category",
 
 	"pageproperties-form-section-semantic-manage-properties-label": "Here you can create, edit, remove and rename properties without to deal with property pages. Renamed properties already annotated will be automatically updated in all the pages which make use of them. To use the [https://schema.org/docs/full.html schema.org] vocabulary in your wiki add in [[MediaWiki:Smw_import_schema|this page]] a subset of the [https://www.semantic-mediawiki.org/wiki/MediaWiki:Smw_import_schema following list]. [https://www.semantic-mediawiki.org/wiki/Help:Import_vocabulary Check here] to find out more.<br /><br />",
 
@@ -127,6 +142,7 @@
 
 	"pageproperties-form-displaytitle-label": "Display title",
 	"pageproperties-form-displaytitle-help": "can be blank",
+	"pageproperties-form-categories-label": "Categories",
 
 	"pageproperties_form-displaytitle-option-default": "default",
 	"pageproperties_form-displaytitle-option-override": "as defined:",

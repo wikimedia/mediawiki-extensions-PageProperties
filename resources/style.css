@@ -44,11 +44,23 @@
 	cursor: pointer;
 }
 
+#categories-wrapper #pageproperties-categories-datatable tr td {
+	cursor: pointer;
+}
+
 #semantic-properties-wrapper .pageproperties-datatable-left {
 	float: left;
 }
 
+#categories-wrapper .pageproperties-datatable-left {
+	float: left;
+}
+
 #semantic-properties-wrapper .pageproperties-datatable-right {
+	float: right;
+}
+
+#categories-wrapper .pageproperties-datatable-right {
 	float: right;
 }
 

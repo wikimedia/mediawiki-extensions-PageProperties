@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.02",
+	"version": "1.2.1",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -22,12 +22,14 @@
 		"PageProperties": "includes/PageProperties.php",
 		"PagePropertiesHooks": "includes/PagePropertiesHooks.php",
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
+		"SpecialManageProperties": "includes/specials/SpecialManageProperties.php",
 		"PagePropertiesJob": "includes/PagePropertiesJob.php",
 		"PagePropertiesHtmlContentHandler": "includes/content/PagePropertiesHtmlContentHandler.php",
 		"PagePropertiesHtmlContent": "includes/content/PagePropertiesHtmlContent.php",
 		"PagePropertiesApiSaveProperty": "includes/api/PagePropertiesApiSaveProperty.php",
 		"PagePropertiesApiLoadData": "includes/api/PagePropertiesApiLoadData.php",
-		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php"
+		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php",
+		"PagePropertiesApiSaveCategory": "includes/api/PagePropertiesApiSaveCategory.php"
 	},
 	"ExtensionMessagesFiles": {
 		"PagePropertiesAlias": "PageProperties.alias.php",
@@ -53,12 +55,14 @@
 		"LinkerMakeExternalLink": "PagePropertiesHooks::onLinkerMakeExternalLink"
 	},
 	"SpecialPages": {
-		"PageProperties": "SpecialPageProperties"
+		"PageProperties": "SpecialPageProperties",
+		"ManageProperties": "SpecialManageProperties"
 	},
 	"APIModules": {
 		"pageproperties-manageproperties-saveproperty": "PagePropertiesApiSaveProperty",
 		"pageproperties-manageproperties-load-data": "PagePropertiesApiLoadData",
-		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion"
+		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion",
+		"pageproperties-manageproperties-savecategory": "PagePropertiesApiSaveCategory"
 	},
 	"JobClasses": {
 		"PageProperties": "PagePropertiesJob"
@@ -111,7 +115,6 @@
 				"dynamictable.js"
 			],
 			"styles": [
-				"datatables/datatables.min.css",
 				"style.css"
 			],
 			"dependencies": [
@@ -123,15 +126,28 @@
 				"prefs-tabs-navigation-hint"
 			]
 		},
+		"ext.PageProperties.CategoryMultiselectWidgetPageProperties": {
+			"scripts": [
+				"mw.widgets.CategoryMultiselectWidgetPageProperties.js"
+			],
+			"dependencies": [
+				"mediawiki.widgets.CategoryMultiselectWidget"
+			]
+		},
 		"ext.PageProperties.Semantic": {
 			"position": "top",
 			"scripts": [
 				"datatables/datatables.min.js",
+				"intl-tel-input/js/intlTelInput.js",
+				"PagePropertiesintlTelInput.js",
+				"PagePropertiesFunctions.js",
 				"ManageProperties.js",
+				"Categories.js",
 				"PageProperties.js"
 			],
 			"styles": [
-				"datatables/datatables.min.css"
+				"datatables/datatables.min.css",
+				"intl-tel-input/css/intlTelInput.min.css"
 			],
 			"dependencies": [
 				"mediawiki.cookie",
@@ -179,17 +195,20 @@
 				"pageproperties-jsmodule-manageproperties-options",
 				"pageproperties-jsmodule-manageproperties-help-page",
 				"pageproperties-jsmodule-manageproperties-define-property",
+				"pageproperties-jsmodule-manageproperties-define-category",
 				"pageproperties-jsmodule-manageproperties-save",
 				"pageproperties-jsmodule-manageproperties-cancel",
 				"pageproperties-jsmodule-manageproperties-delete",
 				"pageproperties-jsmodule-manageproperties-delete-confirm",
 				"pageproperties-jsmodule-pageproperties-delete-confirm",
 				"pageproperties-jsmodule-pageproperties-create-property",
+				"pageproperties-jsmodule-pageproperties-create-category",
 				"pageproperties-jsmodule-pageproperties-add-property",
 				"pageproperties-jsmodule-pageproperties-page-properties",
 				"pageproperties-jsmodule-pageproperties-manage-properties",
 				"pageproperties-jsmodule-pageproperties-no-properties",
 				"pageproperties-jsmodule-pageproperties-columns",
+				"pageproperties-jsmodule-pageproperties-columns-categories",
 				"pageproperties-jsmodule-pageproperties-outdated-version"
 			]
 		}
