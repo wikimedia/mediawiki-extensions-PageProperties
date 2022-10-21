@@ -349,15 +349,15 @@ class PagePropertiesHooks {
 			];
 		}
 		$title = $skin->getTitle();
+		$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
 		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
 			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );
 			$title = Title::newFromText( $par, NS_MAIN );
+		}
+		if ( $user->isAllowed( 'pageproperties-caneditproperties' ) ) {
 			if ( !$title || !$title->isKnown() || !$title->isContentPage() ) {
 				return;
 			}
-		}
-		if ( $user->isAllowed( 'pageproperties-caneditproperties' ) ) {
-			$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
 			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
 				'text'   => wfMessage( 'pageproperties-label' )->text(),
 				'href'   => $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
