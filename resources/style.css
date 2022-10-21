@@ -94,3 +94,19 @@
 	top: 8px;
 	right: 8px;
 }
+
+.pageproperties-ooui-window {
+	z-index: 10000;
+}
+
+.oo-ui-labelElement .oo-ui-labelElement-label {
+	display: inline;
+}
+
+.oo-ui-actionFieldLayout .oo-ui-actionFieldLayout-input .oo-ui-widget:not( .oo-ui-textInputWidget ) {
+	margin-right: auto;
+}
+
+.oo-ui-draggableElement.oo-ui-tagItemWidget.oo-ui-widget-enabled:not( .oo-ui-tagItemWidget-fixed ) {
+	/* margin-right: 8px; */
+}
