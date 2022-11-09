@@ -1,3 +1,6 @@
+/* stylelint-disable selector-max-id */
+/* stylelint-disable no-descending-specificity */
+/* stylelint-disable color-named */
 
 .ItemWidget {
 	padding: 12px 0;
@@ -32,14 +35,13 @@
 }
 
 .oo-ui-comboBoxInputWidget-field {
-	border-spacing: 0;
+	/* border-spacing: 0; */
 }
 
 .pageproperties_dynamictable td {
 	padding-top: 4px;
 }
 
-/* stylelint-disable selector-max-id */
 #semantic-properties-wrapper #pageproperties-datatable tr td {
 	cursor: pointer;
 }
@@ -48,19 +50,11 @@
 	cursor: pointer;
 }
 
-#semantic-properties-wrapper .pageproperties-datatable-left {
+.pageproperties-datatable-left {
 	float: left;
 }
 
-#categories-wrapper .pageproperties-datatable-left {
-	float: left;
-}
-
-#semantic-properties-wrapper .pageproperties-datatable-right {
-	float: right;
-}
-
-#categories-wrapper .pageproperties-datatable-right {
+.pageproperties-datatable-right {
 	float: right;
 }
 
@@ -68,13 +62,9 @@
 	position: relative;
 }
 
-.pageproperties-ooui-window .oo-ui-actionFieldLayout-button,
-#semantic-properties-wrapper .oo-ui-actionFieldLayout-button {
+#semantic-properties-wrapper .oo-ui-actionFieldLayout-button,
+.pageproperties-ooui-window .oo-ui-actionFieldLayout-button {
 	vertical-align: top;
-}
-
-#pageproperties-form .oo-ui-panelLayout-scrollable {
-	overflow: visible;
 }
 
 #semantic-properties-wrapper [ class*='inputName-mw.widgets.DateInputWidget' ] {
@@ -99,14 +89,66 @@
 	z-index: 10000;
 }
 
-.oo-ui-labelElement .oo-ui-labelElement-label {
+#semantic-properties-wrapper .oo-ui-labelElement-label {
 	display: inline;
 }
 
-.oo-ui-actionFieldLayout .oo-ui-actionFieldLayout-input .oo-ui-widget:not( .oo-ui-textInputWidget ) {
-	margin-right: auto;
+#import-wrapper #import-datatable-heading-map tr td {
+	cursor: pointer;
 }
 
-.oo-ui-draggableElement.oo-ui-tagItemWidget.oo-ui-widget-enabled:not( .oo-ui-tagItemWidget-fixed ) {
-	/* margin-right: 8px; */
+#import-wrapper .oo-ui-panelLayout-expanded {
+	position: relative;
+}
+
+#import-wrapper .oo-ui-layout {
+	display: block;
+}
+
+#import-wrapper .oo-ui-menuLayout-content {
+	display: block;
+	position: relative;
+}
+
+.pageproperties-import-dialog .oo-ui-selectWidget {
+	display: table;
+	width: 100%;
+}
+
+.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget {
+	display: table-row;
+}
+
+.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label {
+	display: table-cell;
+	padding: 8px;
+}
+
+.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label.right {
+	text-align: right;
+	color: gray;
+}
+
+.pageproperties-import-toolbar-action-button {
+	margin-right: 0;
+}
+
+.pageproperties-import-toolbar-action-button .oo-ui-buttonElement-button {
+	border: 0;
+	/* stylelint-disable-next-line declaration-no-important */
+	border-width: 0 !important;
+}
+
+.pageproperties-import-dialog .oo-ui-pageLayout {
+	font-family: monospace;
+	white-space: pre-wrap;
+	background: #f7f7f7;
+	padding: 8px;
+}
+
+.pageproperties-import-saved-content {
+	height: 280px;
+	overflow-y: auto;
+	background: #f7f7f7;
+	padding: 8px;
 }

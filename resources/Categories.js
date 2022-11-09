@@ -343,18 +343,18 @@ const Categories = ( function () {
 		};
 
 		var toolGroup = [
-			[
-				'createcategory',
-				'add',
-				mw.msg( 'pageproperties-jsmodule-pageproperties-create-category' ),
-				onSelect
-			]
+			{
+				name: 'createcategory',
+				icon: 'add',
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-create-category' ),
+				onSelect: onSelect
+			}
 		];
 		PagePropertiesFunctions.createToolGroup( toolFactory, 'group', toolGroup );
 
 		toolbar.setup( [
 			{
-				// name: "format",
+				name: 'my-group',
 				// type: "bar",
 				// label: "Create property",
 				include: [ { group: 'group' } ]

@@ -22,6 +22,10 @@
 // eslint-disable-next-line no-unused-vars
 const PagePropertiesFunctions = ( function () {
 
+	function getKeyByValue( obj, value ) {
+		return Object.keys( obj ).find( ( key ) => obj[ key ] === value );
+	}
+
 	function sortObjectByKeys( object ) {
 		var ret = {};
 		Object.keys( object )
@@ -37,61 +41,74 @@ const PagePropertiesFunctions = ( function () {
 		delete jQuery.extend( o, { [ newKey ]: o[ oldKey ] } )[ oldKey ];
 	}
 
-	function createTool(
-		group,
-		name,
-		icon,
-		title,
-		onSelect,
-		flags,
-		narrowConfig,
-		init,
-		// eslint-disable-next-line no-unused-vars
-		displayBothIconAndLabel
-	) {
+	function createTool( obj, config ) {
+
 		var Tool = function () {
-			Tool.super.apply( this, arguments );
+			// Tool.super.apply( this, arguments );
+			Tool.super.call( this, arguments[ 0 ], config );
+
+			// OO.ui.mixin.PendingElement.call( this, {} );
+
+			/*
 			this.toggled = false;
 			if ( init ) {
 				init.call( this );
 			}
+*/
 		};
 
 		OO.inheritClass( Tool, OO.ui.Tool );
-
+		// OO.mixinClass( Tool, OO.ui.mixin.PendingElement );
 		Tool.prototype.onSelect = function () {
-			if ( onSelect ) {
-				onSelect.call( this );
+			// this.setPendingElement(this.$element)
+			// this.pushPending();
+
+			if ( obj.onSelect ) {
+				obj.onSelect.call( this );
 			} else {
 				this.toggled = !this.toggled;
 				this.setActive( this.toggled );
 			}
-			// toolbars[ toolbar ].emit( 'updateState' );
+			// Tool.emit( 'updateState' );
 		};
+
 		Tool.prototype.onUpdateState = function () {};
 
-		Tool.static.name = name;
+		/*
 		Tool.static.group = group;
+		Tool.static.name = name;
 		Tool.static.icon = icon;
 		Tool.static.title = title;
 		Tool.static.flags = flags;
+		// Tool.static.classes = ['oo-ui-actionWidget'];
 		Tool.static.narrowConfig = narrowConfig;
 		Tool.static.displayBothIconAndLabel = true; // !!displayBothIconAndLabel;
+*/
+
+		for ( var i in obj ) {
+			Tool.static[ i ] = obj[ i ];
+		}
+
+		Tool.static.displayBothIconAndLabel = true;
+
 		return Tool;
 	}
 
-	function createToolGroup( toolFactory, name, tools ) {
+	function createToolGroup( toolFactory, groupName, tools ) {
 		tools.forEach( function ( tool ) {
-			var args = tool.slice();
-			args.splice( 0, 0, name );
-			toolFactory.register( createTool.apply( null, args ) );
+			var obj = jQuery.extend( {}, tool );
+			obj.group = groupName;
+			var config = ( tool.config ? tool.config : {} );
+			delete obj.config;
+			toolFactory.register( createTool( obj, config ) );
 		} );
 	}
 
 	return {
 		createToolGroup,
 		sortObjectByKeys,
-		renameObjectKey
+		renameObjectKey,
+		getKeyByValue
 	};
 
 }() );

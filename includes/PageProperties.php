@@ -286,7 +286,7 @@ class PageProperties {
 
 		// page_title can be null
 		if ( empty( $page_title ) ) {
-			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; } .mw-body .firstHeading { border-bottom: none; margin-bottom: 0; } </style>' );
+			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; } .mw-body .firstHeading { border-bottom: none; margin-bottom: 0; margin-top: 0; } </style>' );
 		}
 
 		if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
