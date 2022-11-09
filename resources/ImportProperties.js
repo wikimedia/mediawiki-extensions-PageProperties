@@ -319,7 +319,7 @@ const ImportProperties = ( function () {
 
 	function createBookletPage( name, label, config ) {
 		function PageLayout() {
-			pageLayout.super.call( this, name, config );
+			PageLayout.super.call( this, name, config );
 			this.$element.append( config.data );
 		}
 
@@ -350,7 +350,7 @@ const ImportProperties = ( function () {
 
 			if ( config.step === 1 ) {
 				processDialogConfirm = new ProcessDialogConfirm( {
-					size: config.multistep ? 'larger' : 'medium',
+					size: 'larger', // config.multistep ? 'larger' : 'medium',
 					classes: [ 'pageproperties-import-dialog' ],
 					data: { multistep: config.multistep }
 				} );
