@@ -566,7 +566,12 @@ const PageProperties = ( function () {
 		for ( var i in SemanticProperties ) {
 			var value = SemanticProperties[ i ];
 			// name, icon, title, onSelect, flags, narrowConfig, init,displayBothIconAndLabel
-			toolGroup.push( [ value.key, null, i, onSelectProperty ] );
+			toolGroup.push( {
+				name: value.key,
+				icon: null,
+				title: i,
+				onSelect: onSelectProperty
+			} );
 			accelerator[ value.key ] = value.typeLabel;
 		}
 
@@ -590,12 +595,12 @@ const PageProperties = ( function () {
 
 		if ( CanManageProperties ) {
 			var toolGroup = [
-				[
-					'createproperty',
-					'add',
-					mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
-					onSelect
-				]
+				{
+					name: 'createproperty',
+					icon: 'add',
+					title: mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
+					onSelect: onSelect
+				}
 			];
 			PagePropertiesFunctions.createToolGroup( toolFactory, 'groupB', toolGroup );
 		}
@@ -650,18 +655,18 @@ const PageProperties = ( function () {
 		};
 
 		var toolGroup = [
-			[
-				'pageproperties',
-				null,
-				mw.msg( 'pageproperties-jsmodule-pageproperties-page-properties' ),
-				onSelectSwitch
-			],
-			[
-				'manageproperties',
-				null,
-				mw.msg( 'pageproperties-jsmodule-pageproperties-manage-properties' ),
-				onSelectSwitch
-			]
+			{
+				name: 'pageproperties',
+				icon: null,
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-page-properties' ),
+				onSelect: onSelectSwitch
+			},
+			{
+				name: 'manageproperties',
+				icon: null,
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-manage-properties' ),
+				onSelect: onSelectSwitch
+			}
 			// ["forms", "null", "Forms", onSelectSwitch],
 		];
 		PagePropertiesFunctions.createToolGroup( toolFactory, 'selectSwitch', toolGroup );
@@ -779,6 +784,7 @@ const PageProperties = ( function () {
 
 		} else {
 			ManageProperties.initialize( SemanticProperties, true );
+			ImportProperties.updateVariables( SemanticProperties );
 		}
 
 		return true;
@@ -863,10 +869,10 @@ const PageProperties = ( function () {
 		$( '#semantic-properties-wrapper' ).append( myStack.$element );
 
 		toolbarA.initialize();
-		toolbarA.emit( 'updateState' );
+		// toolbarA.emit( 'updateState' );
 
 		toolbarB.initialize();
-		toolbarB.emit( 'updateState' );
+		// toolbarB.emit( 'updateState' );
 
 		ManageProperties.initialize( SemanticProperties, false );
 	}
@@ -916,6 +922,11 @@ $( document ).ready( function () {
 		Categories.initialize(
 			categories
 		);
+
+		ImportProperties.initialize(
+			semanticProperties
+		);
+
 	}
 
 	if ( canManageProperties ) {

@@ -16,7 +16,9 @@ module.exports = function ( grunt ) {
 				'!node_modules/**',
 				'!vendor/**',
 				'!resources/datatables/**',
-				'!resources/intl-tel-input/**'
+				'!resources/intl-tel-input/**',
+				'!resources/papaparse/**',
+				'!resources/promise-polyfill/**'
 			]
 		},
 		stylelint: {

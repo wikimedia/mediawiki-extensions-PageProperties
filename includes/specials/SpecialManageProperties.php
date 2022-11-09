@@ -241,11 +241,11 @@ class SpecialManageProperties extends FormSpecialPage {
 		// 	'append_html' => '<div id="forms-wrapper"></div>'
 		// ];
 
-		// $formDescriptor['import'] = [
-		// 	'section' => 'form-section-import',
-		// 	'type' => 'hidden',
-		// 	'append_html' => '<div id="import-wrapper"></div>'
-		// ];
+		$formDescriptor['import'] = [
+			'section' => 'form-section-import',
+			'type' => 'hidden',
+			'append_html' => '<div id="import-wrapper"></div>'
+		];
 
 		return $formDescriptor;
 	}

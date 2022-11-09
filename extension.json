@@ -29,7 +29,8 @@
 		"PagePropertiesApiSaveProperty": "includes/api/PagePropertiesApiSaveProperty.php",
 		"PagePropertiesApiLoadData": "includes/api/PagePropertiesApiLoadData.php",
 		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php",
-		"PagePropertiesApiSaveCategory": "includes/api/PagePropertiesApiSaveCategory.php"
+		"PagePropertiesApiSaveCategory": "includes/api/PagePropertiesApiSaveCategory.php",
+		"PagePropertiesApiImport": "includes/api/PagePropertiesApiImport.php"
 	},
 	"ExtensionMessagesFiles": {
 		"PagePropertiesAlias": "PageProperties.alias.php",
@@ -62,7 +63,8 @@
 		"pageproperties-manageproperties-saveproperty": "PagePropertiesApiSaveProperty",
 		"pageproperties-manageproperties-load-data": "PagePropertiesApiLoadData",
 		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion",
-		"pageproperties-manageproperties-savecategory": "PagePropertiesApiSaveCategory"
+		"pageproperties-manageproperties-savecategory": "PagePropertiesApiSaveCategory",
+		"pageproperties-manageproperties-import": "PagePropertiesApiImport"
 	},
 	"JobClasses": {
 		"PageProperties": "PagePropertiesJob"
@@ -134,14 +136,20 @@
 				"mediawiki.widgets.CategoryMultiselectWidget"
 			]
 		},
+		"ext.PageProperties.promise-polyfill": {
+			"scripts": "promise-polyfill/promise-polyfill.js",
+			"skipFunction": "promise-polyfill/skip-Promise.js"
+		},
 		"ext.PageProperties.Semantic": {
 			"position": "top",
 			"scripts": [
 				"datatables/datatables.min.js",
+				"papaparse/papaparse.min.js",
 				"intl-tel-input/js/intlTelInput.js",
 				"PagePropertiesintlTelInput.js",
 				"PagePropertiesFunctions.js",
 				"ManageProperties.js",
+				"ImportProperties.js",
 				"Categories.js",
 				"PageProperties.js"
 			],
@@ -150,9 +158,14 @@
 				"intl-tel-input/css/intlTelInput.min.css"
 			],
 			"dependencies": [
+				"ext.PageProperties.promise-polyfill",
+				"mediawiki.util",
+				"mediawiki.base",
 				"mediawiki.cookie",
 				"oojs-ui-core",
 				"oojs-ui-widgets",
+				"oojs-ui.styles.icons-media",
+				"oojs-ui.styles.icons-movement",
 				"oojs-ui.styles.icons-interactions",
 				"oojs-ui.styles.icons-editing-core",
 				"oojs-ui-toolbars",
@@ -209,7 +222,49 @@
 				"pageproperties-jsmodule-pageproperties-no-properties",
 				"pageproperties-jsmodule-pageproperties-columns",
 				"pageproperties-jsmodule-pageproperties-columns-categories",
-				"pageproperties-jsmodule-pageproperties-outdated-version"
+				"pageproperties-jsmodule-pageproperties-outdated-version",
+				"importstart",
+				"import-revision-count",
+				"importnopages",
+				"imported-log-entries",
+				"importfailed",
+				"importcantopen",
+				"importsuccess",
+				"importnofile",
+				"importuploaderrorsize",
+				"importuploaderrorpartial",
+				"import-noarticle",
+				"import-nonewrevisions",
+				"pageproperties-jsmodule-import-goback",
+				"pageproperties-jsmodule-import-goforward",
+				"pageproperties-jsmodule-import-goforward",
+				"pageproperties-jsmodule-import-selectfile",
+				"pageproperties-jsmodule-import-upload",
+				"pageproperties-jsmodule-import-pause",
+				"pageproperties-jsmodule-import-play",
+				"pageproperties-jsmodule-import-confirmsave",
+				"pageproperties-jsmodule-import-hasheader",
+				"pageproperties-jsmodule-import-valuesseparator",
+				"pageproperties-jsmodule-import-valuesseparator-help",
+				"pageproperties-jsmodule-import-pagecontent",
+				"pageproperties-jsmodule-import-pagename",
+				"pageproperties-jsmodule-import-assigncategories",
+				"pageproperties-jsmodule-import-thirdstep",
+				"pageproperties-jsmodule-import-freewikitext-help",
+				"pageproperties-jsmodule-import-categoriesformula-help",
+				"pageproperties-jsmodule-import-pagenameformula-help",
+				"pageproperties-jsmodule-import-options-label-none",
+				"pageproperties-jsmodule-import-imported",
+				"pageproperties-jsmodule-import-local",
+				"pageproperties-jsmodule-import-firststep",
+				"pageproperties-jsmodule-import-secondstep",
+				"pageproperties-jsmodule-import-fromfield",
+				"pageproperties-jsmodule-import-newcontent",
+				"pageproperties-jsmodule-import-formula",
+				"pageproperties-jsmodule-import-selectone",
+				"pageproperties-jsmodule-import-previewimport",
+				"pageproperties-jsmodule-import-selectproperty",
+				"pageproperties-jsmodule-import-importpreview"
 			]
 		}
 	},

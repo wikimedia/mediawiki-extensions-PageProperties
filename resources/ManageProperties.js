@@ -1168,18 +1168,18 @@ const ManageProperties = ( function () {
 		};
 
 		var toolGroup = [
-			[
-				'createproperty',
-				'add',
-				mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
-				onSelect
-			]
+			{
+				name: 'createproperty',
+				icon: 'add',
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
+				onSelect: onSelect
+			}
 		];
 		PagePropertiesFunctions.createToolGroup( toolFactory, 'group', toolGroup );
 
 		toolbar.setup( [
 			{
-				// name: "format",
+				name: 'my-group',
 				// type: "bar",
 				// label: "Create property",
 				include: [ { group: 'group' } ]
@@ -1296,7 +1296,7 @@ const ManageProperties = ( function () {
 			$( '#semantic-properties-wrapper' ).append( frame.$element );
 
 			toolbar.initialize();
-			toolbar.emit( 'updateState' );
+			// toolbar.emit( 'updateState' );
 		}
 
 		initializeDataTable();
