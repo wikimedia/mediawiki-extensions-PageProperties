@@ -57,6 +57,9 @@ class PagePropertiesImporter extends WikiImporter {
 	private $mLogItemCallback;
 
 	/** @var callable|null */
+	private $mPageCallback;
+
+	/** @var callable|null */
 	private $mPageOutCallback;
 
 	/** @var callable|null */
@@ -315,6 +318,24 @@ class PagePropertiesImporter extends WikiImporter {
 		$page = $this->wikiPageFactory->newFromTitle( $title );
 		$this->countableCache['title_' . $title->getPrefixedText()] = $page->isCountable();
 		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function pageCallback( $title ) {
+		if ( isset( $this->mPageCallback ) ) {
+			call_user_func( $this->mPageCallback, $title );
+		}
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function setPageCallback( $callback ) {
+		$previous = $this->mPageCallback;
+		$this->mPageCallback = $callback;
+		return $previous;
 	}
 
 	/**

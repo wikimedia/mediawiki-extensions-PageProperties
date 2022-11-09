@@ -181,6 +181,24 @@ class PagePropertiesImporter1_35 extends WikiImporter {
 	/**
 	 * @inheritDoc
 	 */
+	public function pageCallback( $title ) {
+		if ( isset( $this->mPageCallback ) ) {
+			call_user_func( $this->mPageCallback, $title );
+		}
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public function setPageCallback( $callback ) {
+		$previous = $this->mPageCallback;
+		$this->mPageCallback = $callback;
+		return $previous;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	public function setPageOutCallback( $callback ) {
 		$previous = $this->mPageOutCallback;
 		$this->mPageOutCallback = $callback;
