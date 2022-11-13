@@ -240,7 +240,7 @@ class PagePropertiesApiImport extends ApiBase {
 
 			$properties = [
 				'categories' => $categories,
-				'semanticproperties' => $semanticProperties,
+				'semantic-properties' => $semanticProperties,
 			];
 
 			// https://www.mediawiki.org/wiki/Manual:Page_title#:~:text=Titles%20containing%20the%20characters%20%23,for%20MediaWiki%20it%20is%20not.
