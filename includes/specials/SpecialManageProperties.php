@@ -213,7 +213,12 @@ class SpecialManageProperties extends FormSpecialPage {
 			'pageproperties-canManageProperties' => $this->canManageProperties,
 			'pageproperties-categories' => json_encode( $categories, true ),
 			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
-			'pageproperties-properties' => json_encode( $pageProperties, true )
+			'pageproperties-properties' => json_encode( $pageProperties, true ),
+
+			// @see UploadWizard -> UploadWizard.config.php
+			'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
+			'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
+			// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
 		] );
 	}
 

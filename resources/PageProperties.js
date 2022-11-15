@@ -904,6 +904,8 @@ $( document ).ready( function () {
 		'pageproperties-canManageProperties'
 	);
 
+	var maxPhpUploadSize = mw.config.get( 'maxPhpUploadSize' );
+	var maxMwUploadSize = mw.config.get( 'maxMwUploadSize' );
 	// console.log(semanticProperties);
 	// console.log(properties);
 
@@ -924,7 +926,9 @@ $( document ).ready( function () {
 		);
 
 		ImportProperties.initialize(
-			semanticProperties
+			semanticProperties,
+			maxPhpUploadSize,
+			maxMwUploadSize
 		);
 
 	}

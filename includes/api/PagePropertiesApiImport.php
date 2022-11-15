@@ -62,9 +62,9 @@ class PagePropertiesApiImport extends ApiBase {
 		$result = $this->getResult();
 
 		$params = $this->extractRequestParams();
-		$options = json_decode( $params['options'], true );
 		$file = json_decode( $params['file'], true );
-		$action = $params['import-action'];
+		$config = json_decode( $params['config'], true );
+		$options = json_decode( $params['options'], true );
 
 		$services = MediaWikiServices::getInstance();
 
@@ -100,7 +100,7 @@ class PagePropertiesApiImport extends ApiBase {
 		}
 */
 
-		if ( $action === 'import' ) {
+		if ( $config['preview'] === false ) {
 			// @see includes/api/ApiImport.php
 			$isUpload = true;
 			$interwikisource = null;
@@ -124,16 +124,34 @@ class PagePropertiesApiImport extends ApiBase {
 
 		$output = $context->getOutput();
 
-		if ( $options['values']['hasHeader'] ) {
-			$header = array_shift( $file );
+		// *** attention! the heading has to be
+		// retrieved from the first chunk and "duplicate_pages"
+		// should persist during subsequent calls of the same
+		// process !! use $_SESSION[] with the process id as key
+
+		if ( empty( $_SESSION['pageproperties-import-data'] ) ||
+			$_SESSION['pageproperties-import-data']['process-id'] !== $config['processId'] ) {
+
+			if ( $options['values']['hasHeader'] ) {
+				$heading = array_shift( $file );
+
+			} else {
+				$heading = [];
+				$EA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				$length = count( $file[0] );
+				for ( $i = 0; $i < $length; $i++ ) {
+					$heading[] = $EA[$i];
+				}
+			}
+
+			$_SESSION['pageproperties-import-data'] = [
+				'process-id' => $config['processId'],
+				'duplicate_pages' => [],
+				'heading' => $heading,
+			];
 
 		} else {
-			$header = [];
-			$EA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-			$length = count( $file[0] );
-			for ( $i = 0; $i < $length; $i++ ) {
-				$header[] = $EA[$i];
-			}
+			$heading = $_SESSION['pageproperties-import-data']['heading'];
 		}
 
 		if ( $options['values']['selectPagename'] === 'formula' ) {
@@ -144,7 +162,7 @@ class PagePropertiesApiImport extends ApiBase {
 			preg_match_all( '/<\s*([^<>]+)\s*>/', $options['values']['categoriesFormula'], $categoriesMatches, PREG_PATTERN_ORDER );
 		}
 
-		$duplicate_pages = [];
+		$duplicate_pages = $_SESSION['pageproperties-import-data']['duplicate_pages'];
 		$invalid_titles = [];
 		$skippedMsg = $this->msg( 'pageproperties-import-api-skipped' )->text();
 
@@ -153,7 +171,7 @@ class PagePropertiesApiImport extends ApiBase {
 			$skippedMsg => 0
 		];
 
-		if ( $action === 'preview' ) {
+		if ( $config['preview'] === true ) {
 			$invalidtitlesMsg = $this->msg( 'pageproperties-import-api-invalidtitles' )->text();
 			$pagesMsg = $this->msg( 'pageproperties-import-api-pages' )->text();
 
@@ -178,7 +196,7 @@ class PagePropertiesApiImport extends ApiBase {
 
 			$n = 0;
 			foreach ( $fields as $value ) {
-				$mappedFieldName = ( array_key_exists( $header[$n], $options['mappedProperties'] ) ? $options['mappedProperties'][$header[$n]] : null );
+				$mappedFieldName = ( array_key_exists( $heading[$n], $options['mappedProperties'] ) ? $options['mappedProperties'][$heading[$n]] : null );
 
 				if ( $mappedFieldName ) {
 					if ( !empty( $options['valuesSeparator'] ) && str_pos( $value, $options['valuesSeparator'] ) !== false ) {
@@ -187,22 +205,31 @@ class PagePropertiesApiImport extends ApiBase {
 						// }, explode( $options['valuesSeparator'], $value ) ) );
 
 						$value = preg_split( '/\s*' . preg_quote( $options['valuesSeparator'], '/' ) . '\s*/', $value, -1, PREG_SPLIT_NO_EMPTY );
+
+						if ( $config['preview'] === true ) {
+							$value = array_map( static function ( $v ) {
+								return htmlspecialchars( $v );
+							}, $value );
+						}
+
+					} elseif ( $config['preview'] === true ) {
+						$value = htmlspecialchars( $value );
 					}
 
 					$semanticProperties[$mappedFieldName] = $value;
 				}
 
-				if ( $options['values']['selectPagecontent'] === 'field' && $header[$n] === $options['values']['pagecontent'] ) {
+				if ( $options['values']['selectPagecontent'] === 'field' && $heading[$n] === $options['values']['pagecontent'] ) {
 					$pagecontent = $value;
 				}
 
 				if ( $options['values']['selectPagename'] === 'field' ) {
-					if ( $header[$n] === $options['values']['pagename'] ) {
+					if ( $heading[$n] === $options['values']['pagename'] ) {
 						$pagename = $value;
 					}
 				} else {
-					if ( in_array( $header[$n], $pagenameMatches[1] ) ) {
-						$pagename = preg_replace( '/\<\s*' . $header[$n] . '\s*\>/', $value, $pagename );
+					if ( in_array( $heading[$n], $pagenameMatches[1] ) ) {
+						$pagename = preg_replace( '/\<\s*' . $heading[$n] . '\s*\>/', $value, $pagename );
 
 					} elseif ( $mappedFieldName && in_array( $mappedFieldName, $pagenameMatches[1] ) ) {
 						$pagename = preg_replace( '/\<\s*' . $mappedFieldName . '\s*\>/', $value, $pagename );
@@ -210,13 +237,13 @@ class PagePropertiesApiImport extends ApiBase {
 				}
 
 				if ( $options['values']['selectCategories'] === 'field' ) {
-					if ( $header[$n] === $options['values']['categories'] ) {
+					if ( $heading[$n] === $options['values']['categories'] ) {
 						$categories = $value;
 					}
 
 				} else {
-					if ( in_array( $header[$n], $categoriesMatches[1] ) ) {
-						$categories = preg_replace( '/\<\s*' . $header[$n] . '\s*\>/', $value, $categories );
+					if ( in_array( $heading[$n], $categoriesMatches[1] ) ) {
+						$categories = preg_replace( '/\<\s*' . $heading[$n] . '\s*\>/', $value, $categories );
 
 					} elseif ( $mappedFieldName && in_array( $mappedFieldName, $categoriesMatches[1] ) ) {
 						$categories = preg_replace( '/\<\s*' . $mappedFieldName . ')\s*\>/', $value, $categories );
@@ -245,7 +272,7 @@ class PagePropertiesApiImport extends ApiBase {
 
 			// https://www.mediawiki.org/wiki/Manual:Page_title#:~:text=Titles%20containing%20the%20characters%20%23,for%20MediaWiki%20it%20is%20not.
 			// forbidden chars: # < > [ ] | { } _
-			$pagename = str_replace( [ '#', '<', '>', '[', ']', '|', '{', '}', '_' ], '', $pagename );
+			// $pagename = str_replace( [ '#', '<', '>', '[', ']', '|', '{', '}', '_' ], '', $pagename );
 
 			if ( !array_key_exists( $pagename, $duplicate_pages ) ) {
 				$duplicate_pages[ $pagename ] = 0;
@@ -254,7 +281,7 @@ class PagePropertiesApiImport extends ApiBase {
 				$pagename = $pagename . " " . $duplicate_pages[ $pagename ];
 			}
 
-			if ( $action === 'preview' ) {
+			if ( $config['preview'] === true ) {
 				list( $title, $foreignTitle ) = $importer->processTitleSelf( $pagename );
 
 				if ( !$title ) {
@@ -293,7 +320,7 @@ class PagePropertiesApiImport extends ApiBase {
 				];
 			}
 
-			if ( $action === 'import' ) {
+			if ( $config['preview'] === false ) {
 				try {
 					$importer->doImportSelf( $pagename, $contents );
 				} catch ( Exception $e ) {
@@ -302,7 +329,7 @@ class PagePropertiesApiImport extends ApiBase {
 			}
 		}
 
-		if ( $action === 'preview' ) {
+		if ( $config['preview'] === true ) {
 			if ( !count( $invalid_titles ) ) {
 				unset( $ret[$invalidtitlesMsg] );
 			} else {
@@ -316,6 +343,8 @@ class PagePropertiesApiImport extends ApiBase {
 			$ret['import'] = $reporter->getData();
 			$ret['error_messages'] = $error_messages;
 		}
+
+		$_SESSION['pageproperties-import-data']['duplicate_pages'] = $duplicate_pages;
 
 		$result->addValue( [ $this->getModuleName() ], 'result', $ret );
 	}
@@ -335,18 +364,17 @@ class PagePropertiesApiImport extends ApiBase {
 	public function getAllowedParams() {
 		return [
 			'options' => [
-				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_TYPE => 'raw',
+				ApiBase::PARAM_REQUIRED => true
+			],
+			'config' => [
+				ApiBase::PARAM_TYPE => 'raw',
 				ApiBase::PARAM_REQUIRED => true
 			],
 			'file' => [
-				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_TYPE => 'raw',
 				ApiBase::PARAM_REQUIRED => true
-			],
-			'import-action' => [
-				ApiBase::PARAM_TYPE => 'string',
-				ApiBase::PARAM_REQUIRED => true
-			],
-
+			]
 		];
 	}
 
