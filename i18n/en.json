@@ -28,7 +28,7 @@
 	"pageproperties-jsmodule-import-imported": "imported",
 	"pageproperties-jsmodule-import-local": "local",
 	"pageproperties-jsmodule-import-firststep": "<strong>First step</strong><br />Verify that data are consistent",
-	"pageproperties-jsmodule-import-secondstep": "<strong>Second step</strong><br />Map imported to local properties (delete all the fields that you don't want to use for properties, including those to be used as pagename, page content or category list,  clicking on the table row)",
+	"pageproperties-jsmodule-import-secondstep": "<strong>Second step</strong><br />Map imported to local properties<!-- (delete all the fields that you don't want to use for properties, including those to be used as pagename, page content or category list,  clicking on the table row)-->",
 	"pageproperties-jsmodule-import-fromfield": "From field",
 	"pageproperties-jsmodule-import-newcontent": "New content",
 	"pageproperties-jsmodule-import-formula": "Formula",
