@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -264,7 +264,8 @@
 				"pageproperties-jsmodule-import-selectone",
 				"pageproperties-jsmodule-import-previewimport",
 				"pageproperties-jsmodule-import-selectproperty",
-				"pageproperties-jsmodule-import-importpreview"
+				"pageproperties-jsmodule-import-importpreview",
+				"pageproperties-jsmodule-import-file-upload-max-size"
 			]
 		}
 	},

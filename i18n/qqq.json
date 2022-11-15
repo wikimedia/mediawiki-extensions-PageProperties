@@ -4,6 +4,9 @@
 	},
 	"pageproperties": "A label message",
 	"manageproperties": "A label message",
+
+	"pageproperties-jsmodule-import-file-upload-max-size": "A label message",
+
 	"pageproperties-label": "A label message",
 	"specialpages-group-": "A label message",
 	"properties-navigation": "A label message",

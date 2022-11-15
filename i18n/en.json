@@ -5,6 +5,8 @@
 	"pageproperties": "Page Properties",
 	"manageproperties": "Manage Properties",
 
+	"pageproperties-jsmodule-import-file-upload-max-size": "please increase PHP's post_max_size and upload_max_filesize to continue (current upload limit: $1)",
+
 	"pageproperties-jsmodule-import-goback": "go back",
 	"pageproperties-jsmodule-import-goforward": "go forward",
 	"pageproperties-jsmodule-import-selectfile": "Select a csv or json file",

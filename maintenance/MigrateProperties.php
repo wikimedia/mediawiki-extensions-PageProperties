@@ -49,7 +49,8 @@ class MigrateProperties extends Maintenance {
 		$this->langCode = $contLang->getCode();
 		$this->user = User::newSystemUser( 'Maintenance script', [ 'steal' => true ] );
 
-		$db = $this->getDB( DB_MASTER );
+		// phpcs:ignore MediaWiki.Usage.DeprecatedConstantUsage.DB_MASTER
+		$db = $this->getDB( version_compare( MW_VERSION, '1.36', '<' ) ? DB_MASTER : DB_PRIMARY );
 
 		if ( !$db->tableExists( 'page_properties' ) ) {
 			$this->output( "\nNo properties to import!\n" );

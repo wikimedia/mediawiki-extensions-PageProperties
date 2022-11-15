@@ -49,6 +49,10 @@ const ImportProperties = ( function () {
 	var RateCallApiPreview = 500;
 	var ThresholdCallApi = 100;
 	var RateCallApi = 20;
+	var MaxPhpUploadSize;
+	var MaxMwUploadSize;
+	// var WgMaxArticleSize;
+	var FieldMaxSize = 1000;
 
 	var windowManager = new OO.ui.WindowManager( {
 		classes: [ 'pageproperties-ooui-window' ]
@@ -306,7 +310,19 @@ const ImportProperties = ( function () {
 	}
 
 	function callApiPromiseRun( obj, config ) {
-		callApiPromise( config, obj, ParsedData.slice( config.start, config.end ) )
+		var slice = ParsedData.slice( config.start, config.end );
+
+		if ( obj.preview ) {
+			slice = slice.map( ( x ) => x.map( function ( y ) {
+				if ( y.length <= FieldMaxSize ) {
+					return y;
+				}
+				return y.slice( 0, Math.max( 0, FieldMaxSize ) ) + '...';
+			} )
+			);
+		}
+
+		callApiPromise( config, obj, slice )
 			.then( callApiPromiseCallback )
 			.catch( ( err ) => {
 				// eslint-disable-next-line no-console
@@ -479,7 +495,8 @@ const ImportProperties = ( function () {
 	}
 
 	function callApiPromise( config, obj, file ) {
-		// *** this shouldn't happen
+
+		// *** this shouldn't occur
 		if ( ProcessConfig.config.processId !== config.processId ) {
 			return new Promise( ( resolve, reject ) => {
 				reject( 'canceled process' );
@@ -492,18 +509,28 @@ const ImportProperties = ( function () {
 			} );
 		}
 
+		var payload = {
+			action: 'pageproperties-manageproperties-import',
+			options: JSON.stringify( obj ),
+			config: JSON.stringify( config ),
+			file: JSON.stringify( file ),
+			format: 'json'
+		};
+
+		if ( new Blob( [ payload.file ] ).size > Math.min( MaxPhpUploadSize, MaxMwUploadSize ) ) {
+			reject( mw.msg( 'pageproperties-jsmodule-import-file-upload-max-size', PagePropertiesFunctions.formatBytes( Math.min( MaxPhpUploadSize, MaxMwUploadSize ) ) ) );
+		}
+
 		// *** we use a polyfill
 		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
+			// @todo verify that uploaded file is not spliced/reduced by the process
+			// @todo ensure that each file chunk does not exceed post_max_size
+			// and upload_max_filesize
+			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/UploadWizard/+/refs/heads/master/resources/transports/mw.FormDataTransport.js
 			mw.loader.using( 'mediawiki.api', function () {
 				new mw.Api()
-					.postWithToken( 'csrf', {
-						action: 'pageproperties-manageproperties-import',
-						'import-action': config.preview ? 'preview' : 'import',
-						format: 'json',
-						file: JSON.stringify( file ),
-						options: JSON.stringify( obj )
-					} )
+					.postWithToken( 'csrf', payload )
 					.done( function ( res ) {
 						if ( ProcessConfig.paused ) {
 							reject( 'paused' );
@@ -543,7 +570,7 @@ const ImportProperties = ( function () {
 			if ( value ) {
 				var valueLowerCase = value.toLowerCase();
 				values = values.filter(
-					( x ) => x.toLowerCase().indexOf( valueLowerCase ) === 0
+					( x ) => x.toLowerCase().indexOf( valueLowerCase ) !== -1
 				);
 			}
 
@@ -568,14 +595,14 @@ const ImportProperties = ( function () {
 		} );
 
 		searchWidget.results.addItems( getItems() );
-		var that = this;
+		var self = this;
 
 		searchWidget.getResults().on( 'press', function ( widget ) {
 			if ( !widget ) {
 				return;
 			}
 
-			ModelMappedProperties[ that.data.label ] = widget.data;
+			ModelMappedProperties[ self.data.label ] = widget.data;
 			createDataTableHeadingMap();
 
 			windowManager.removeWindows( [ DialogName ] );
@@ -607,6 +634,14 @@ const ImportProperties = ( function () {
 	];
 	ProcessDialog.prototype.getActionProcess = function ( action ) {
 		var dialog = this;
+
+		if ( action === 'delete' ) {
+			if ( dialog.data.label in ModelMappedProperties ) {
+				delete ModelMappedProperties[ dialog.data.label ];
+				createDataTableHeadingMap();
+			}
+		}
+
 		return new OO.ui.Process( function () {
 			dialog.close( { action: action } );
 		} );
@@ -693,7 +728,6 @@ const ImportProperties = ( function () {
 					return callApi(dialog, false);
 				});
 */
-
 				// @todo double-check
 				pauseProcess( true );
 				if ( actionWidget.isPending() ) {
@@ -1194,8 +1228,12 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 		SemanticProperties = semanticProperties;
 	}
 
-	function initialize( semanticProperties ) {
+	// , wgMaxArticleSize
+	function initialize( semanticProperties, maxPhpUploadSize, maxMwUploadSize ) {
 		SemanticProperties = semanticProperties;
+		MaxPhpUploadSize = maxPhpUploadSize;
+		MaxMwUploadSize = maxMwUploadSize;
+		// WgMaxArticleSize = wgMaxArticleSize;
 
 		Model = {};
 		ModelMappedProperties = {};
