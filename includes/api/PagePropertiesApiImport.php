@@ -364,15 +364,15 @@ class PagePropertiesApiImport extends ApiBase {
 	public function getAllowedParams() {
 		return [
 			'options' => [
-				ApiBase::PARAM_TYPE => 'raw',
+				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
 			'config' => [
-				ApiBase::PARAM_TYPE => 'raw',
+				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
 			'file' => [
-				ApiBase::PARAM_TYPE => 'raw',
+				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			]
 		];
