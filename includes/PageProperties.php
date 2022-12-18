@@ -23,14 +23,12 @@
  */
 
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Revision\SlotRecord;
 use SMW\MediaWiki\MediaWikiNsContentReader;
 
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
-
-include_once __DIR__ . '/LoggerPageProperties.php';
-include_once __DIR__ . '/WSSlotsPageProperties.php';
 
 class PageProperties {
 	protected static $cached_page_properties = [];
@@ -455,7 +453,7 @@ class PageProperties {
 	 */
 	public static function checkWritePermissions( $user, $title ) {
 		$actions = [ 'edit' ];
-		if ( !$title->exists() ) {
+		if ( !$title->isKnown() ) {
 			$actions[] = 'create';
 		}
 
@@ -486,10 +484,10 @@ class PageProperties {
 	 * @param User $user
 	 * @param Title $title
 	 * @param array $obj
-	 * @param bool $doNullEdit
+	 * @param null|string $mainSlotContent
 	 * @return null|bool
 	 */
-	public static function setPageProperties( $user, $title, $obj, $doNullEdit = true ) {
+	public static function setPageProperties( $user, $title, $obj, $mainSlotContent = null ) {
 		$canWrite = self::checkWritePermissions( $user, $title );
 
 		if ( !$canWrite ) {
@@ -526,11 +524,11 @@ class PageProperties {
 			}
 		}
 
-		if ( empty( implode( $obj['page-properties']['categories'] ) ) ) {
+		if ( array_key_exists( 'categories', $obj['page-properties'] ) && empty( implode( $obj['page-properties']['categories'] ) ) ) {
 			unset( $obj['page-properties']['categories'] );
 		}
 
-		$keys = [ 'page-properties', 'SEO', 'semantic-properties' ];
+		$keys = [ 'page-properties', 'SEO', 'semantic-properties', 'semantic-forms' ];
 
 		// if $obj is empty the related slot will be removed
 		foreach ( $keys as $key ) {
@@ -539,17 +537,18 @@ class PageProperties {
 			}
 		}
 
-		// previous solution:
-		// cache will be unset through the hook onPageSaveComplete
-		$edit_summary = "PageProperties update";
-		$wikiPage = self::getWikiPage( $title );
+		$slots = [];
+		if ( $mainSlotContent !== null ) {
+			$slots[SlotRecord::MAIN] = $mainSlotContent;
+		}
 
-		// new solution: update cache
-		// $title->getArticleID();
+		// update cache (optimistic update)
 		$key = $title->getFullText();
 		self::$cached_page_properties[ $key ] = $obj;
 
-		$ret = WSSlotsPageProperties::editSlot( $user, $wikiPage, ( !empty( $obj ) ? json_encode( $obj ) : '' ), SLOT_ROLE_PAGEPROPERTIES, $edit_summary, false, '', $doNullEdit );
+		$slots[SLOT_ROLE_PAGEPROPERTIES] = ( !empty( $obj ) ? json_encode( $obj ) : '' );
+
+		$ret = self::recordSlots( $user, $title, $slots );
 
 		// the slot cache was preventively populated with the planned revision
 		// (see WSSlotsPageProperties.php)
@@ -558,6 +557,68 @@ class PageProperties {
 		}
 
 		return $ret;
+	}
+
+	/**
+	 * ***credits WSSlots MediaWiki extension - Wikibase Solutions
+	 * @param User $user
+	 * @param Title $title
+	 * @param array $slots
+	 * @return bool
+	 */
+	private static function recordSlots( $user, $title, $slots ) {
+		$wikiPage = self::getWikiPage( $title );
+		$pageUpdater = $wikiPage->newPageUpdater( $user );
+		$oldRevisionRecord = $wikiPage->getRevisionRecord();
+		$slotRoleRegistry = MediaWikiServices::getInstance()->getSlotRoleRegistry();
+
+		// The 'main' content slot MUST be set when creating a new page
+		if ( $oldRevisionRecord === null && !array_key_exists( MediaWiki\Revision\SlotRecord::MAIN, $slots ) ) {
+			$main_content = ContentHandler::makeContent( "", $title );
+			$pageUpdater->setContent( SlotRecord::MAIN, $main_content );
+		}
+
+		foreach ( $slots as $slotName => $text ) {
+			if ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
+				$modelId = $oldRevisionRecord->getSlot( $slotName )
+					->getContent()->getContentHandler()->getModelID();
+			} else {
+				$modelId = $slotRoleRegistry->getRoleHandler( $slotName )
+					->getDefaultModel( $title );
+			}
+
+			// Remove the slot if $text is empty and the slot name is not MAIN
+			if ( $text === "" && $slotName !== SlotRecord::MAIN ) {
+				$pageUpdater->removeSlot( $slotName );
+
+			} else {
+				$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
+				$pageUpdater->setContent( $slotName, $slotContent );
+			}
+		}
+
+		// *** this ensures that onContentAlterParserOutput relies
+		// on updated data
+		if ( method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
+			$derivedDataUpdater = $pageUpdater->prepareUpdate();
+			$slots = $derivedDataUpdater->getSlots()->getSlots();
+			self::setSlots( $title, $slots );
+		}
+
+		$summary = "PageProperties update";
+		$flags = EDIT_INTERNAL;
+		$comment = CommentStoreComment::newUnsavedComment( $summary );
+
+		$ret = $pageUpdater->saveRevision( $comment, $flags );
+
+		// Perform an additional null-edit to make sure all page properties are up-to-date
+		if ( !$pageUpdater->isUnchanged() && !array_key_exists( SlotRecord::MAIN, $slots ) ) {
+			$comment = CommentStoreComment::newUnsavedComment( "" );
+			$ret_ = $pageUpdater = $wikiPage->newPageUpdater( $user );
+			$pageUpdater->saveRevision( $comment, EDIT_SUPPRESS_RC | EDIT_AUTOSUMMARY );
+		}
+
+		return ( $ret !== null );
 	}
 
 	/**
@@ -651,6 +712,48 @@ class PageProperties {
 			return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 		}
 		return WikiPage::factory( $title );
+	}
+
+	/**
+	 * @param Title $title
+	 * @return array
+	 */
+	public static function getSemanticData( Title $title ) {
+		// $subject = new SMW\DIWikiPage( $title, NS_MAIN );
+		$subject = SMW\DIWikiPage::newFromTitle( $title );
+		$semanticData = self::$SMWStore->getSemanticData( $subject );
+		$ret = [];
+
+		foreach ( $semanticData->getProperties() as $property ) {
+			$key = $property->getKey();
+			if ( in_array( $key, self::$exclude ) ) {
+				continue;
+			}
+			$propertyDv = self::$SMWDataValueFactory->newDataValueByItem( $property, null );
+
+			if ( !$property->isUserAnnotable() || !$propertyDv->isVisible() ) {
+				continue;
+			}
+
+			foreach ( $semanticData->getPropertyValues( $property ) as $dataItem ) {
+				$dataValue = self::$SMWDataValueFactory->newDataValueByItem( $dataItem, $property );
+
+				if ( $dataValue->isValid() ) {
+					$label = $property->getLabel();
+
+					// @todo,get appropriate methods of other dataValues
+					if ( $dataValue instanceof \SMWTimeValue ) {
+						$ret[ $label ][] = $dataValue->getISO8601Date();
+					} else {
+						$dataValue->setOption( 'no.text.transformation', true );
+						$dataValue->setOption( 'form/short', true );
+						$ret[ $label ][] = $dataValue->getWikiValue();
+					}
+				}
+			}
+		}
+
+		return $ret;
 	}
 
 	/**
@@ -784,22 +887,14 @@ class PageProperties {
 				continue;
 			}
 
-			if ( $userDefined ) {
+			// if ( $userDefined ) {
+			// phpcs:ignore Generic.CodeAnalysis.UnconditionalIfStatement.Found
+			if ( true ) {
 				foreach ( $specialPropertyDefinitions as $key_ ) {
-
 					$dataValues = self::getPropertyDataValues( $property, $key_ );
 					if ( $dataValues ) {
-
 						if ( $key_ === '_PDESC' ) {
-							foreach ( $dataValues as $value ) {
-								$desc = $value->getTextValueByLanguageCode( $langCode );
-								if ( !empty( $desc ) ) {
-									// @see SemanticMediaWiki/src/DataValues/MonolingualTextValue.php
-									$list = $value->toArray();
-									$ret[ $label ][ 'description' ] = current( $list );
-									break;
-								}
-							}
+							$ret[ $label ][ 'description' ] = self::getMonolingualText( $langCode, $dataValues );
 						}
 
 						$ret[ $label ][ 'properties' ][ $key_ ] = array_map( static function ( $value ) {
@@ -812,6 +907,23 @@ class PageProperties {
 		}
 
 		return $ret;
+	}
+
+	/**
+	 * @see SemanticMediaWiki/src/DataValues/MonolingualTextValue.php
+	 * @param string $langCode
+	 * @param array $dataValues
+	 * @return string|null
+	 */
+	public static function getMonolingualText( $langCode, $dataValues ) {
+		foreach ( $dataValues as $value ) {
+			$desc = $value->getTextValueByLanguageCode( $langCode );
+			if ( !empty( $desc ) ) {
+				$list = $value->toArray();
+				return current( $list );
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -1071,16 +1183,20 @@ class PageProperties {
 
 		$conds = [
 			'page_namespace' => $namespace,
-			'page_is_redirect' => 0,
-			'page_title' . $dbr->buildLike( $prefix, $dbr->anyString() )
+			'page_is_redirect' => 0
 		];
+
+		if ( !empty( $prefix ) ) {
+			$conds[] = 'page_title' . $dbr->buildLike( $prefix, $dbr->anyString() );
+		}
 
 		$res = $dbr->select(
 			'page',
-			[ 'page_namespace', 'page_title' ],
+			[ 'page_namespace', 'page_title', 'page_id' ],
 			$conds,
 			__METHOD__,
 			[
+				'ORDER BY' => 'page_title',
 				// see here https://doc.wikimedia.org/mediawiki-core/
 				'USE INDEX' => ( version_compare( MW_VERSION, '1.36', '<' ) ? 'name_title' : 'page_name_title' ),
 			]
@@ -1091,7 +1207,6 @@ class PageProperties {
 		}
 
 		$ret = [];
-
 		foreach ( $res as $row ) {
 			$title = Title::newFromRow( $row );
 

@@ -548,6 +548,14 @@ const ImportProperties = ( function () {
 						} else {
 							reject( 'unknown error' );
 						}
+					} )
+					.fail( function ( res ) {
+						reject( 'error' );
+						var msg = res;
+						// The following messages are used here:
+						// * pageproperties-permissions-error
+						// * pageproperties-permissions-error-b
+						OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
 					} );
 			} );
 		} );
@@ -773,20 +781,6 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 };
 */
 
-	function destroyDataTable( id ) {
-		if ( !$.fn.dataTable.isDataTable( '#' + id ) ) {
-			return;
-		}
-		var table = $( '#' + id ).DataTable();
-
-		// *** necessary, othwerwise dataTable.on("click", "tr"
-		// gets called 2 times, and openDialog() will create 2 dialogs
-		table.off( 'click' );
-
-		table.destroy();
-		$( '#' + id ).empty();
-	}
-
 	function createDataTable() {
 		var data = FileContent;
 		var hasHeader = Model.hasHeader.getValue();
@@ -822,7 +816,7 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 
 		ParsedData = results.data;
 
-		destroyDataTable( 'import-datatable' );
+		PagePropertiesFunctions.destroyDataTable( 'import-datatable' );
 
 		var header = createDataTableHeadingMap();
 
@@ -839,7 +833,7 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 	}
 
 	function createDataTableHeadingMap() {
-		destroyDataTable( 'import-datatable-heading-map' );
+		PagePropertiesFunctions.destroyDataTable( 'import-datatable-heading-map' );
 		var hasHeader = Model.hasHeader.getValue();
 		var fileData = ParsedData.slice();
 
@@ -976,7 +970,7 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 			$content: [
 				fieldset.$element,
 				$(
-					'<div><table class="display" id="import-datatable-heading-map" width="100%"></table></div>'
+					'<div><table class="pageproperties-datatable display" id="import-datatable-heading-map" width="100%"></table></div>'
 				)
 			],
 			expanded: false,

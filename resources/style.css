@@ -7,6 +7,11 @@
 	display: block;
 }
 
+.oo-ui-fieldLayout.oo-ui-labelElement.ItemWidget {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
 .InnerItemWidget {
 	padding-bottom: 8px;
 	display: block;
@@ -16,6 +21,11 @@
 	z-index: 10;
 }
 
+.pageproperties_dynamictable {
+	width: 100%;
+	margin-bottom: 12px;
+}
+
 .pageproperties_dynamictable label {
 	display: inline;
 }
@@ -23,6 +33,12 @@
 .pageproperties_dynamictable_key_cell {
 	/* stylelint-disable-next-line declaration-property-unit-disallowed-list */
 	width: 50%;
+}
+
+.pageproperties_dynamictable_key_cell,
+.pageproperties_dynamictable_value_cell,
+.pageproperties_dynamictable_cancel_cell {
+	padding: 2px;
 }
 
 .pageproperties_dynamictable_row {
@@ -42,11 +58,7 @@
 	padding-top: 4px;
 }
 
-#semantic-properties-wrapper #pageproperties-datatable tr td {
-	cursor: pointer;
-}
-
-#categories-wrapper #pageproperties-categories-datatable tr td {
+.pageproperties-datatable tr td {
 	cursor: pointer;
 }
 
@@ -73,6 +85,7 @@
 
 #semantic-properties-wrapper .PanelProperties {
 	min-height: 160px;
+	overflow-x: hidden;
 }
 
 .oo-ui-messageWidget.oo-ui-messageWidget-block.oo-ui-messageWidget-showClose {
@@ -91,10 +104,6 @@
 
 #semantic-properties-wrapper .oo-ui-labelElement-label {
 	display: inline;
-}
-
-#import-wrapper #import-datatable-heading-map tr td {
-	cursor: pointer;
 }
 
 #import-wrapper .oo-ui-panelLayout-expanded {
@@ -154,6 +163,56 @@
 	padding: 8px;
 }
 
+.oo-ui-bookletLayout-stackLayout > .oo-ui-panelLayout.pageproperties-forms-fields-panel {
+	padding: 0;
+}
+
+.pageproperties-forms-fields-actionwidget {
+	background-color: #f5f5f5;
+	border-bottom: 1px dotted #aaa;
+	margin-top: 0;
+	padding: 0;
+}
+
+.pageproperties-ooui-window .pageproperties-forms-fields-actionwidget .oo-ui-actionFieldLayout-button {
+	vertical-align: middle;
+}
+
+.pageproperties-forms-fields-contentframe {
+	padding: 16px 18px 18px;
+}
+
 #import-datatable td {
 	vertical-align: top;
+}
+
+#pageproperties-forms-datatable-dialog .buttons-wrapper {
+	white-space: nowrap;
+}
+
+#form-section-properties .oo-ui-menuLayout-expanded {
+	position: static;
+}
+
+#form-section-properties .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-menu {
+	position: static;
+}
+
+#form-section-properties .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-content {
+	position: static;
+}
+
+#form-section-properties #pageproperties-import-search-widget {
+	height: 280px;
+}
+
+.PanelProperties-panel-section {
+	border: 1px solid #ccc;
+	border-top: 0;
+	border-bottom: 1px dotted #ccc;
+	background: #f8f9fa;
+}
+
+.PanelProperties-panel-section:last-child {
+	border-bottom: 1px solid #ccc;
 }

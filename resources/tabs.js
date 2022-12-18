@@ -5,6 +5,10 @@
 	$( function () {
 		let tabs, previousTab, switchingNoHash;
 
+		if ( !$( '.mw-prefs-tabs' ).get( 0 ) ) {
+			return;
+		}
+
 		// ***edited
 		switchingNoHash = true;
 

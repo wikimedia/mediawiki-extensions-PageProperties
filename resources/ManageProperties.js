@@ -32,6 +32,8 @@ const ManageProperties = ( function () {
 	var DataLoaded = false;
 	var DataLoading = false;
 	var DataTable;
+	var WindowManager;
+	var ManagePropertiesSpecialPage;
 
 	var optionsInputs = [
 		'OO.ui.DropdownInputWidget',
@@ -48,11 +50,6 @@ const ManageProperties = ( function () {
 		'mw.widgets.CategoryMultiselectWidget'
 	];
 
-	var windowManager = new OO.ui.WindowManager( {
-		classes: [ 'pageproperties-ooui-window' ]
-	} );
-	$( document.body ).append( windowManager.$element );
-
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
 	}
@@ -68,11 +65,21 @@ const ManageProperties = ( function () {
 			return true;
 		}
 
-		var inputName = PageProperties.inputNameFromLabel( inputLabel );
+		var inputName = inputNameFromLabel( inputLabel );
 
 		return (
 			inArray( inputName, multiselectInputs ) || inArray( inputName, optionsInputs )
 		);
+	}
+
+	function inputNameFromLabel( inputName ) {
+		var ret = inputName;
+		var parts = ret.split( ' ' );
+		if ( parts.length > 1 ) {
+			// eslint-disable-next-line no-useless-escape
+			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/g, '' );
+		}
+		return ret;
 	}
 
 	function titleNamespace( name ) {
@@ -368,6 +375,7 @@ const ManageProperties = ( function () {
 
 		var help_page = {
 			_PVAL: 'Help:Special_property_Allows_value',
+			_URI: 'Help:Special_property_Equivalent_URI',
 			_CONV: 'Help:Special_property_Corresponds_to',
 			_UNIT: 'Help:Special_property_Display_units',
 			_SERV: 'Help:Special_property_Provides_service',
@@ -988,77 +996,102 @@ const ManageProperties = ( function () {
 		) {
 			return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 		}
-
-		var obj = {};
-		switch ( action ) {
-			case 'save':
-				for ( var property in Model ) {
-					obj[ property ] = getPropertyValue( property );
-				}
-
-				if (
-					// eslint-disable-next-line no-underscore-dangle
-					( obj._PVAL.length || obj._PVALI !== '' ) &&
-					// eslint-disable-next-line no-underscore-dangle
-					!inArray( obj.__pageproperties_preferred_input, optionsInputs )
-				) {
-					OO.ui.alert(
-						new OO.ui.HtmlSnippet(
-							mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion1' ) +
-								optionsInputs.join( '</br>' )
-						),
-						{ size: 'medium' }
-					);
-				} else if (
-					// eslint-disable-next-line no-underscore-dangle
-					inArray( obj.__pageproperties_preferred_input, optionsInputs ) &&
-					// eslint-disable-next-line no-underscore-dangle
-					!obj._PVAL.length && obj._PVALI === ''
-				) {
-					OO.ui.alert(
-						mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion2' ),
-						{
-							size: 'medium'
+		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets
+		return ProcessDialog.super.prototype.getActionProcess
+			.call( this, action )
+			.next( function () {
+				var obj = {};
+				switch ( action ) {
+					case 'save':
+						for ( var property in Model ) {
+							obj[ property ] = getPropertyValue( property );
 						}
-					);
 
-					return ProcessDialog.super.prototype.getActionProcess.call(
-						this,
-						action
-					);
-				}
-			// eslint-disable no-fallthrough
-			case 'delete':
-				mw.loader.using( 'mediawiki.api', function () {
-					new mw.Api()
-						.postWithToken( 'csrf', {
-							action: 'pageproperties-manageproperties-saveproperty',
-							dialogAction: action,
-							previousLabel: SelectedProperty.label,
-							format: 'json',
-							data: JSON.stringify( obj )
-						} )
-						.done( function ( res ) {
-							if ( 'pageproperties-manageproperties-saveproperty' in res ) {
-								var data = res[ 'pageproperties-manageproperties-saveproperty' ];
-								if ( data[ 'result-action' ] === 'error' ) {
-									OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
-										size: 'medium'
-									} );
-								} else {
-									if ( PageProperties.updatePropertiesPanel( data ) === true ) {
-										windowManager.removeWindows( [ 'myDialog' ] );
-									}
+						if (
+							// eslint-disable-next-line no-underscore-dangle
+							( obj._PVAL.length || obj._PVALI !== '' ) &&
+							// eslint-disable-next-line no-underscore-dangle
+							!inArray( obj.__pageproperties_preferred_input, optionsInputs )
+						) {
+							OO.ui.alert(
+								new OO.ui.HtmlSnippet(
+									mw.msg(
+										'pageproperties-jsmodule-manageproperties-suggestion1'
+									) + optionsInputs.join( '</br>' )
+								),
+								{ size: 'medium' }
+							);
+						} else if (
+							// eslint-disable-next-line no-underscore-dangle
+							inArray( obj.__pageproperties_preferred_input, optionsInputs ) &&
+							// eslint-disable-next-line no-underscore-dangle
+							!obj._PVAL.length &&
+							// eslint-disable-next-line no-underscore-dangle
+							obj._PVALI === ''
+						) {
+							OO.ui.alert(
+								mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion2' ),
+								{
+									size: 'medium'
 								}
-							} else {
-								OO.ui.alert( 'unknown error', { size: 'medium' } );
-							}
-						} );
-				} );
+							);
 
-				break;
-		}
+							return ProcessDialog.super.prototype.getActionProcess.call(
+								this,
+								action
+							);
+						}
+					// eslint-disable no-fallthrough
+					case 'delete':
+						// eslint-disable-next-line compat/compat, no-unused-vars
+						return new Promise( ( resolve, reject ) => {
+							mw.loader.using( 'mediawiki.api', function () {
+								new mw.Api()
+									.postWithToken( 'csrf', {
+										action: 'pageproperties-manageproperties-saveproperty',
+										dialogAction: action,
+										previousLabel: SelectedProperty.label,
+										format: 'json',
+										data: JSON.stringify( obj )
+									} )
+									.done( function ( res ) {
+										resolve();
+										if ( 'pageproperties-manageproperties-saveproperty' in res ) {
+											var data =
+												res[ 'pageproperties-manageproperties-saveproperty' ];
+											if ( data[ 'result-action' ] === 'error' ) {
+												OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
+													size: 'medium'
+												} );
+											} else {
+												if (
+													updateData( data ) === true
+												) {
+													WindowManager.removeWindows( [ 'myDialog' ] );
+												} else {
+													OO.ui.alert( 'unknown error', { size: 'medium' } );
+												}
+											}
+										} else {
+											OO.ui.alert( 'unknown error', { size: 'medium' } );
+										}
+									} )
+									.fail( function ( res ) {
+										// this will show a nice modal but is not necessary
+										// reject();
+										resolve();
+										var msg = res;
+										// The following messages are used here:
+										// * pageproperties-permissions-error
+										// * pageproperties-permissions-error-b
+										OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
+									} );
+							} );
+						} ); // promise
+				}
+			} ); // .next
 
+		// eslint-disable-next-line no-unreachable
 		return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 	};
 
@@ -1066,7 +1099,7 @@ const ManageProperties = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				windowManager.removeWindows( [ 'myDialog' ] );
+				WindowManager.removeWindows( [ 'myDialog' ] );
 			}, this );
 	};
 
@@ -1107,7 +1140,6 @@ const ManageProperties = ( function () {
 
 			options.push( { optgroup: namespace } );
 			options = options.concat(
-
 				createInputOptions( obj_, {
 					value: 'key'
 				} )
@@ -1131,7 +1163,6 @@ const ManageProperties = ( function () {
 
 			options.push( { optgroup: namespace } );
 			options = options.concat(
-
 				createInputOptions( obj_, {
 					value: 'key'
 				} )
@@ -1145,6 +1176,58 @@ const ManageProperties = ( function () {
 
 	function getImportedVocabulariesWidgetCategories() {
 		return ImportedVocabulariesWidgetCategories;
+	}
+
+	function updateData( data ) {
+		switch ( data[ 'result-action' ] ) {
+			case 'update':
+				SemanticProperties = jQuery.extend(
+					SemanticProperties,
+					data[ 'semantic-properties' ]
+				);
+				break;
+			case 'delete':
+				for ( var property of data[ 'deleted-properties' ] ) {
+					delete SemanticProperties[ property ];
+				}
+				break;
+
+			case 'create':
+				SemanticProperties = jQuery.extend(
+					SemanticProperties,
+					data[ 'semantic-properties' ]
+				);
+				SemanticProperties =
+					PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
+				break;
+
+			case 'rename':
+				delete SemanticProperties[ data[ 'previous-label' ] ];
+				// delete Model[data["previous-label"]];
+
+				SemanticProperties = jQuery.extend(
+					SemanticProperties,
+					data[ 'semantic-properties' ]
+				);
+				SemanticProperties =
+					PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
+				break;
+		}
+
+		if ( !ManagePropertiesSpecialPage ) {
+			PageProperties.updateVariables( SemanticProperties );
+			PageProperties.updateData( data );
+		}
+
+		PagePropertiesForms.updateVariables( SemanticProperties );
+
+		if ( ManagePropertiesSpecialPage ) {
+			ImportProperties.updateVariables( SemanticProperties );
+		}
+
+		initialize();
+
+		return true;
 	}
 
 	function createToolbar() {
@@ -1224,6 +1307,8 @@ const ManageProperties = ( function () {
 	}
 
 	function initializeDataTable() {
+		PagePropertiesFunctions.destroyDataTable( 'pageproperties-datatable-manage' );
+
 		var data = [];
 
 		for ( var i in SemanticProperties ) {
@@ -1231,18 +1316,17 @@ const ManageProperties = ( function () {
 			data.push( [
 				i,
 				value.typeLabel,
-				'_IMPO' in value.properties ?
-					// eslint-disable-next-line no-underscore-dangle
+				'_IMPO' in value.properties ? // eslint-disable-next-line no-underscore-dangle
 					value.properties._IMPO.slice( -1 )[ 0 ] :
 					'',
 				value.description
 			] );
 		}
 
-		DataTable = $( '#pageproperties-datatable' ).DataTable( {
+		DataTable = $( '#pageproperties-datatable-manage' ).DataTable( {
 			order: 1,
 			pageLength: 20,
-
+			scrollX: true,
 			// https://datatables.net/reference/option/dom
 			dom: '<"pageproperties-datatable-left"f><"pageproperties-datatable-right"l>rtip',
 
@@ -1266,11 +1350,17 @@ const ManageProperties = ( function () {
 		} );
 	}
 
-	function initialize( semanticProperties, managePropertiesSpecialPage ) {
+	function initialize(
+		windowManager,
+		semanticProperties,
+		managePropertiesSpecialPage
+	) {
 		Model = {};
 
 		if ( arguments.length ) {
+			WindowManager = windowManager;
 			SemanticProperties = semanticProperties;
+			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
 		}
 
 		if ( managePropertiesSpecialPage ) {
@@ -1280,7 +1370,7 @@ const ManageProperties = ( function () {
 
 			var contentFrame = new OO.ui.PanelLayout( {
 				$content: $(
-					'<table id="pageproperties-datatable" class="display" width="100%"></table>'
+					'<table id="pageproperties-datatable-manage" class="pageproperties-datatable display" width="100%"></table>'
 				),
 				expanded: false,
 				padded: true
@@ -1324,9 +1414,9 @@ const ManageProperties = ( function () {
 			size: 'larger'
 		} );
 
-		windowManager.addWindows( [ processDialog ] );
+		WindowManager.addWindows( [ processDialog ] );
 
-		windowManager.openWindow( processDialog );
+		WindowManager.openWindow( processDialog );
 
 		// windowManager.openWindow( 'myDialog', { size: 'larger' } );
 	}
@@ -1342,6 +1432,7 @@ const ManageProperties = ( function () {
 		disableMultipleFields,
 		optionsInputs,
 		multiselectInputs,
-		getImportedVocabulariesWidgetCategories
+		getImportedVocabulariesWidgetCategories,
+		inputNameFromLabel
 	};
 }() );

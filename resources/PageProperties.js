@@ -24,12 +24,21 @@
 const PageProperties = ( function () {
 	var SemanticProperties;
 	var Properties;
-	var CanManageProperties;
 
+	// eslint-disable-next-line no-unused-vars
+	var CanManageProperties;
 	var Model;
-	var PanelProperties;
-	var myStack;
+	var OuterStack;
 	var ManagePropertiesSpecialPage;
+	var DialogSearchName = 'dialogSearch';
+	var WindowManagerSearch;
+	var Forms;
+	var SetForms;
+	var TargetPage;
+	var PropertiesStack;
+	var IsNewPage;
+	var PageContent;
+	var PageCategories;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -56,16 +65,6 @@ const PageProperties = ( function () {
 		return Properties[ property ];
 	}
 
-	function inputNameFromLabel( inputName ) {
-		var ret = inputName;
-		var parts = ret.split( ' ' );
-		if ( parts.length > 1 ) {
-			// eslint-disable-next-line no-useless-escape
-			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/g, '' );
-		}
-		return ret;
-	}
-
 	function inputIsEmpty( inputWidget ) {
 		var value = inputWidget.getValue();
 
@@ -85,7 +84,7 @@ const PageProperties = ( function () {
 		return value === false;
 	}
 
-	function getInputWidget( inputName, property, index, value ) {
+	function getInputWidget( inputName, property, index, value, required ) {
 		if ( Array.isArray( value ) ) {
 			for ( var i in value ) {
 				if ( value[ i ].trim() === '' ) {
@@ -114,7 +113,8 @@ const PageProperties = ( function () {
 				encodeURIComponent( property ) +
 				'-' +
 				index,
-			value: value
+			value: value,
+			required: required
 		};
 
 		if ( isMultiselect( inputName ) ) {
@@ -139,10 +139,26 @@ const PageProperties = ( function () {
 		return ManageProperties.inputInstanceFromName( inputName, config );
 	}
 
+	function getSetForms() {
+		return SetForms;
+	}
+
+	function getPageCategories() {
+		return PageCategories;
+	}
+
 	function getModel( submit ) {
 		var ret = {};
 
+		var propertiesInForms = getPropertiesInForms();
 		for ( var property in Model ) {
+			if ( !submit && property.indexOf( '__' ) === 0 ) {
+				continue;
+			}
+			// ignore deleted properties
+			if ( !inArray( property, propertiesInForms ) && !( property in Properties ) ) {
+				continue;
+			}
 			ret[ property ] = [];
 			for ( var i in Model[ property ] ) {
 				var value = Model[ property ][ i ].getValue();
@@ -196,8 +212,8 @@ const PageProperties = ( function () {
 							} )
 							.appendTo( '#pageproperties-form' );
 
-					// override the value of the existing input
-					// } else if ( prefix || isMultiselect( inputName ) ) {
+						// override the value of the existing input
+						// } else if ( prefix || isMultiselect( inputName ) ) {
 					} else {
 						inputEl.val( inputVal );
 					}
@@ -218,6 +234,17 @@ const PageProperties = ( function () {
 			}
 		}
 
+		return ret;
+	}
+
+	function getPropertiesInForms() {
+		var ret = [];
+
+		for ( var form of SetForms ) {
+			for ( var i in Forms[ form ].fields ) {
+				ret.push( i );
+			}
+		}
 		return ret;
 	}
 
@@ -263,16 +290,22 @@ const PageProperties = ( function () {
 				return;
 			}
 
-			this.removeItems( [ itemWidget ] );
-			delete Model[ itemWidget.parentWidget.property ][ itemWidget.index ];
-			// delete Properties[itemWidget.parentWidget.property][itemWidget.index];
+			var length = this.getItems().length;
 
-			if ( this.getItems().length === 0 ) {
+			if ( length > 1 ) {
+				this.removeItems( [ itemWidget ] );
+				delete Model[ itemWidget.parentWidget.property ][ itemWidget.index ];
+			} else {
+				Model[ itemWidget.parentWidget.property ][ itemWidget.index ].setValue( '' );
+			}
+
+			if ( length === 0 ) {
 				itemWidget.parentWidget.onDeleteButtonClick();
 			}
 			return;
 		}
 
+		// currently unused (deletion of single properties through delete icon)
 		if (
 			( itemWidget.optionsList && !itemWidget.optionsList.getItems().length ) ||
 			// eslint-disable-next-line no-alert
@@ -332,37 +365,70 @@ const PageProperties = ( function () {
 			)
 		);
 
-		var fieldset = new OO.ui.FieldsetLayout( {
-			label: ''
+		var deleteButton = new OO.ui.ButtonWidget( {
+			icon: 'close'
+			// flags: ["destructive"],
 		} );
 
-		var deleteButton = new OO.ui.ButtonWidget( {
-			icon: 'trash',
-			flags: [ 'destructive' ]
-		} );
+		var required =
+			config.form &&
+			'required' in Forms[ config.form ].fields[ config.property ] &&
+			Forms[ config.form ].fields[ config.property ].required === true;
 
 		var inputWidget = getInputWidget(
 			config.inputName,
 			config.property,
 			config.index,
-			config.value
+			config.value,
+			required
 		);
 
 		Model[ config.property ][ config.index ] = inputWidget;
 
-		fieldset.addItems( [
-			// eslint-disable-next-line mediawiki/class-doc
+		var helpMessage = '';
+		if ( config.last ) {
+			if (
+				config.form &&
+				'help-message' in Forms[ config.form ].fields[ config.property ]
+			) {
+				var source = Forms[ config.form ].fields[ config.property ];
+				if ( source[ 'help-message-result' ] ) {
+					helpMessage = source[ 'help-message-result' ];
+				} else {
+					helpMessage = source[ 'help-message' ];
+
+					if ( Array.isArray( helpMessage ) ) {
+						helpMessage = helpMessage[ 0 ];
+					}
+				}
+			} else if ( SemanticProperties[ config.property ].description ) {
+				helpMessage = SemanticProperties[ config.property ].description;
+			}
+		}
+
+		var widget = config.multiple ?
 			new OO.ui.ActionFieldLayout( inputWidget, deleteButton, {
 				label: '',
 				align: 'top',
-
-				// The following classes are used here:
+				help: helpMessage,
+				helpInline: true,
+				// This can produce:
 				// * inputName-mw.widgets.DateInputWidget
+				// * inputName-mw.widgets...
 				classes: [ 'inputName-' + config.inputName ]
-			} )
-		] );
+			} ) :
+			new OO.ui.FieldLayout( inputWidget, {
+				label: '',
+				align: 'top',
+				help: helpMessage,
+				helpInline: true,
+				// This can produce:
+				// * inputName-mw.widgets.DateInputWidget
+				// * inputName-mw.widgets...
+				classes: [ 'inputName-' + config.inputName ]
+			} );
 
-		this.$element.append( fieldset.$element );
+		this.$element.append( widget.$element );
 
 		deleteButton.connect( this, {
 			click: 'onDeleteButtonClick'
@@ -392,10 +458,6 @@ const PageProperties = ( function () {
 
 		this.property = config.property;
 
-		var fieldset = new OO.ui.FieldsetLayout( {
-			label: ''
-		} );
-
 		var deleteButton = new OO.ui.ButtonWidget( {
 			icon: 'trash',
 			flags: [ 'destructive' ]
@@ -405,19 +467,31 @@ const PageProperties = ( function () {
 
 		var inputName;
 
-		if ( '__pageproperties_preferred_input' in propertyObj.properties ) {
-			inputName = inputNameFromLabel(
+		if (
+			'form' in config &&
+			'preferred-input' in Forms[ config.form ].fields[ config.property ]
+		) {
+			inputName = Forms[ config.form ].fields[ config.property ][ 'preferred-input' ];
+		} else if ( '__pageproperties_preferred_input' in propertyObj.properties ) {
+			inputName = ManageProperties.inputNameFromLabel(
 				// eslint-disable-next-line no-underscore-dangle
 				propertyObj.properties.__pageproperties_preferred_input[ 0 ]
 			);
 		} else {
-			inputName = inputNameFromLabel(
+			inputName = ManageProperties.inputNameFromLabel(
 				ManageProperties.getAvailableInputs( propertyObj.type )[ 0 ]
 			);
 		}
 
 		var multiple = false;
+
 		if (
+			'form' in config &&
+			'multiple' in Forms[ config.form ].fields[ config.property ] &&
+			Forms[ config.form ].fields[ config.property ].multiple !== ''
+		) {
+			multiple = Forms[ config.form ].fields[ config.property ].multiple;
+		} else if (
 			!ManageProperties.disableMultipleFields( propertyObj.type, inputName ) &&
 			'__pageproperties_allows_multiple_values' in propertyObj.properties &&
 			// eslint-disable-next-line no-underscore-dangle
@@ -438,9 +512,7 @@ const PageProperties = ( function () {
 
 		var values = getPropertyValue( config.property );
 
-		// if (!(config.property in Model)) {
 		Model[ config.property ] = {};
-		// }
 
 		if ( !isMultiselect( inputName ) ) {
 			for ( var i in values ) {
@@ -452,7 +524,10 @@ const PageProperties = ( function () {
 						// Properties[ config.property ][ i ],
 						value: values[ i ],
 						parentWidget: this,
-						index: optionsList.items.length
+						index: optionsList.items.length,
+						multiple: multiple,
+						form: config.form,
+						last: i === values.length - 1
 					} )
 				] );
 			}
@@ -465,12 +540,17 @@ const PageProperties = ( function () {
 					// Properties[ config.property ],
 					value: values,
 					parentWidget: this,
-					index: optionsList.items.length
+					index: optionsList.items.length,
+					multiple: false,
+					form: config.form,
+					last: i === values.length - 1
 				} )
 			] );
 		}
 
-		if ( CanManageProperties ) {
+		// if (CanManageProperties) {
+		// eslint-disable-next-line no-constant-condition
+		if ( false ) {
 			var editButton = new OO.ui.ButtonWidget( {
 				icon: 'settings',
 				flags: [ 'progressive' ]
@@ -520,16 +600,20 @@ const PageProperties = ( function () {
 						inputName: inputName,
 						value: '',
 						parentWidget: that,
-						index: optionsList.items.length
+						index: optionsList.items.length,
+						multiple: multiple,
+						last: true
 					} )
 				] );
 			} );
 			items.push( addOption );
 		}
 
-		fieldset.addItems( items );
+		// fieldset.addItems(items);
 
-		this.$element.append( fieldset.$element );
+		for ( var item of items ) {
+			this.$element.append( item.$element );
+		}
 
 		deleteButton.connect( this, {
 			click: 'onDeleteButtonClick'
@@ -543,6 +627,175 @@ const PageProperties = ( function () {
 		this.emit( 'delete' );
 	};
 
+	// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/SearchWidgetDialog.js
+	function ProcessDialogSearch( config ) {
+		ProcessDialogSearch.super.call( this, config );
+	}
+	OO.inheritClass( ProcessDialogSearch, OO.ui.ProcessDialog );
+	ProcessDialogSearch.static.name = DialogSearchName;
+	ProcessDialogSearch.static.title = mw.msg(
+		'pageproperties-jsmodule-forms-selectfield'
+	);
+	ProcessDialogSearch.prototype.initialize = function () {
+		ProcessDialogSearch.super.prototype.initialize.apply( this, arguments );
+		var self = this;
+		var isSelected;
+		var values;
+		function getItems( value ) {
+			switch ( self.data.toolName ) {
+				case 'addremoveproperties':
+					values = Object.keys( SemanticProperties );
+					values = values.filter( ( x ) => !inArray( x, getPropertiesInForms() ) );
+					isSelected = function ( value_ ) {
+						return value_ in Properties;
+					};
+					break;
+				case 'addremoveforms':
+					values = Object.keys( Forms );
+					isSelected = function ( value_ ) {
+						return inArray( value_, SetForms );
+					};
+					break;
+			}
+
+			if ( value ) {
+				var valueLowerCase = value.toLowerCase();
+				values = values.filter(
+					( x ) => x.toLowerCase().indexOf( valueLowerCase ) !== -1
+				);
+			}
+
+			return values.map( ( x ) => {
+				var menuOptionWidget = new OO.ui.MenuOptionWidget( {
+					data: x,
+					label: x,
+					selected: isSelected( x )
+				} );
+
+				if ( self.data.toolName === 'addremoveproperties' ) {
+					menuOptionWidget.$element.append(
+						$(
+							'<span class="oo-ui-labelElement-label right">' +
+								SemanticProperties[ x ].typeLabel +
+								'</span>'
+						)
+					);
+				}
+				return menuOptionWidget;
+			} );
+		}
+
+		var searchWidget = new OO.ui.SearchWidget( {
+			id: 'pageproperties-import-search-widget'
+		} );
+
+		searchWidget.results.addItems( getItems() );
+		var self = this;
+
+		// searchWidget.getResults() is a SelectWidget
+		// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.SelectWidget
+
+		this.selectWidget = searchWidget.getResults();
+
+		this.selectWidget.multiselect = true;
+		/*
+		this.selectWidget.on("press", function (widget) {
+			if (!widget) {
+				return;
+			}
+		});
+*/
+		searchWidget.onQueryChange = function ( value ) {
+			searchWidget.results.clearItems();
+			searchWidget.results.addItems( getItems( value ) );
+		};
+
+		this.$body.append( [ searchWidget.$element ] );
+	};
+
+	ProcessDialogSearch.prototype.getBodyHeight = function () {
+		return 300;
+	};
+
+	ProcessDialogSearch.static.actions = [
+		{
+			action: 'save',
+			modes: 'edit',
+			label: mw.msg( 'pageproperties-jsmodule-forms-searchdialog-save' ),
+			flags: [ 'primary', 'progressive' ]
+		},
+		{
+			// modes: "edit",
+			label: mw.msg( 'pageproperties-jsmodule-manageproperties-cancel' ),
+			flags: [ 'safe', 'close' ]
+		}
+	];
+	ProcessDialogSearch.prototype.getActionProcess = function ( action ) {
+		var dialog = this;
+
+		if ( action === 'save' ) {
+			var items = processDialogSearch.selectWidget.findSelectedItems();
+			var values = items.map( ( x ) => x.data );
+
+			switch ( this.data.toolName ) {
+				case 'addremoveproperties':
+					// remove unselected properties
+					for ( var i in Properties ) {
+						if ( !inArray( i, values ) ) {
+							delete Properties[ i ];
+						}
+					}
+
+					// add new properties
+					for ( var label of values ) {
+						if ( !( label in Properties ) ) {
+							Properties[ label ] = [ '' ];
+						}
+					}
+
+					// PropertiesPanel.populateFieldset();
+					break;
+				case 'addremoveforms':
+					var propertiesInForms = getPropertiesInForms();
+					for ( var property of propertiesInForms ) {
+						if ( !inArray( property, values ) ) {
+							delete Properties[ property ];
+						}
+					}
+
+					SetForms = values;
+					break;
+			}
+
+			updatePanels();
+		}
+
+		return new OO.ui.Process( function () {
+			dialog.close( { action: action } );
+		} );
+
+		// return ProcessDialog.super.prototype.getActionProcess.call( this, action );
+	};
+	ProcessDialogSearch.prototype.getTeardownProcess = function ( data ) {
+		return ProcessDialogSearch.super.prototype.getTeardownProcess
+			.call( this, data )
+			.first( function () {
+				WindowManagerSearch.removeWindows( [ DialogSearchName ] );
+			}, this );
+	};
+
+	function openSearchDialog( toolName ) {
+		var processDialogSearch = new ProcessDialogSearch( {
+			size: 'medium',
+			classes: [ 'pageproperties-import-dialog' ],
+			data: { toolName: toolName }
+		} );
+
+		WindowManagerSearch.addWindows( [ processDialogSearch ] );
+
+		WindowManagerSearch.openWindow( processDialogSearch );
+	}
+
 	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.Toolbar
 
 	function createToolbar() {
@@ -553,88 +806,48 @@ const PageProperties = ( function () {
 			actions: true
 		} );
 
-		var onSelectProperty = function () {
-			var selectedProperty = this.getTitle();
-
-			PanelProperties.addProperty( selectedProperty );
-
-			this.setActive( false );
-		};
-
-		var accelerator = {};
-		var toolGroup = [];
-		for ( var i in SemanticProperties ) {
-			var value = SemanticProperties[ i ];
-			// name, icon, title, onSelect, flags, narrowConfig, init,displayBothIconAndLabel
-			toolGroup.push( {
-				name: value.key,
-				icon: null,
-				title: i,
-				onSelect: onSelectProperty
-			} );
-			accelerator[ value.key ] = value.typeLabel;
-		}
-
-		toolbar.getToolAccelerator = function getToolAccelerator( name ) {
-			return accelerator[ name ];
-		};
-
-		PagePropertiesFunctions.createToolGroup( toolFactory, 'groupA', toolGroup );
-
 		var onSelect = function () {
 			var toolName = this.getName();
 
 			switch ( toolName ) {
-				case 'createproperty':
-					ManageProperties.openDialog();
+				case 'addremoveforms':
+				case 'addremoveproperties':
+					openSearchDialog( toolName );
 					break;
 			}
 
 			this.setActive( false );
 		};
 
-		if ( CanManageProperties ) {
-			var toolGroup = [
-				{
-					name: 'createproperty',
-					icon: 'add',
-					title: mw.msg( 'pageproperties-jsmodule-pageproperties-create-property' ),
-					onSelect: onSelect
-				}
-			];
-			PagePropertiesFunctions.createToolGroup( toolFactory, 'groupB', toolGroup );
-		}
-
-		// Finally define which tools and in what order appear in the toolbar. Each tool may only be
-		// used once (but not all defined tools must be used).
-		toolbar.setup( [
+		var toolGroup = [
 			{
-				type: 'list',
-				label: mw.msg( 'pageproperties-jsmodule-pageproperties-add-property' ),
-				include: [ { group: 'groupA' } ]
+				name: 'addremoveforms',
+				icon: 'add',
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-addremoveforms' ),
+				onSelect: onSelect
 			},
 			{
-				include: [ { group: 'groupB' } ]
+				name: 'addremoveproperties',
+				icon: 'add',
+				title: mw.msg( 'pageproperties-jsmodule-forms-addremoveproperties' ),
+				onSelect: onSelect
 			}
+		];
+		PagePropertiesFunctions.createToolGroup( toolFactory, 'group', toolGroup );
 
-			// see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
-			/*
-{
-			name: 'editorSwitch',
-			align: 'after',
-			type: 'list',
-			label: 'Switch editor',
-			invisibleLabel: true,
-			icon: 'edit',
-			include: [ { group: 'editorSwitchTools' } ]
-		},
-*/
+		toolbar.setup( [
+			{
+				name: 'my-group',
+				// type: "bar",
+				// label: "Create property",
+				include: [ { group: 'group' } ]
+			}
 		] );
 
 		return toolbar;
 	}
 
-	function createActionToolbar( panel ) {
+	function createActionToolbar() {
 		// see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/refs/tags/v0.40.4/demos/pages/toolbars.js
 
 		var toolFactory = new OO.ui.ToolFactory();
@@ -647,9 +860,14 @@ const PageProperties = ( function () {
 		var onSelectSwitch = function () {
 			var selected = this.getName();
 
-			if ( panel.getData().name === selected ) {
-				myStack.setItem( panel );
+			var panels = OuterStack.getItems();
+			for ( var panel of panels ) {
+				if ( panel.getData().name === selected ) {
+					break;
+				}
 			}
+
+			OuterStack.setItem( panel );
 
 			this.setActive( false );
 		};
@@ -664,12 +882,32 @@ const PageProperties = ( function () {
 			{
 				name: 'manageproperties',
 				icon: null,
-				title: mw.msg( 'pageproperties-jsmodule-pageproperties-manage-properties' ),
+				title: mw.msg(
+					'pageproperties-jsmodule-pageproperties-manage-properties'
+				),
+				onSelect: onSelectSwitch
+			},
+			{
+				name: 'managecategories',
+				icon: null,
+				title: mw.msg(
+					'pageproperties-jsmodule-pageproperties-manage-categories'
+				),
+				onSelect: onSelectSwitch
+			},
+			{
+				name: 'manageforms',
+				icon: null,
+				title: mw.msg( 'pageproperties-jsmodule-pageproperties-manage-forms' ),
 				onSelect: onSelectSwitch
 			}
 			// ["forms", "null", "Forms", onSelectSwitch],
 		];
-		PagePropertiesFunctions.createToolGroup( toolFactory, 'selectSwitch', toolGroup );
+		PagePropertiesFunctions.createToolGroup(
+			toolFactory,
+			'selectSwitch',
+			toolGroup
+		);
 
 		toolbar.setup( [
 			// see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
@@ -687,38 +925,197 @@ const PageProperties = ( function () {
 		return toolbar;
 	}
 
-	function PanelLayout( name, config ) {
-		PanelLayout.super.call( this, name, config );
+	function PanelLayout( config ) {
+		PanelLayout.super.call( this, config );
 
-		this.messageWidget = new OO.ui.MessageWidget( {
-			type: 'notice',
+		/*
+		this.messageWidget = new OO.ui.MessageWidget({
+			type: "notice",
 			label: new OO.ui.HtmlSnippet(
-				mw.msg( 'pageproperties-jsmodule-pageproperties-no-properties' )
-			)
+				mw.msg("pageproperties-jsmodule-pageproperties-no-properties")
+			),
+		});
+*/
+
+		this.fieldset = new OO.ui.FieldsetLayout( {
+			label: ''
 		} );
-		this.optionsList = new ListWidget();
+
 		this.populateFieldset();
 
-		this.$element.append( this.optionsList.$element );
-		this.$element.append( this.messageWidget.$element );
+		this.$element.append(
+			'<h3 style="margin-top:0;padding-top:0"><b>' +
+				config.data.label +
+				'</b></h3>'
+		);
+		this.$element.append( this.fieldset.$element );
+		// this.$element.append(this.messageWidget.$element);
 	}
 
 	OO.inheritClass( PanelLayout, OO.ui.PanelLayout );
 	PanelLayout.prototype.populateFieldset = function () {
-		this.optionsList.clearItems();
+		this.fieldset.clearItems();
+		var data = this.data;
 
-		Properties = PagePropertiesFunctions.sortObjectByKeys( Properties );
+		var items = [];
+		if ( 'properties' in data && data.properties === true ) {
+			var propertiesInForms = getPropertiesInForms();
+			Properties = PagePropertiesFunctions.sortObjectByKeys( Properties );
 
-		for ( var i in Properties ) {
-			this.optionsList.addItems( [
-				new ItemWidget( {
-					classes: [ 'ItemWidget' ],
-					property: i
-				} )
-			] );
+			for ( var i in Properties ) {
+				if ( inArray( i, propertiesInForms ) ) {
+					continue;
+				}
+				items.push(
+					new ItemWidget( {
+						classes: [ 'ItemWidget' ],
+						property: i
+					} )
+				);
+			}
+		} else if ( 'form' in data ) {
+			var formName = data.form;
+			var form = Forms[ formName ];
+
+			for ( var i in form.fields ) {
+				items.push(
+					new ItemWidget( {
+						classes: [ 'ItemWidget' ],
+						property: i,
+						form: formName
+					} )
+				);
+			}
+		} else if ( 'pagenameFormula' in data ) {
+			var userDefinedInput;
+			var userDefinedField;
+			if ( data.userDefined ) {
+				var inputName = 'mw.widgets.TitleInputWidget';
+				userDefinedInput = new mw.widgets.TitleInputWidget( {
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__title' + '-' + '0',
+					required: true
+				} );
+
+				// eslint-disable-next-line no-underscore-dangle
+				Model.__title = { 0: userDefinedInput };
+
+				userDefinedField = new OO.ui.FieldLayout( userDefinedInput, {
+					label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
+					align: 'top',
+
+					// help: new OO.ui.HtmlSnippet("&nbsp;"),
+					// helpInline: true,
+					// The following classes are used here:
+					// * inputName-mw.widgets.TitleInputWidget
+					// * inputName-mw.widgets...
+					classes: [ 'ItemWidget', 'inputName-' + inputName ]
+				} );
+			}
+
+			// show radio
+			// userdefined (default) with title input
+			// pagenameFormula of form x (for each defined pagenameFormula)
+			var options = [];
+			if (
+				Object.keys( data.pagenameFormula ).length > 1 ||
+				( data.userDefined && Object.keys( data.pagenameFormula ).length )
+			) {
+				if ( data.userDefined ) {
+					options.push( {
+						data: '',
+						label: mw.msg( 'pageproperties-jsmodule-forms-userdefined' )
+					} );
+				}
+
+				for ( var i in data.pagenameFormula ) {
+					options.push( {
+						data: data.pagenameFormula[ i ],
+						label: 'pagename formula of ' + i // mw.msg("pageproperties-jsmodule-forms-userdefined"),
+					} );
+				}
+
+				var selectPagenameInput = new OO.ui.RadioSelectInputWidget( {
+					options: options,
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__pagename-formula' + '-' + '0'
+				} );
+
+				Model[ '__pagename-formula' ] = { 0: selectPagenameInput };
+
+				selectPagenameInput.on( 'change', function ( value ) {
+					userDefinedField.toggle( value === '' );
+					userDefinedInput.setRequired( value === '' );
+				} );
+
+				items.push(
+					new OO.ui.FieldLayout( selectPagenameInput, {
+						label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
+						align: 'top',
+						classes: [ 'ItemWidget' ]
+					} )
+				);
+			}
+
+			if ( data.userDefined ) {
+				items.push( userDefinedField );
+			}
+
+			if ( data.freeText ) {
+				// @todo add editor
+				// @see PageForms-5.5.1/includes/forminputs/PF_TextAreaInput.php
+				// libs/PF_wikieditor.js
+
+				var inputName = 'OO.ui.MultilineTextInputWidget';
+				var inputWidget = new OO.ui.MultilineTextInputWidget( {
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__freetext' + '-' + '0',
+					autosize: true,
+					rows: 6,
+					value: PageContent
+				} );
+
+				// eslint-disable-next-line no-underscore-dangle
+				Model.__freetext = { 0: inputWidget };
+
+				items.push(
+					new OO.ui.FieldLayout( inputWidget, {
+						label: mw.msg( 'pageproperties-jsmodule-formedit-freetext' ),
+						align: 'top',
+
+						// The following classes are used here:
+						// * inputName-mw.widgets.TitleInputWidget
+						// * inputName-mw.widgets...
+						classes: [ 'ItemWidget', 'inputName-' + inputName ]
+					} )
+				);
+			}
+			if ( data.categories ) {
+				var categories = data.categories;
+				var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__pagecategories' + '-' + '0'
+					// value: categories,
+				} );
+
+				// eslint-disable-next-line no-underscore-dangle
+				Model.__pagecategories = { 0: categoriesInput };
+
+				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
+				for ( var category of categories ) {
+					categoriesInput.addTag( category, category );
+				}
+				items.push(
+					new OO.ui.FieldLayout( categoriesInput, {
+						label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
+						align: 'top',
+						classes: [ 'ItemWidget' ]
+					} )
+				);
+			}
 		}
 
-		this.messageWidget.toggle( !this.optionsList.getItems().length );
+		this.fieldset.addItems( items );
 	};
 
 	PanelLayout.prototype.addProperty = function ( property ) {
@@ -729,19 +1126,14 @@ const PageProperties = ( function () {
 		this.populateFieldset();
 	};
 
-	function updatePropertiesPanel( data ) {
+	function updateData( data ) {
 		Properties = getModel();
 
 		switch ( data[ 'result-action' ] ) {
 			case 'update':
-				SemanticProperties = jQuery.extend(
-					SemanticProperties,
-					data[ 'semantic-properties' ]
-				);
 				break;
 			case 'delete':
 				for ( var property of data[ 'deleted-properties' ] ) {
-					delete SemanticProperties[ property ];
 					// delete Model[property];
 					delete Properties[ property ];
 				}
@@ -751,78 +1143,197 @@ const PageProperties = ( function () {
 				for ( var property in data[ 'semantic-properties' ] ) {
 					Properties[ property ] = [ '' ];
 				}
-				SemanticProperties = jQuery.extend(
-					SemanticProperties,
-					data[ 'semantic-properties' ]
-				);
-				SemanticProperties = PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
 				break;
 
 			case 'rename':
-				delete SemanticProperties[ data[ 'previous-label' ] ];
-				// delete Model[data["previous-label"]];
-
-				SemanticProperties = jQuery.extend(
-					SemanticProperties,
-					data[ 'semantic-properties' ]
-				);
-				SemanticProperties = PagePropertiesFunctions.sortObjectByKeys( SemanticProperties );
 				if ( data[ 'previous-label' ] in Properties ) {
-					PagePropertiesFunctions.renameObjectKey( Properties, data[ 'previous-label' ], data.label );
+					PagePropertiesFunctions.renameObjectKey(
+						Properties,
+						data[ 'previous-label' ],
+						data.label
+					);
 				}
 				break;
 		}
 
-		// update toolbar
-		// ...
-		// PanelProperties.populateFieldset();
-
-		ManageProperties.loadData( SemanticProperties );
-
 		if ( !ManagePropertiesSpecialPage ) {
 			initialize();
-
-		} else {
-			ManageProperties.initialize( SemanticProperties, true );
-			ImportProperties.updateVariables( SemanticProperties );
+			PagePropertiesCategories.initialize();
+			PagePropertiesForms.initialize();
 		}
-
 		return true;
 	}
 
-	// eslint-disable-next-line max-len
-	function initialize( managePropertiesSpecialPage, canManageProperties, semanticProperties, properties ) {
-		var selectedPanelName = null;
+	function updateVariables( semanticProperties ) {
+		SemanticProperties = semanticProperties;
+	}
+
+	function getPropertiesPanels() {
+		var panels = [];
+
+		// create panels for forms
+		var pagenameFormula = {};
+		var userDefined = false;
+		var freeText = false;
+		var formProperties = [];
+		var formCategories = [];
+		for ( var form of SetForms ) {
+			if ( !TargetPage ) {
+				if ( Forms[ form ][ 'pagename-formula' ] ) {
+					pagenameFormula[ form ] = Forms[ form ][ 'pagename-formula' ];
+				} else {
+					userDefined = true;
+				}
+			}
+
+			if (
+				Forms[ form ][ 'freetext-input' ] === 'show always' ||
+				( !TargetPage && Forms[ form ][ 'freetext-input' ] === 'show on create' )
+			) {
+				freeText = true;
+			}
+
+			for ( var i in Forms[ form ].fields ) {
+				formProperties.push( i );
+			}
+
+			if ( Forms[ form ].categories ) {
+				for ( var i of Forms[ form ].categories ) {
+					formCategories.push( i );
+				}
+			}
+
+			panels.push(
+				new PanelLayout( {
+					expanded: false,
+					padded: true,
+					framed: false,
+					classes: [ 'PanelProperties-panel-section' ],
+					data: {
+						label: form, // mw.msg
+						form: form
+					}
+				} )
+			);
+		}
+
+		if ( !SetForms.length ) {
+			if ( !TargetPage || IsNewPage ) {
+				freeText = true;
+			}
+			if ( !TargetPage ) {
+				userDefined = true;
+			}
+		}
+
+		// create scattered properties panel
+		if (
+			Object.keys( Properties ).filter( ( x ) => !inArray( x, formProperties ) ).length
+		) {
+			panels.push(
+				new PanelLayout( {
+					padded: true,
+					framed: false,
+					classes: [ 'PanelProperties-panel-section' ],
+					data: {
+						label: 'properties', // mw.msg
+						expanded: false,
+						properties: true
+					}
+				} )
+			);
+		}
+
+		formCategories = formCategories
+			.concat( PageCategories )
+			.filter( function onlyUnique( value, index, self ) {
+				return self.indexOf( value ) === index;
+			} );
+
+		// create title and free text input
+		if (
+			Object.keys( pagenameFormula ).length ||
+			userDefined ||
+			freeText ||
+			formCategories
+		) {
+			panels.push(
+				new PanelLayout( {
+					expanded: false,
+					padded: true,
+					framed: false,
+					classes: [ 'PanelProperties-panel-section' ],
+					data: {
+						label: 'wiki', // mw.msg
+						pagenameFormula: pagenameFormula,
+						userDefined: userDefined,
+						freeText: freeText,
+						categories: formCategories
+					}
+				} )
+			);
+		}
+
+		return panels;
+	}
+
+	function updatePanels() {
+		PropertiesStack.clearItems();
+		PropertiesStack.addItems( getPropertiesPanels() );
+
+		setTimeout( function () {
+			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
+		}, 30 );
+	}
+
+	function updateForms( forms ) {
+		Forms = forms;
+		updatePanels();
+	}
+
+	function initialize(
+		managePropertiesSpecialPage,
+		canManageProperties,
+		semanticProperties,
+		properties,
+		forms,
+		setForms,
+		targetPage,
+		isNewPage,
+		pageContent,
+		pageCategories,
+		windowManagerSearch
+	) {
 		Model = {};
 
-		if ( myStack ) {
-			selectedPanelName = myStack.getCurrentItem().getData().name;
-			$( '#semantic-properties-wrapper' ).empty();
-		}
+		$( '#semantic-properties-wrapper' ).empty();
 
 		if ( arguments.length ) {
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
 			CanManageProperties = canManageProperties;
 			SemanticProperties = semanticProperties;
 			Properties = properties;
+			Forms = forms;
+			SetForms = setForms;
+			TargetPage = targetPage;
+			IsNewPage = isNewPage;
+			PageContent = pageContent;
+			PageCategories = pageCategories;
+			WindowManagerSearch = windowManagerSearch;
 		}
 
-		if ( ManagePropertiesSpecialPage ) {
-			return;
-		}
-
-		PanelProperties = new PanelLayout( {
-			expanded: false,
-			padded: true,
+		PropertiesStack = new OO.ui.StackLayout( {
+			items: getPropertiesPanels(),
+			continuous: true,
 			classes: [ 'PanelProperties' ]
 		} );
 
 		var toolbarA = createToolbar();
 
 		var frameA = new OO.ui.PanelLayout( {
-			$content: [ toolbarA.$element, PanelProperties.$element ],
+			$content: [ toolbarA.$element, PropertiesStack.$element ],
 			expanded: false,
-			framed: true,
+			framed: false,
 			data: { name: 'pageproperties' }
 		} );
 
@@ -832,7 +1343,7 @@ const PageProperties = ( function () {
 
 		var contentFrameB = new OO.ui.PanelLayout( {
 			$content: $(
-				'<table id="pageproperties-datatable" class="display" width="100%"></table>'
+				'<table id="pageproperties-datatable-manage" class="pageproperties-datatable display" width="100%"></table>'
 			),
 			expanded: false,
 			padded: true
@@ -845,138 +1356,214 @@ const PageProperties = ( function () {
 			data: { name: 'manageproperties' }
 		} );
 
-		myStack = new OO.ui.StackLayout( {
-			items: [ frameA, frameB ],
+		var toolbarC = PagePropertiesCategories.createToolbar();
+
+		var contentFrameC = new OO.ui.PanelLayout( {
+			$content: $(
+				'<table id="pageproperties-categories-datatable" class="pageproperties-datatable display" width="100%"></table>'
+			),
+			expanded: false,
+			padded: true
+		} );
+
+		var frameC = new OO.ui.PanelLayout( {
+			$content: [ toolbarC.$element, contentFrameC.$element ],
+			expanded: false,
+			framed: true,
+			data: { name: 'managecategories' }
+		} );
+
+		var toolbarD = PagePropertiesForms.createToolbarA();
+
+		var contentFrameD = new OO.ui.PanelLayout( {
+			$content: $(
+				'<table id="pageproperties-forms-datatable" class="pageproperties-datatable display" width="100%"></table>'
+			),
+			expanded: false,
+			padded: true
+		} );
+
+		var frameD = new OO.ui.PanelLayout( {
+			$content: [ toolbarD.$element, contentFrameD.$element ],
+			expanded: false,
+			framed: true,
+			data: { name: 'manageforms' }
+		} );
+
+		OuterStack = new OO.ui.StackLayout( {
+			items: [ frameA, frameB, frameC, frameD ],
 			expanded: true,
 			continuous: false
 		} );
 
-		if ( selectedPanelName === 'manageproperties' ) {
-			myStack.setItem( frameB );
-		}
+		var actionToolbar = createActionToolbar();
+		toolbarA.$actions.append( actionToolbar.$element );
 
-		if ( CanManageProperties ) {
-			var actionToolbar = createActionToolbar( frameB );
+		actionToolbar = createActionToolbar();
+		toolbarB.$actions.append( actionToolbar.$element );
 
-			toolbarA.$actions.append( actionToolbar.$element );
+		actionToolbar = createActionToolbar();
+		toolbarC.$actions.append( actionToolbar.$element );
 
-			var actionToolbar = createActionToolbar( frameA );
-			toolbarB.$actions.append( actionToolbar.$element );
-		}
+		actionToolbar = createActionToolbar();
+		toolbarD.$actions.append( actionToolbar.$element );
 
-		// myStack.addItems([frameA, frameB])
-
-		$( '#semantic-properties-wrapper' ).append( myStack.$element );
+		$( '#semantic-properties-wrapper' ).append( OuterStack.$element );
 
 		toolbarA.initialize();
 		// toolbarA.emit( 'updateState' );
-
 		toolbarB.initialize();
-		// toolbarB.emit( 'updateState' );
+		toolbarC.initialize();
+		toolbarD.initialize();
 
-		ManageProperties.initialize( SemanticProperties, false );
+		setTimeout( function () {
+			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
+		}, 30 );
 	}
 
 	return {
 		initialize,
-		updatePropertiesPanel,
-		inputNameFromLabel,
-		getModel
+		updateData,
+		getModel,
+		getSetForms,
+		getPageCategories,
+		updateForms,
+		updateVariables
 	};
 }() );
 
 $( document ).ready( function () {
-	var managePropertiesSpecialPage = mw.config.get( 'pageproperties-managePropertiesSpecialPage' );
-	// console.log("managePropertiesSpecialPage", managePropertiesSpecialPage);
+	var managePropertiesSpecialPage = mw.config.get(
+		'pageproperties-managePropertiesSpecialPage'
+	);
+
+	// console.log( 'managePropertiesSpecialPage', managePropertiesSpecialPage );
 
 	var categories = JSON.parse( mw.config.get( 'pageproperties-categories' ) );
-	// console.log("categories", categories);
-
-	// var selectedPage = mw.config.get( 'pageproperties-selectedPage' );
-	// console.log("selectedPage", selectedPage);
+	// console.log( 'categories', categories );
 
 	var semanticProperties = JSON.parse(
 		mw.config.get( 'pageproperties-semanticProperties' )
 	);
+	// console.log( semanticProperties );
+
 	var properties = JSON.parse( mw.config.get( 'pageproperties-properties' ) );
+	// console.log( 'properties', properties );
 
 	var canManageProperties = !!mw.config.get(
 		'pageproperties-canManageProperties'
 	);
 
-	var maxPhpUploadSize = mw.config.get( 'maxPhpUploadSize' );
-	var maxMwUploadSize = mw.config.get( 'maxMwUploadSize' );
-	// console.log(semanticProperties);
-	// console.log(properties);
+	// console.log( 'canManageProperties', canManageProperties );
 
-	PageProperties.initialize(
-		managePropertiesSpecialPage,
-		canManageProperties,
+	var forms = JSON.parse( mw.config.get( 'pageproperties-forms' ) );
+	// console.log( 'forms', forms );
+
+	// the order is important !!
+	var windowManagerForms = PagePropertiesFunctions.createWindowManager();
+	var windowManagerSearch = PagePropertiesFunctions.createWindowManager();
+	var windowManagerManageProperties =
+		PagePropertiesFunctions.createWindowManager();
+
+	if ( !managePropertiesSpecialPage ) {
+		var pageContent = mw.config.get( 'pageproperties-pageContent' );
+		var targetPage = mw.config.get( 'pageproperties-target-page' );
+		var isNewPage = mw.config.get( 'pageproperties-is-newpage' );
+
+		var pageCategories = JSON.parse(
+			mw.config.get( 'pageproperties-page-categories' )
+		);
+		// console.log( 'pageCategories', pageCategories );
+		var setForms = JSON.parse( mw.config.get( 'pageproperties-set-forms' ) );
+		// console.log( 'setForms', setForms );
+
+		PageProperties.initialize(
+			managePropertiesSpecialPage,
+			canManageProperties,
+			semanticProperties,
+			properties,
+			forms,
+			setForms,
+			targetPage,
+			isNewPage,
+			pageContent,
+			pageCategories,
+			windowManagerSearch
+		);
+	}
+
+	ManageProperties.initialize(
+		windowManagerManageProperties,
 		semanticProperties,
-		properties
+		managePropertiesSpecialPage
+	);
+
+	PagePropertiesCategories.initialize( categories );
+
+	PagePropertiesForms.initialize(
+		managePropertiesSpecialPage,
+		windowManagerForms,
+		windowManagerSearch,
+		forms,
+		semanticProperties
 	);
 
 	if ( managePropertiesSpecialPage ) {
-		ManageProperties.initialize(
-			semanticProperties, true
-		);
-
-		Categories.initialize(
-			categories
-		);
+		var maxPhpUploadSize = mw.config.get( 'maxPhpUploadSize' );
+		var maxMwUploadSize = mw.config.get( 'maxMwUploadSize' );
 
 		ImportProperties.initialize(
 			semanticProperties,
 			maxPhpUploadSize,
 			maxMwUploadSize
 		);
-
 	}
 
 	if ( canManageProperties ) {
+		// load importedVocabularies
 		ManageProperties.loadData( semanticProperties );
 	}
 
 	$( '#pageproperties-form' ).submit( function () {
-		// *** the following isn't necessary, since the inputs
-		// are already appended to the form
-		// see function getInputWidget()
 
-		// eslint-disable-next-line no-unused-vars
 		var obj = PageProperties.getModel( true );
 
-		/*
-		var obj = PageProperties.getModel()
+		// eslint-disable-next-line no-underscore-dangle
+		var setForms_ = PageProperties.getSetForms();
 
-		var n = 0
-		// create legacy data structure
-		for( var property in obj ) {
-			for( var ii in obj[property] ) {
-				$('<input>').attr({
+		var formName = null;
+		for ( var i in setForms_ ) {
+			$( '<input>' )
+				.attr( {
 					type: 'hidden',
-					name: 'dynamictable_semantic-properties_key_' + n,
-					value: property
-				}).appendTo('#pageproperties-form');
-
-				$('<input>').attr({
-					type: 'hidden',
-					name: 'dynamictable_semantic-properties_value_' + n,
-					value: obj[property][ii]
-				}).appendTo('#pageproperties-form');
-
-				n++
-			}
-
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__setforms' + '-' + i,
+					value: setForms_[ i ]
+				} )
+				.appendTo( '#pageproperties-form' );
+			formName = setForms_[ i ];
 		}
 
-		console.log("obj", obj);
-		*/
+		// eslint-disable-next-line no-underscore-dangle
+		if ( !targetPage && !obj.__title && !obj[ '__pagename-formula' ] ) {
+			$( '<input>' )
+				.attr( {
+					type: 'hidden',
+					// eslint-disable-next-line no-useless-concat
+					name: 'semantic-properties-input-' + '__pagename-formula' + '-' + '0',
+
+					// there should be only one form
+					value: forms[ formName ][ 'pagename-formula' ]
+				} )
+				.appendTo( '#pageproperties-form' );
+		}
 
 		// return false;
 	} );
 
 	// display every 3 days
 	if (
+		managePropertiesSpecialPage &&
 		canManageProperties &&
 		!mw.cookie.get( 'pageproperties-check-latest-version' )
 	) {

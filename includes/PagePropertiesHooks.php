@@ -257,7 +257,7 @@ class PagePropertiesHooks {
 				$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, null );
 			}
 
-		// *** this assumes that pageproperties is the last slot
+		// *** this assumes that pageproperties is the last slot, isn't so ?
 		} elseif ( !empty( self::$SlotsParserOutput[ $key ]['data'] ) ) {
 			$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, self::$SlotsParserOutput[ $key ]['data'] );
 		}
@@ -355,12 +355,21 @@ class PagePropertiesHooks {
 			$title = Title::newFromText( $par, NS_MAIN );
 		}
 		if ( $user->isAllowed( 'pageproperties-caneditproperties' ) ) {
-			if ( !$title || !$title->isKnown() || !$title->isContentPage() ) {
-				return;
+			// is article
+			if ( $title && $title->isKnown() && $title->isContentPage() ) {
+				$bar[ wfMessage( 'pageproperties' )->text() ][] = [
+					'text'   => wfMessage( 'pageproperties-label' )->text(),
+					'href'   => $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+				];
 			}
-			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
-				'text'   => wfMessage( 'pageproperties-label' )->text(),
-				'href'   => $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+		}
+		$forms = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
+		$specialpage_title = SpecialPage::getTitleFor( 'EditProperties' );
+		// $specialpage_title = SpecialPage::getTitleFor( 'PagePropertiesFormEdit' );
+		foreach ( $forms as $value ) {
+			$bar[ wfMessage( 'pageproperties-forms-label' )->text() ][] = [
+				'text'   => $value->getText(),
+				'href'   => wfAppendQuery( $specialpage_title->getLocalURL(), 'form=' . urlencode( $value->getDbKey() ) )
 			];
 		}
 	}
@@ -412,13 +421,26 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSkinTemplateNavigation( SkinTemplate $skinTemplate, array &$links ) {
-		if ( !empty( $GLOBALS['wgPagePropertiesDisableNavigationLink'] ) ) {
-			return;
-		}
 		$user = $skinTemplate->getUser();
 		$title = $skinTemplate->getTitle();
 
 		if ( !$title->canExist() ) {
+			return;
+		}
+
+		$link = [
+			'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
+			'text' => 'Edit semantic',
+			'href' => $title->getLocalURL( 'action=editsemantic' )
+		];
+
+		$keys = array_keys( $links['views'] );
+		$pos = array_search( 'edit', $keys );
+
+		$links['views'] = array_intersect_key( $links['views'], array_flip( array_slice( $keys, 0, $pos + 1 ) ) )
+			+ [ 'semantic_edit' => $link ] + array_intersect_key( $links['views'], array_flip( array_slice( $keys, $pos + 1 ) ) );
+
+		if ( !empty( $GLOBALS['wgPagePropertiesDisableNavigationLink'] ) ) {
 			return;
 		}
 
@@ -499,6 +521,9 @@ class PagePropertiesHooks {
 		] );
 
 		$outputPage->addHeadItem( 'pageproperties_content_model', '<style>.pageproperties-content-model-text{ font-family: monospace; white-space:pre-wrap; word-wrap:break-word; }</style>' );
+
+		// *** this is required only for CategoriesMultiselectWidget, now removed
+		// $outputPage->addHeadItem( 'page_properties_categories_input','<style> .mw-widgets-tagMultiselectWidget-multilineTextInputWidget{ display: none; } </style>' );
 
 		$title = $outputPage->getTitle();
 		if ( $outputPage->isArticle() && $title->canExist() ) {

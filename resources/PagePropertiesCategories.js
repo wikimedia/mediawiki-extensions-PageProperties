@@ -20,11 +20,11 @@
  */
 
 // eslint-disable-next-line no-unused-vars
-const Categories = ( function () {
+const PagePropertiesCategories = ( function () {
 	var Model = {};
 	var processDialog;
 	var SelectedItem;
-	// eslint-disable-next-line no-shadow
+
 	var Categories;
 	var ImportedVocabulariesWidgetCategories;
 	var DataTable;
@@ -49,13 +49,10 @@ const Categories = ( function () {
 		return propertyValue.slice( -1 )[ 0 ];
 	}
 
-	function updatePanel( data ) {
+	function updateData( data ) {
 		switch ( data[ 'result-action' ] ) {
 			case 'update':
-				Categories = jQuery.extend(
-					Categories,
-					data.categories
-				);
+				Categories = jQuery.extend( Categories, data.categories );
 				break;
 			case 'delete':
 				for ( var property of data[ 'deleted-properties' ] ) {
@@ -64,25 +61,19 @@ const Categories = ( function () {
 				break;
 
 			case 'create':
-				Categories = jQuery.extend(
-					Categories,
-					data.categories
-				);
+				Categories = jQuery.extend( Categories, data.categories );
 				Categories = PagePropertiesFunctions.sortObjectByKeys( Categories );
 				break;
 
 			case 'rename':
 				delete Categories[ data[ 'previous-label' ] ];
 
-				Categories = jQuery.extend(
-					Categories,
-					data.categories
-				);
+				Categories = jQuery.extend( Categories, data.categories );
 				Categories = PagePropertiesFunctions.sortObjectByKeys( Categories );
 				break;
 		}
 
-		initialize( Categories, true );
+		initialize();
 
 		return true;
 	}
@@ -194,45 +185,64 @@ const Categories = ( function () {
 			return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 		}
 
-		var obj = {};
-		switch ( action ) {
-			case 'save':
-				for ( var property in Model ) {
-					obj[ property ] = getPropertyValue( property );
-				}
+		// https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs#Action_sets
+		return ProcessDialog.super.prototype.getActionProcess
+			.call( this, action )
+			.next( function () {
+				var obj = {};
+				switch ( action ) {
+					case 'save':
+						for ( var property in Model ) {
+							obj[ property ] = getPropertyValue( property );
+						}
 
-			// eslint-disable no-fallthrough
-			case 'delete':
-				mw.loader.using( 'mediawiki.api', function () {
-					new mw.Api()
-						.postWithToken( 'csrf', {
-							action: 'pageproperties-manageproperties-savecategory',
-							dialogAction: action,
-							previousLabel: SelectedItem.label,
-							format: 'json',
-							data: JSON.stringify( obj )
-						} )
-						.done( function ( res ) {
-							if ( 'pageproperties-manageproperties-savecategory' in res ) {
-								var data = res[ 'pageproperties-manageproperties-savecategory' ];
-								if ( data[ 'result-action' ] === 'error' ) {
-									OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
-										size: 'medium'
+					// eslint-disable no-fallthrough
+					case 'delete':
+						// eslint-disable-next-line compat/compat, no-unused-vars
+						return new Promise( ( resolve, reject ) => {
+							mw.loader.using( 'mediawiki.api', function () {
+								new mw.Api()
+									.postWithToken( 'csrf', {
+										action: 'pageproperties-manageproperties-savecategory',
+										dialogAction: action,
+										previousLabel: SelectedItem.label,
+										format: 'json',
+										data: JSON.stringify( obj )
+									} )
+									.done( function ( res ) {
+										if ( 'pageproperties-manageproperties-savecategory' in res ) {
+											var data =
+												res[ 'pageproperties-manageproperties-savecategory' ];
+											if ( data[ 'result-action' ] === 'error' ) {
+												OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
+													size: 'medium'
+												} );
+											} else {
+												if ( updateData( data ) === true ) {
+													windowManager.removeWindows( [ 'myDialog' ] );
+												}
+											}
+										} else {
+											OO.ui.alert( 'unknown error', { size: 'medium' } );
+										}
+									} )
+									.fail( function ( res ) {
+										// this will show a nice modal but is not necessary
+										// reject();
+										resolve();
+										var msg = res;
+										// The following messages are used here:
+										// * pageproperties-permissions-error
+										// * pageproperties-permissions-error-b
+										OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
 									} );
-								} else {
-									if ( updatePanel( data ) === true ) {
-										windowManager.removeWindows( [ 'myDialog' ] );
-									}
-								}
-							} else {
-								OO.ui.alert( 'unknown error', { size: 'medium' } );
-							}
-						} );
-				} );
+							} );
+						} ); // promise
 
-				break;
-		}
+				}
+			} ); // .next
 
+		// eslint-disable-next-line no-unreachable
 		return ProcessDialog.super.prototype.getActionProcess.call( this, action );
 	};
 
@@ -282,14 +292,16 @@ const Categories = ( function () {
 	}
 
 	function initializeDataTable() {
+		PagePropertiesFunctions.destroyDataTable(
+			'pageproperties-categories-datatable'
+		);
 		var data = [];
 
 		for ( var i in Categories ) {
 			var value = Categories[ i ];
 			data.push( [
 				value.label,
-				'_IMPO' in value.properties ?
-					// eslint-disable-next-line no-underscore-dangle
+				'_IMPO' in value.properties ? // eslint-disable-next-line no-underscore-dangle
 					value.properties._IMPO.slice( -1 )[ 0 ] :
 					''
 			] );
@@ -298,7 +310,7 @@ const Categories = ( function () {
 		DataTable = $( '#pageproperties-categories-datatable' ).DataTable( {
 			order: 1,
 			pageLength: 20,
-
+			scrollX: true,
 			// https://datatables.net/reference/option/dom
 			dom: '<"pageproperties-datatable-left"f><"pageproperties-datatable-right"l>rtip',
 
@@ -365,12 +377,16 @@ const Categories = ( function () {
 	}
 
 	function initialize( categories ) {
-		Categories = categories;
+
+		if ( arguments.length ) {
+			Categories = categories;
+		}
+
 		$( '#categories-wrapper' ).empty();
 
 		var contentFrame = new OO.ui.PanelLayout( {
 			$content: $(
-				'<table id="pageproperties-categories-datatable" class="display" width="100%"></table>'
+				'<table id="pageproperties-categories-datatable" class="pageproperties-datatable display" width="100%"></table>'
 			),
 			expanded: false,
 			padded: true
@@ -394,6 +410,7 @@ const Categories = ( function () {
 	}
 
 	return {
-		initialize
+		initialize,
+		createToolbar
 	};
 }() );

@@ -21,7 +21,6 @@
 
 // eslint-disable-next-line no-unused-vars
 const PagePropertiesFunctions = ( function () {
-
 	function getKeyByValue( obj, value ) {
 		return Object.keys( obj ).find( ( key ) => obj[ key ] === value );
 	}
@@ -42,7 +41,6 @@ const PagePropertiesFunctions = ( function () {
 	}
 
 	function createTool( obj, config ) {
-
 		var Tool = function () {
 			// Tool.super.apply( this, arguments );
 			Tool.super.call( this, arguments[ 0 ], config );
@@ -98,17 +96,53 @@ const PagePropertiesFunctions = ( function () {
 		tools.forEach( function ( tool ) {
 			var obj = jQuery.extend( {}, tool );
 			obj.group = groupName;
-			var config = ( tool.config ? tool.config : {} );
+			var config = tool.config ? tool.config : {};
 			delete obj.config;
 			toolFactory.register( createTool( obj, config ) );
 		} );
+	}
+
+	function createWindowManager() {
+		var windowManager = new OO.ui.WindowManager( {
+			classes: [ 'pageproperties-ooui-window' ]
+		} );
+		$( document.body ).append( windowManager.$element );
+
+		return windowManager;
+	}
+
+	// ***remove annoying &nbsp; on OOUI / Mediawiki 1.39 (~v0.44.3)
+	// see vendor/oojs/oojs-ui/php/layouts/FieldsetLayout.php
+	function removeNbspFromLayoutHeader( selector ) {
+		$( selector + ' .oo-ui-fieldLayout-header' ).each( function () {
+			var html = $( this ).html();
+			if ( /<label [^>]+>&nbsp;<\/label>/.test( html ) ) {
+				$( this ).html( '' );
+			}
+		} );
+	}
+
+	function destroyDataTable( id ) {
+		if ( !$.fn.dataTable.isDataTable( '#' + id ) ) {
+			return;
+		}
+		var table = $( '#' + id ).DataTable();
+
+		// *** necessary, othwerwise dataTable.on("click", "tr"
+		// gets called 2 times, and openDialog() will create 2 dialogs
+		table.off( 'click' );
+
+		table.destroy();
+		$( '#' + id ).empty();
 	}
 
 	return {
 		createToolGroup,
 		sortObjectByKeys,
 		renameObjectKey,
-		getKeyByValue
+		getKeyByValue,
+		createWindowManager,
+		removeNbspFromLayoutHeader,
+		destroyDataTable
 	};
-
 }() );

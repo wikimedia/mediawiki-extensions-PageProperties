@@ -20,6 +20,8 @@
  */
 
 $( document ).ready( function () {
+	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
+
 	var msg1 = mw.config.get( 'pageproperties-js-alert-1' );
 	var msg2 = mw.config.get( 'pageproperties-js-alert-2' );
 	var propertiesTypes = JSON.parse( mw.config.get( 'pageproperties-propertiesTypes' ) );

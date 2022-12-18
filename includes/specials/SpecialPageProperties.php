@@ -23,7 +23,6 @@
  */
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
-include_once __DIR__ . '/HTMLCategoriesMultiselectField.php';
 
 use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\MediaWikiServices;
@@ -136,7 +135,6 @@ class SpecialPageProperties extends FormSpecialPage {
 		$this->getFormValues( $out );
 
 		$out->addModules( 'ext.PageProperties' );
-		// $out->addModules( 'ext.PageProperties.CategoryMultiselectWidgetPageProperties' );
 
 		$out->addModuleStyles(
 			[
@@ -146,11 +144,6 @@ class SpecialPageProperties extends FormSpecialPage {
 		);
 
 		$out->addModuleStyles( 'oojs-ui-widgets.styles' );
-
-		if ( defined( 'SMW_VERSION' ) ) {
-			$out->addModules( 'ext.PageProperties.Semantic' );
-			$this->getFormValuesSMW( $out );
-		}
 
 		$hidden_inputs = [];
 
@@ -162,11 +155,17 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$htmlForm->setId( 'pageproperties-form' );
 
+		$request = $this->getRequest();
+
+		// if ( defined( 'SMW_VERSION' ) ) {
+		// 	$hidden_inputs['semantic_forms'] = ( $request->wasPosted() ? $_POST['semantic_forms'] : implode( '|', $this->pageProperties['semantic-forms'] ) );
+		// }
+
 		foreach ( $hidden_inputs as $key => $value ) {
 			$htmlForm->addHiddenField( $key, $value );
 		}
 
-		if ( !defined( 'SMW_VERSION' ) && !$this->getRequest()->wasPosted() && !empty( $this->pageProperties[ 'semantic-properties' ] ) ) {
+		if ( !defined( 'SMW_VERSION' ) && !$request->wasPosted() && !empty( $this->pageProperties[ 'semantic-properties' ] ) ) {
 			$htmlForm->addHiddenField( 'confirm_delete_semantic_properties', 1 );
 		}
 
@@ -231,44 +230,21 @@ class SpecialPageProperties extends FormSpecialPage {
 		// page properties
 		$mainPage = Title::newMainPage();
 
-		if ( $request->wasPosted() ) {
-			$dynamic_values = $this->getDynamictableValues( $_POST );
-			$page_properties = [];
-
-			if ( $request->getVal( 'page_properties_display_title_select' ) === 'override' ) {
-				$page_properties['page-properties']['display-title'] = $request->getVal( 'page_properties_display_title_input' );
-			}
-
-			if ( $request->getVal( 'page_properties_language_select' ) === 'override' ) {
-				$page_properties['page-properties']['language'] = $request->getVal( 'page_properties_language_input' );
-			}
-
-			$page_properties['page-properties']['model'] = $request->getVal( 'page_properties_model' );
-
-			$page_properties['page-properties']['categories'] = preg_split( "/[\r\n]+/", $_POST['page_properties_categories'], -1, PREG_SPLIT_NO_EMPTY );
-
-			$meta = [];
-			if ( array_key_exists( 'SEO_meta', $dynamic_values ) ) {
-				foreach ( $dynamic_values['SEO_meta'] as $value ) {
-					$meta[ $value[0] ] = $value[1];
-				}
-			}
-			$page_properties['SEO']['meta'] = $meta;
-
-			$page_properties['SEO']['subpages'] = $request->getVal( 'SEO_subpages' );
-			if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
-				$page_properties['SEO']['entire-site'] = $request->getVal( 'SEO_entire_site' );
-			}
-
-		} else {
+		// *** we retrieve it also when posted,
+		// since semantic-properties and semantic-forms
+		// are not handled anymore (since 1.2.4) from this page
+		// (this is a preferred way than posting them as
+		// hidden inputs)
+		// if ( !$request->wasPosted() ) {
 			$default_values = [
 				'page-properties' => [
 					// 'display_title' => null,
 					// 'language' => $page_language,
 					'model' => $this->title->getContentModel(),
-					'categories' => $this->getCategories(),
+					// 'categories' => $this->getCategories(),
 				],
 				'semantic-properties' => [],
+				'semantic-forms' => [],
 				'SEO' => [
 					'meta' => [],
 					'subpages' => true,
@@ -286,138 +262,38 @@ class SpecialPageProperties extends FormSpecialPage {
 			}
 
 			$page_properties = array_replace_recursive( $default_values, $page_properties );
+		// }
+
+		if ( $request->wasPosted() ) {
+			$dynamic_values = $this->getDynamictableValues( $_POST );
+			// $page_properties = [];
+
+			if ( $request->getVal( 'page_properties_display_title_select' ) === 'override' ) {
+				$page_properties['page-properties']['display-title'] = $request->getVal( 'page_properties_display_title_input' );
+			}
+
+			if ( $request->getVal( 'page_properties_language_select' ) === 'override' ) {
+				$page_properties['page-properties']['language'] = $request->getVal( 'page_properties_language_input' );
+			}
+
+			$page_properties['page-properties']['model'] = $request->getVal( 'page_properties_model' );
+
+			$meta = [];
+			if ( array_key_exists( 'SEO_meta', $dynamic_values ) ) {
+				foreach ( $dynamic_values['SEO_meta'] as $value ) {
+					$meta[ $value[0] ] = $value[1];
+				}
+			}
+			$page_properties['SEO']['meta'] = $meta;
+
+			$page_properties['SEO']['subpages'] = $request->getVal( 'SEO_subpages' );
+			if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
+				$page_properties['SEO']['entire-site'] = $request->getVal( 'SEO_entire_site' );
+			}
+
 		}
 
 		$this->pageProperties = $page_properties;
-	}
-
-	/**
-	 * @param OutputPage $out
-	 * @return void
-	 */
-	private function getFormValuesSMW( $out ) {
-		$request = $this->getRequest();
-		$semanticProperties = \PageProperties::getSemanticProperties();
-
-		if ( !$request->wasPosted() ) {
-			$page_properties = $this->pageProperties;
-
-			// this could contain properties manually annotated on the page
-			$pageProperties = self::getSemanticData( $this->title );
-
-			$recorderPageProperties = [];
-			foreach ( $page_properties['semantic-properties'] as $key => $value ) {
-				$recorderPageProperties[$key] = ( is_array( $value ) ? $value : [ $value ] );
-			}
-
-			// merge with the recorded properties
-			$pageProperties = array_merge( $pageProperties, $recorderPageProperties );
-
-			// remove undeclared properties
-			$pageProperties = array_intersect_key( $pageProperties, $semanticProperties );
-
-		} else {
-			// $dynamic_values = $this->getDynamictableValues( $_POST );
-			$pageProperties = [];
-			// e.g. semantic-properties-input-Carbon_copy-0
-			foreach ( $_POST as $key => $value ) {
-				if ( strpos( $key, 'semantic-properties-input-' ) === 0 ) {
-					preg_match( '/^semantic\-properties\-input\-(.+?)\-\d+$/', $key, $match );
-
-					// replace underscore with space
-					// https://www.php.net/manual/en/language.variables.external.php
-					$pageProperties[ urldecode( $match[1] ) ][] = $value;
-				}
-			}
-		}
-
-		$out->addJsConfigVars( [
-			'pageproperties-managePropertiesSpecialPage' => false,
-			'pageproperties-canManageProperties' => $this->canManageProperties,
-			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
-			'pageproperties-properties' => json_encode( $pageProperties, true )
-		] );
-
-		$this->pageProperties['semantic-properties'] = $pageProperties;
-	}
-
-	/**
-	 * @param Title $title
-	 * @return array
-	 */
-	public static function getSemanticData( Title $title ) {
-		// $subject = new SMW\DIWikiPage( $title, NS_MAIN );
-		$subject = SMW\DIWikiPage::newFromTitle( $title );
-		$semanticData = \PageProperties::$SMWStore->getSemanticData( $subject );
-		$ret = [];
-
-		foreach ( $semanticData->getProperties() as $property ) {
-			$key = $property->getKey();
-			if ( in_array( $key, \PageProperties::$exclude ) ) {
-				continue;
-			}
-			$propertyDv = \PageProperties::$SMWDataValueFactory->newDataValueByItem( $property, null );
-
-			if ( !$property->isUserAnnotable() || !$propertyDv->isVisible() ) {
-				continue;
-			}
-
-			foreach ( $semanticData->getPropertyValues( $property ) as $dataItem ) {
-				$dataValue = \PageProperties::$SMWDataValueFactory->newDataValueByItem( $dataItem, $property );
-
-				if ( $dataValue->isValid() ) {
-					$label = $property->getLabel();
-
-					// @todo,get appropriate methods of other dataValues
-					if ( $dataValue instanceof \SMWTimeValue ) {
-						$ret[ $label ][] = $dataValue->getISO8601Date();
-					} else {
-						$dataValue->setOption( 'no.text.transformation', true );
-						$dataValue->setOption( 'form/short', true );
-						$ret[ $label ][] = $dataValue->getWikiValue();
-					}
-				}
-			}
-		}
-
-		return $ret;
-	}
-
-	/**
-	 * @return array
-	 */
-	private function getCategories() {
-		$ret = [];
-		$TitleArray = $this->wikiPage->getCategories();
-		foreach ( $TitleArray as $title ) {
-			$ret[] = $title->getText();
-		}
-		return $ret;
-	}
-
-	/**
-	 * @return OOUI\ButtonWidget
-	 */
-	private function clearFieldButton() {
-		return new OOUI\ButtonWidget(
-			[
-				'classes' => [ 'pageproperties_dynamictable_cancel_button' ],
-				'icon' => 'close'
-			]
-		);
-	}
-
-	/**
-	 * @return OOUI\ButtonWidget
-	 */
-	private function addFieldButton() {
-		return new OOUI\ButtonWidget(
-			[
-				'classes' => [ 'pageproperties_dynamictable_add_button' ],
-				'label' => $this->msg( 'pageproperties_dynamictable_addfield' )->text(),
-				'icon' => 'add'
-			]
-		);
 	}
 
 	/**
@@ -433,23 +309,6 @@ class SpecialPageProperties extends FormSpecialPage {
 		$formDescriptor = [];
 
 		///////////////// main /////////////////
-
-		HTMLForm::$typeMappings['categoriesmultiselect'] = \HTMLCategoriesMultiselectField::class;
-
-		// $categories = $this->getCategories();
-
-		$formDescriptor['page_properties_categories'] = [
-			'label-message' => 'pageproperties-form-categories-label',
-			'type' => 'categoriesmultiselect',
-			// 'type' => 'titlesmultiselect',
-			// 'namespace' => NS_CATEGORY,
-			'name' => 'page_properties_categories',
-			'id' => 'page_properties_categories_input',
-			// this produces an error client-side with the standard categories input
-			'default' => implode( "\n", $pageProperties['categories'] ),
-			'allowArbitrary' => true,
-			'section' => 'form-section-main',
-		];
 
 		$default_of_display_title = $default = ( !array_key_exists( 'display-title', $pageProperties ) ? 'default' : 'override' );
 		$display_title_default = ( array_key_exists( 'display-title', $pageProperties ) ? $pageProperties[ 'display-title' ] : "" );
@@ -476,6 +335,8 @@ class SpecialPageProperties extends FormSpecialPage {
 			'hide-if' => [ '===', 'page_properties_display_title_select', 'default' ],
 			'type' => 'text',
 			'section' => 'form-section-main',
+			// *** not working with 'hide-if'
+			// 'infusable' => false,
 			'default' => $display_title_default,
 		];
 
@@ -539,17 +400,6 @@ class SpecialPageProperties extends FormSpecialPage {
 			'default' => $pageProperties['model'],
 		];
 
-		///////////////// semantic properties /////////////////
-
-		if ( defined( 'SMW_VERSION' ) ) {
-			$formDescriptor['semantic_properties'] = [
-				'section' => 'form-section-semantic-properties',
-				'type' => 'hidden',
-				'append_html' => '<div id="semantic-properties-wrapper"></div>'
-			];
-
-		}
-
 		///////////////// SEO /////////////////
 
 		$options = [];
@@ -590,10 +440,10 @@ class SpecialPageProperties extends FormSpecialPage {
 			$prepend_html = '';
 
 			if ( $n == count( $tags ) ) {
-				$prepend_html .= '<table cellpadding="0" cellspacing="0" class="pageproperties_dynamictable" style="width:100%;margin-bottom:12px">';
+				$prepend_html .= '<table cellpadding="0" cellspacing="0" class="pageproperties_dynamictable">';
 			}
 
-			$prepend_html .= '<tr class="pageproperties_dynamictable_row"><td style="padding:2px 2px 2px 0" class="pageproperties_dynamictable_key_cell">';
+			$prepend_html .= '<tr class="pageproperties_dynamictable_row"><td style="padding-left:0" class="pageproperties_dynamictable_key_cell">';
 
 			$formDescriptor['dynamictable_SEO_meta_key_' . $n] = [
 				'name' => 'dynamictable_SEO_meta_key_' . $n,
@@ -613,8 +463,8 @@ class SpecialPageProperties extends FormSpecialPage {
 				$formDescriptor['dynamictable_SEO_meta_key_' . $n]['options'] = $options;
 			}
 
-			$prepend_html = '<td style="padding:2px 2px 2px 2px" class="pageproperties_dynamictable_value_cell">';
-			$append_html = '</td><td style="padding:2px 0 2px 2px" class="pageproperties_dynamictable_cancel_cell">' . $this->clearFieldButton() . '</td></tr>';
+			$prepend_html = '<td class="pageproperties_dynamictable_value_cell">';
+			$append_html = '</td><td style="padding-right:0" class="pageproperties_dynamictable_cancel_cell">' . $this->clearFieldButton() . '</td></tr>';
 
 			if ( $n == count( $SEO['meta'] ) - 1 + count( $tags ) ) {
 				$append_html .= '</table>';
@@ -677,6 +527,31 @@ class SpecialPageProperties extends FormSpecialPage {
 	}
 
 	/**
+	 * @return OOUI\ButtonWidget
+	 */
+	private function clearFieldButton() {
+		return new OOUI\ButtonWidget(
+			[
+				'classes' => [ 'pageproperties_dynamictable_cancel_button' ],
+				'icon' => 'close'
+			]
+		);
+	}
+
+	/**
+	 * @return OOUI\ButtonWidget
+	 */
+	private function addFieldButton() {
+		return new OOUI\ButtonWidget(
+			[
+				'classes' => [ 'pageproperties_dynamictable_add_button' ],
+				'label' => $this->msg( 'pageproperties_dynamictable_addfield' )->text(),
+				'icon' => 'add'
+			]
+		);
+	}
+
+	/**
 	 * @return void
 	 */
 	protected function getLanguageOptions() {
@@ -728,10 +603,8 @@ class SpecialPageProperties extends FormSpecialPage {
 		return $options;
 	}
 
-	// https://www.mediawiki.org/wiki/Manual:Language
-	// see includes/specials/SpecialPageLanguage.php
-
 	/**
+	 * @see includes/specials/SpecialPageLanguage.php	// https://www.mediawiki.org/wiki/Manual:Language
 	 * @param IContextSource $context
 	 * @param Title $title
 	 * @param string $newLanguage Language code
@@ -895,7 +768,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 			// ***edited
 			// $data['reason'],
-			null,
+			"",
 			true
 		);
 
@@ -937,6 +810,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	public function onSubmit( $data ) {
 		$title = $this->title;
+		// $this->pageProperties['semantic-forms'] = explode( '|', $_POST['semantic_forms'] );
 		$pageProperties = $this->pageProperties['page-properties'];
 
 		if ( $title->getContentModel() != $pageProperties['model'] ) {

@@ -24,13 +24,15 @@
 
 class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	protected $html_fragments = [];
+	protected $stickyFooter = false;
 
 	/**
 	 * @stable to call
 	 * @inheritDoc
 	 */
-	public function __construct( $descriptor, $context = null, $messagePrefix = '' ) {
+	public function __construct( $descriptor, $context = null, $messagePrefix = '', $stickyFooter = false ) {
 		// ***edited
+		$this->stickyFooter = $stickyFooter;
 		$symbols = [ 'append_html', 'prepend_html' ];
 
 		foreach ( $descriptor as $key => $value ) {
@@ -69,6 +71,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				continue;
 			}
 			$label = $this->getLegend( $key );
+
 			$content =
 				// ***edited
 				// $this->getHeaderText( $key ) .
@@ -145,9 +148,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 		// *** edited
 		// if ( $this->areOptionsEditable() ) {
-		// ***set to true to enable sticky footer
-		// @phpcs:ignore Generic.CodeAnalysis.UnconditionalIfStatement.Found
-		if ( false ) {
+		if ( $this->stickyFooter ) {
 			$t = $this->getTitle()->getSubpage( 'reset' );
 
 			$html .= new OOUI\ButtonWidget( [
@@ -221,6 +222,12 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 				// ***edited
 				if ( !empty( $retval ) ) {
+
+					// ***remove the annoying &nbsp; on OOUI / Mediawiki 1.39 (~v0.44.3)
+					// see vendor/oojs/oojs-ui/php/layouts/FieldsetLayout.php
+					// $retval = str_replace( '>&nbsp;</label>','></label>', $retval );
+					$retval = preg_replace( '/<label [^>]+>&nbsp;<\/label>/', '', $retval );
+
 					$html[] = $retval;
 
 					$labelValue = trim( $value->getLabel() );

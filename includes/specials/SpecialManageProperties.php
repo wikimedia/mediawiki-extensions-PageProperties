@@ -89,9 +89,8 @@ class SpecialManageProperties extends FormSpecialPage {
 		$context->getOutput()->enableOOUI();
 
 		$out->setPageTitle( $this->msg( 'manageproperties' )->text() );
-		$this->getFormValues();
 
-		$out->addModules( 'ext.PageProperties' );
+		$out->addModules( 'ext.PageProperties.ManageProperties' );
 
 		$out->addModuleStyles(
 			[
@@ -100,13 +99,11 @@ class SpecialManageProperties extends FormSpecialPage {
 			]
 		);
 
-		$out->addModuleStyles( 'oojs-ui-widgets.styles' );
+		// $out->addModuleStyles( 'oojs-ui-widgets.styles' );
 
-		// if ( defined( 'SMW_VERSION' ) ) {
-			$out->addModules( 'ext.PageProperties.Semantic' );
-			$this->getFormValuesSMW( $par, $out );
-		// }
+		$this->addJsConfigVars( $par, $out );
 
+		// @todo implement a Javascript-only output
 		$form_descriptor = $this->formDescriptor();
 
 		$htmlForm = new \OOUIHTMLFormTabs( $form_descriptor, $context, 'pageproperties' );
@@ -133,15 +130,37 @@ class SpecialManageProperties extends FormSpecialPage {
 	}
 
 	/**
+	 * @param string $par
+	 * @param OutputPage $out
 	 * @return void
 	 */
-	private function getFormValues() {
+	private function addJsConfigVars( $par, $out ) {
+		$semanticProperties = \PageProperties::getSemanticProperties();
+		$pageProperties = [];
+		$categories = $this->getCategoriesSemantic();
+		$forms = $this->getForms();
+		$setForms = [];
+
+		$out->addJsConfigVars( [
+			'pageproperties-managePropertiesSpecialPage' => true,
+			'pageproperties-set-forms' => json_encode( $setForms, true ),
+			'pageproperties-canManageProperties' => $this->canManageProperties,
+			'pageproperties-categories' => json_encode( $categories, true ),
+			'pageproperties-forms' => json_encode( $forms, true ),
+			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
+			'pageproperties-properties' => json_encode( $pageProperties, true ),
+
+			// @see UploadWizard -> UploadWizard.config.php
+			'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
+			'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
+			// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
+		] );
 	}
 
 	/**
 	 * @return array
 	 */
-	private function getCategories() {
+	private function getCategoriesSemantic() {
 		$dbr = wfGetDB( DB_REPLICA );
 
 		$res = $dbr->select(
@@ -188,7 +207,6 @@ class SpecialManageProperties extends FormSpecialPage {
 				$dataValue = $dataValueFactory->newDataValueByItem( $value, $prop );
 
 				if ( $dataValue instanceof SMW\DataValues\ImportValue ) {
-					// echo $dataValue->getImportReference();
 					$ret[$label]['properties']['_IMPO'][] = $dataValue->getWikiValue();
 				}
 			}
@@ -198,28 +216,20 @@ class SpecialManageProperties extends FormSpecialPage {
 	}
 
 	/**
-	 * @param string $par
-	 * @param OutputPage $out
-	 * @return void
+	 * @return array
 	 */
-	private function getFormValuesSMW( $par, $out ) {
-		$semanticProperties = \PageProperties::getSemanticProperties();
-		$pageProperties = [];
-		$categories = $this->getCategories();
+	private function getForms() {
+		$arr = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
+		$ret = [];
 
-		$out->addJsConfigVars( [
-			'pageproperties-selectedPage' => $par,
-			'pageproperties-managePropertiesSpecialPage' => true,
-			'pageproperties-canManageProperties' => $this->canManageProperties,
-			'pageproperties-categories' => json_encode( $categories, true ),
-			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
-			'pageproperties-properties' => json_encode( $pageProperties, true ),
-
-			// @see UploadWizard -> UploadWizard.config.php
-			'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
-			'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
-			// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
-		] );
+		foreach ( $arr as $title ) {
+			$wikiPage = \PageProperties::getWikiPage( $title );
+			$text = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
+			if ( !empty( $text ) ) {
+				$ret[$title->getText()] = json_decode( $text, true );
+			}
+		}
+		return $ret;
 	}
 
 	/**
@@ -240,11 +250,11 @@ class SpecialManageProperties extends FormSpecialPage {
 			'append_html' => '<div id="categories-wrapper"></div>'
 		];
 
-		// $formDescriptor['forms'] = [
-		// 	'section' => 'form-section-forms',
-		// 	'type' => 'hidden',
-		// 	'append_html' => '<div id="forms-wrapper"></div>'
-		// ];
+		$formDescriptor['forms'] = [
+			'section' => 'form-section-forms',
+			'type' => 'hidden',
+			'append_html' => '<div id="forms-wrapper"></div>'
+		];
 
 		$formDescriptor['import'] = [
 			'section' => 'form-section-import',
