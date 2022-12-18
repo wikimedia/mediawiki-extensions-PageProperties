@@ -39,6 +39,7 @@ const PageProperties = ( function () {
 	var IsNewPage;
 	var PageContent;
 	var PageCategories;
+	var processDialogSearch;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -785,7 +786,7 @@ const PageProperties = ( function () {
 	};
 
 	function openSearchDialog( toolName ) {
-		var processDialogSearch = new ProcessDialogSearch( {
+		processDialogSearch = new ProcessDialogSearch( {
 			size: 'medium',
 			classes: [ 'pageproperties-import-dialog' ],
 			data: { toolName: toolName }
