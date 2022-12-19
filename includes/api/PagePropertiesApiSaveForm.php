@@ -126,12 +126,17 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			}
 		}
 
-		$inheritableBooleanKeys = [ "multiple" ];
+		$inheritableBooleanKeys = [ 'multiple' ];
+		$types = [ 'required' => 'bool', 'help-message' => 'string', 'preferred-input' => 'string',
+			 'multiple' => 'bool', 'on-create-only' => 'bool', 'value-formula' => 'string' ];
 		$obj['fields'] = [];
 		foreach ( $fields as $property => $values ) {
 			$obj['fields'][$property] = [];
 			foreach ( $values as $key => $value ) {
 				if ( !empty( $value ) || in_array( $key, $inheritableBooleanKeys ) ) {
+					if ( array_key_exists( $key, $types ) ) {
+						settype( $value, $types[$key] );
+					}
 					$obj['fields'][$property][$key] = $value;
 				}
 			}

@@ -433,7 +433,7 @@ class SpecialEditProperties extends FormSpecialPage {
 
 			foreach ( $data as $property => $values ) {
 				if ( in_array( $property, $pagenameMatches[1] ) ) {
-					$pagenameFormula = preg_replace( '/\<\s*' . $property . '\s*\>/', \PageProperties::array_last( $values ), $pagename );
+					$pagenameFormula = preg_replace( '/\<\s*' . $property . '\s*\>/', \PageProperties::array_last( $values ), $pagenameFormula );
 				}
 			}
 
