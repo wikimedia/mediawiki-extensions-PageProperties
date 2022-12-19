@@ -362,6 +362,7 @@ class SpecialEditProperties extends FormSpecialPage {
 			$text = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
 			if ( !empty( $text ) ) {
 				$obj = json_decode( $text, true );
+				$obj['fields'] = array_intersect_key( $obj['fields'], $this->semanticProperties );
 
 				foreach ( $obj['fields'] as $label => $field ) {
 					$helpMessages = [];
