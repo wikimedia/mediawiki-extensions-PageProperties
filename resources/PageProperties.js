@@ -1138,6 +1138,11 @@ const PageProperties = ( function () {
 					// delete Model[property];
 					delete Properties[ property ];
 				}
+				for ( var form in Forms ) {
+					for ( var property of data[ 'deleted-properties' ] ) {
+						delete Forms[ form ].fields[ property ];
+					}
+				}
 				break;
 
 			case 'create':
@@ -1150,6 +1155,13 @@ const PageProperties = ( function () {
 				if ( data[ 'previous-label' ] in Properties ) {
 					PagePropertiesFunctions.renameObjectKey(
 						Properties,
+						data[ 'previous-label' ],
+						data.label
+					);
+				}
+				for ( var form in Forms ) {
+					PagePropertiesFunctions.renameObjectKey(
+						Forms[ form ].fields,
 						data[ 'previous-label' ],
 						data.label
 					);

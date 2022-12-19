@@ -524,7 +524,8 @@ class PageProperties {
 			}
 		}
 
-		if ( array_key_exists( 'categories', $obj['page-properties'] ) && empty( implode( $obj['page-properties']['categories'] ) ) ) {
+		if ( !empty( $obj['page-properties'] ) && array_key_exists( 'categories', $obj['page-properties'] )
+			&& empty( implode( $obj['page-properties']['categories'] ) ) ) {
 			unset( $obj['page-properties']['categories'] );
 		}
 
