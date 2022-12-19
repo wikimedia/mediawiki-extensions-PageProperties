@@ -428,17 +428,19 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		$link = [
-			'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
-			'text' => 'Edit semantic',
-			'href' => $title->getLocalURL( 'action=editsemantic' )
-		];
+		if ( defined( 'SMW_VERSION' ) ) {
+			$link = [
+				'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
+				'text' => 'Edit semantic',
+				'href' => $title->getLocalURL( 'action=editsemantic' )
+			];
 
-		$keys = array_keys( $links['views'] );
-		$pos = array_search( 'edit', $keys );
+			$keys = array_keys( $links['views'] );
+			$pos = array_search( 'edit', $keys );
 
-		$links['views'] = array_intersect_key( $links['views'], array_flip( array_slice( $keys, 0, $pos + 1 ) ) )
-			+ [ 'semantic_edit' => $link ] + array_intersect_key( $links['views'], array_flip( array_slice( $keys, $pos + 1 ) ) );
+			$links['views'] = array_intersect_key( $links['views'], array_flip( array_slice( $keys, 0, $pos + 1 ) ) )
+				+ [ 'semantic_edit' => $link ] + array_intersect_key( $links['views'], array_flip( array_slice( $keys, $pos + 1 ) ) );
+		}
 
 		if ( !empty( $GLOBALS['wgPagePropertiesDisableNavigationLink'] ) ) {
 			return;
