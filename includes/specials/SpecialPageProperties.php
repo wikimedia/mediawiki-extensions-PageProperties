@@ -840,7 +840,8 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		// display title is added to the page_props table
 		// through the hook onMultiContentSave
-		\PageProperties::setPageProperties( $this->user, $title, $update_obj );
+		$errors = [];
+		\PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors );
 
 		return true;
 	}

@@ -40,6 +40,7 @@ const PageProperties = ( function () {
 	var PageContent;
 	var PageCategories;
 	var processDialogSearch;
+	var Errors;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -157,7 +158,7 @@ const PageProperties = ( function () {
 				continue;
 			}
 			// ignore deleted properties
-			if ( !inArray( property, propertiesInForms ) && !( property in Properties ) ) {
+			if ( property.indexOf( '__' ) !== 0 && !inArray( property, propertiesInForms ) && !( property in Properties ) ) {
 				continue;
 			}
 			ret[ property ] = [];
@@ -243,6 +244,11 @@ const PageProperties = ( function () {
 
 		for ( var form of SetForms ) {
 			for ( var i in Forms[ form ].fields ) {
+
+				if ( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] === true ) {
+					continue;
+				}
+
 				ret.push( i );
 			}
 		}
@@ -528,7 +534,7 @@ const PageProperties = ( function () {
 						index: optionsList.items.length,
 						multiple: multiple,
 						form: config.form,
-						last: i === values.length - 1
+						last: ( i * 1 ) === values.length - 1
 					} )
 				] );
 			}
@@ -544,7 +550,7 @@ const PageProperties = ( function () {
 					index: optionsList.items.length,
 					multiple: false,
 					form: config.form,
-					last: i === values.length - 1
+					last: true
 				} )
 			] );
 		}
@@ -979,6 +985,11 @@ const PageProperties = ( function () {
 			var form = Forms[ formName ];
 
 			for ( var i in form.fields ) {
+
+				if ( TargetPage && form.fields[ i ][ 'on-create-only' ] === true ) {
+					continue;
+				}
+
 				items.push(
 					new ItemWidget( {
 						classes: [ 'ItemWidget' ],
@@ -1073,7 +1084,8 @@ const PageProperties = ( function () {
 					name: 'semantic-properties-input-' + '__freetext' + '-' + '0',
 					autosize: true,
 					rows: 6,
-					value: PageContent
+					// eslint-disable-next-line no-underscore-dangle
+					value: ( Model.__freetext ? Model.__freetext[ 0 ].getValue() : PageContent )
 				} );
 
 				// eslint-disable-next-line no-underscore-dangle
@@ -1104,7 +1116,7 @@ const PageProperties = ( function () {
 
 				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
 				for ( var category of categories ) {
-					categoriesInput.addTag( category, category );
+					categoriesInput.addTag( category );
 				}
 				items.push(
 					new OO.ui.FieldLayout( categoriesInput, {
@@ -1207,6 +1219,12 @@ const PageProperties = ( function () {
 			}
 
 			for ( var i in Forms[ form ].fields ) {
+				// *** on-create-only field don't get recorded when creating the form
+				// but even if they belong to the form can be added later as single
+				// properties
+				if ( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] === true ) {
+					continue;
+				}
 				formProperties.push( i );
 			}
 
@@ -1239,7 +1257,7 @@ const PageProperties = ( function () {
 			}
 		}
 
-		// create scattered properties panel
+		// create single properties panel
 		if (
 			Object.keys( Properties ).filter( ( x ) => !inArray( x, formProperties ) ).length
 		) {
@@ -1249,7 +1267,7 @@ const PageProperties = ( function () {
 					framed: false,
 					classes: [ 'PanelProperties-panel-section' ],
 					data: {
-						label: 'properties', // mw.msg
+						label: mw.msg( 'pageproperties-jsmodule-formedit-properties' ),
 						expanded: false,
 						properties: true
 					}
@@ -1277,7 +1295,7 @@ const PageProperties = ( function () {
 					framed: false,
 					classes: [ 'PanelProperties-panel-section' ],
 					data: {
-						label: 'wiki', // mw.msg
+						label: mw.msg( 'pageproperties-jsmodule-formedit-wiki' ),
 						pagenameFormula: pagenameFormula,
 						userDefined: userDefined,
 						freeText: freeText,
@@ -1315,7 +1333,8 @@ const PageProperties = ( function () {
 		isNewPage,
 		pageContent,
 		pageCategories,
-		windowManagerSearch
+		windowManagerSearch,
+		errors
 	) {
 		Model = {};
 
@@ -1333,6 +1352,7 @@ const PageProperties = ( function () {
 			PageContent = pageContent;
 			PageCategories = pageCategories;
 			WindowManagerSearch = windowManagerSearch;
+			Errors = errors;
 		}
 
 		PropertiesStack = new OO.ui.StackLayout( {
@@ -1343,8 +1363,19 @@ const PageProperties = ( function () {
 
 		var toolbarA = createToolbar();
 
+		var frameAContent = [ toolbarA.$element, PropertiesStack.$element ];
+
+		if ( Errors.length ) {
+			var messageWidget = new OO.ui.MessageWidget( {
+				type: 'error',
+				label: Errors.join( '<br /> ' )
+			} );
+
+			frameAContent.splice( 1, 0, messageWidget.$element, $( '<br />' ) );
+		}
+
 		var frameA = new OO.ui.PanelLayout( {
-			$content: [ toolbarA.$element, PropertiesStack.$element ],
+			$content: frameAContent,
 			expanded: false,
 			framed: false,
 			data: { name: 'pageproperties' }
@@ -1452,6 +1483,9 @@ $( document ).ready( function () {
 
 	// console.log( 'managePropertiesSpecialPage', managePropertiesSpecialPage );
 
+	var errors = JSON.parse( mw.config.get( 'pageproperties-errors' ) );
+	// console.log( 'errors', errors );
+
 	var categories = JSON.parse( mw.config.get( 'pageproperties-categories' ) );
 	// console.log( 'categories', categories );
 
@@ -1472,11 +1506,12 @@ $( document ).ready( function () {
 	var forms = JSON.parse( mw.config.get( 'pageproperties-forms' ) );
 	// console.log( 'forms', forms );
 
-	// the order is important !!
-	var windowManagerForms = PagePropertiesFunctions.createWindowManager();
+	// the order is important !! ( first is behind)
+	var windowManagerCommon = PagePropertiesFunctions.createWindowManager();
 	var windowManagerSearch = PagePropertiesFunctions.createWindowManager();
 	var windowManagerManageProperties =
 		PagePropertiesFunctions.createWindowManager();
+	var windowManagerAlert = PagePropertiesFunctions.createWindowManager();
 
 	if ( !managePropertiesSpecialPage ) {
 		var pageContent = mw.config.get( 'pageproperties-pageContent' );
@@ -1501,22 +1536,25 @@ $( document ).ready( function () {
 			isNewPage,
 			pageContent,
 			pageCategories,
-			windowManagerSearch
+			windowManagerSearch,
+			errors
 		);
 	}
 
 	ManageProperties.initialize(
 		windowManagerManageProperties,
+		windowManagerAlert,
 		semanticProperties,
 		managePropertiesSpecialPage
 	);
 
-	PagePropertiesCategories.initialize( categories );
+	PagePropertiesCategories.initialize( categories, windowManagerCommon, windowManagerAlert );
 
 	PagePropertiesForms.initialize(
 		managePropertiesSpecialPage,
-		windowManagerForms,
+		windowManagerCommon,
 		windowManagerSearch,
+		windowManagerAlert,
 		forms,
 		semanticProperties
 	);
@@ -1527,6 +1565,8 @@ $( document ).ready( function () {
 
 		ImportProperties.initialize(
 			semanticProperties,
+			windowManagerCommon,
+			windowManagerAlert,
 			maxPhpUploadSize,
 			maxMwUploadSize
 		);

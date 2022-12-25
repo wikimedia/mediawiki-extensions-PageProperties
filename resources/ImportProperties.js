@@ -53,11 +53,8 @@ const ImportProperties = ( function () {
 	var MaxMwUploadSize;
 	// var WgMaxArticleSize;
 	var FieldMaxSize = 1000;
-
-	var windowManager = new OO.ui.WindowManager( {
-		classes: [ 'pageproperties-ooui-window' ]
-	} );
-	$( document.body ).append( windowManager.$element );
+	var WindowManager;
+	var WindowManagerAlert;
 
 	function resetAll() {
 		$( '#import-wrapper' ).empty();
@@ -328,7 +325,7 @@ const ImportProperties = ( function () {
 				// eslint-disable-next-line no-console
 				console.error( err );
 				if ( err !== 'paused' && err !== 'canceled process' ) {
-					OO.ui.alert( 'unknown error', { size: 'medium' } );
+					PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 				}
 			} );
 	}
@@ -371,11 +368,11 @@ const ImportProperties = ( function () {
 					data: { multistep: config.multistep }
 				} );
 
-				windowManager.addWindows( [ processDialogConfirm ] );
+				WindowManager.addWindows( [ processDialogConfirm ] );
 
 				// , {contents: contents}
 				// https://www.mediawiki.org/wiki/OOUI/Windows#Opening
-				instance = windowManager.openWindow( processDialogConfirm );
+				instance = WindowManager.openWindow( processDialogConfirm );
 				var step = config.step;
 				instance.opening.then( function () {
 					// processDialogConfirm.booklet.toggleOutline(config.multistep);
@@ -555,7 +552,7 @@ const ImportProperties = ( function () {
 						// The following messages are used here:
 						// * pageproperties-permissions-error
 						// * pageproperties-permissions-error-b
-						OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
+						PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
 					} );
 			} );
 		} );
@@ -613,7 +610,7 @@ const ImportProperties = ( function () {
 			ModelMappedProperties[ self.data.label ] = widget.data;
 			createDataTableHeadingMap();
 
-			windowManager.removeWindows( [ DialogName ] );
+			WindowManager.removeWindows( [ DialogName ] );
 		} );
 
 		searchWidget.onQueryChange = function ( value ) {
@@ -660,7 +657,7 @@ const ImportProperties = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				windowManager.removeWindows( [ DialogName ] );
+				WindowManager.removeWindows( [ DialogName ] );
 			}, this );
 	};
 
@@ -671,9 +668,9 @@ const ImportProperties = ( function () {
 			data: { label: label }
 		} );
 
-		windowManager.addWindows( [ processDialog ] );
+		WindowManager.addWindows( [ processDialog ] );
 
-		windowManager.openWindow( processDialog );
+		WindowManager.openWindow( processDialog );
 	}
 
 	// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/SearchWidgetDialog.js
@@ -767,7 +764,7 @@ const ImportProperties = ( function () {
 		return ProcessDialogConfirm.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				windowManager.removeWindows( [ DialogConfirmName ] );
+				WindowManager.removeWindows( [ DialogConfirmName ] );
 			}, this );
 	};
 	/*
@@ -1223,8 +1220,11 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 	}
 
 	// , wgMaxArticleSize
-	function initialize( semanticProperties, maxPhpUploadSize, maxMwUploadSize ) {
+	function initialize( semanticProperties, windowManager, windowManagerAlert,
+		maxPhpUploadSize, maxMwUploadSize ) {
 		SemanticProperties = semanticProperties;
+		WindowManager = windowManager;
+		WindowManagerAlert = windowManagerAlert;
 		MaxPhpUploadSize = maxPhpUploadSize;
 		MaxMwUploadSize = maxMwUploadSize;
 		// WgMaxArticleSize = wgMaxArticleSize;

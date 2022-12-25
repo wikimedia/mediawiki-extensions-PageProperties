@@ -37,6 +37,7 @@ const PagePropertiesForms = ( function () {
 	var WindowManagerSearch;
 	var SelectedProperty;
 	var ManagePropertiesSpecialPage;
+	var WindowManagerAlert;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -520,6 +521,9 @@ const PagePropertiesForms = ( function () {
 	ProcessDialogSearch.prototype.initialize = function () {
 		ProcessDialogSearch.super.prototype.initialize.apply( this, arguments );
 
+		var self = this;
+		this.selectedItems = Object.keys( SelectedForm.fields );
+
 		function getItems( value ) {
 			var values = Object.keys( SemanticProperties );
 			if ( value ) {
@@ -533,7 +537,7 @@ const PagePropertiesForms = ( function () {
 				var menuOptionWidget = new OO.ui.MenuOptionWidget( {
 					data: x,
 					label: x,
-					selected: x in SelectedForm.fields
+					selected: inArray( x, self.selectedItems )
 				} );
 				menuOptionWidget.$element.append(
 					$(
@@ -551,12 +555,26 @@ const PagePropertiesForms = ( function () {
 		} );
 
 		searchWidget.results.addItems( getItems() );
+
 		// searchWidget.getResults() is a SelectWidget
 		// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.SelectWidget
+		var searchWidgetResults = searchWidget.getResults();
+		searchWidgetResults.multiselect = true;
 
-		this.selectWidget = searchWidget.getResults();
+		// this.searchWidgetResults = searchWidgetResults;
 
-		this.selectWidget.multiselect = true;
+		// we don't rely anymore on searchWidgetResults.findSelectedItems()
+		// to handle non-visible highlighted items
+		searchWidgetResults.on( 'press', function ( value ) {
+			if ( value === null ) {
+				return;
+			}
+			if ( inArray( value.data, self.selectedItems ) ) {
+				self.selectedItems.splice( self.selectedItems.indexOf( value.data ), 1 );
+			} else {
+				self.selectedItems.push( value.data );
+			}
+		} );
 
 		searchWidget.onQueryChange = function ( value ) {
 			searchWidget.results.clearItems();
@@ -587,18 +605,19 @@ const PagePropertiesForms = ( function () {
 		var dialog = this;
 
 		if ( action === 'save' ) {
-			var items = processDialogSearch.selectWidget.findSelectedItems();
-			var properties = items.map( ( x ) => x.data );
+
+			// var items = dialog.searchWidgetResults.findSelectedItems();
+			// var selectedItems = items.map( ( x ) => x.data );
 
 			// remove unselected properties
 			for ( var label in SelectedForm.fields ) {
-				if ( !inArray( label, properties ) ) {
+				if ( !inArray( label, dialog.selectedItems ) ) {
 					delete SelectedForm.fields[ label ];
 				}
 			}
 
 			// add new properties
-			for ( var label of properties ) {
+			for ( var label of dialog.selectedItems ) {
 				if ( !( label in SelectedForm.fields ) ) {
 					SelectedForm.fields[ label ] = {};
 				}
@@ -667,7 +686,15 @@ const PagePropertiesForms = ( function () {
 		} );
 
 		deleteButton.on( 'click', function () {
-			delete Model[ config.property ][ config.index ];
+			if ( PagePropertiesFunctions.getNestedProp( [ SelectedProperty.label,
+				config.field, config.index ], Model.fields ) ) {
+				delete Model.fields[ SelectedProperty.label ][ config.field ][ config.index ];
+			}
+			if ( PagePropertiesFunctions.getNestedProp( [ SelectedProperty.label,
+				config.field, config.index ], SelectedForm.fields ) ) {
+				// eslint-disable-next-line max-len
+				delete SelectedForm.fields[ SelectedProperty.label ][ config.field ][ config.index ];
+			}
 		} );
 
 		var inputWidget = new OO.ui.MultilineTextInputWidget( {
@@ -855,6 +882,7 @@ const PagePropertiesForms = ( function () {
 			optionsList.addItems( [
 				new InnerItemWidget( {
 					classes: [ 'InnerItemWidget' ],
+					field: 'help-message',
 					value: '',
 					index: optionsList.items.length
 				} )
@@ -865,6 +893,7 @@ const PagePropertiesForms = ( function () {
 			optionsList.addItems( [
 				new InnerItemWidget( {
 					classes: [ 'InnerItemWidget' ],
+					field: 'help-message',
 					value: helpMessages[ i ],
 					index: i
 				} )
@@ -1055,7 +1084,7 @@ const PagePropertiesForms = ( function () {
 		this.$body.append( frame.$element );
 
 		fieldOptionsList.toggle( helpMessages.length );
-		addOption.toggle( false );
+		addOption.toggle( selectHelpInput.getValue() === 'override' );
 		fieldAvailableInputs.toggle( preferredInputValue );
 		fieldMultipleValue.toggle( selectMultipleValueValue !== '' );
 
@@ -1219,7 +1248,7 @@ const PagePropertiesForms = ( function () {
 						}
 
 						if ( formFields.formName === '' ) {
-							OO.ui.alert(
+							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-forms-alert-formname' ),
 								{
 									size: 'medium'
@@ -1232,7 +1261,7 @@ const PagePropertiesForms = ( function () {
 						}
 
 						if ( !Object.keys( SelectedForm.fields ).length ) {
-							OO.ui.alert(
+							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-forms-alert-fields' ),
 								{
 									size: 'medium'
@@ -1266,16 +1295,18 @@ const PagePropertiesForms = ( function () {
 											var data =
 												res[ 'pageproperties-manageproperties-saveform' ];
 											if ( data[ 'result-action' ] === 'error' ) {
-												OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
-													size: 'medium'
-												} );
+												PagePropertiesFunctions.OOUIAlert(
+													WindowManagerAlert,
+													new OO.ui.HtmlSnippet( data.error ), {
+														size: 'medium'
+													} );
 											} else {
 												if ( updateData( data ) === true ) {
 													WindowManager.removeWindows( [ DialogName ] );
 												}
 											}
 										} else {
-											OO.ui.alert( 'unknown error', { size: 'medium' } );
+											PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 										}
 									} )
 									.fail( function ( res ) {
@@ -1286,7 +1317,7 @@ const PagePropertiesForms = ( function () {
 										// The following messages are used here:
 										// * pageproperties-permissions-error
 										// * pageproperties-permissions-error-b
-										OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
+										PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
 									} );
 							} );
 						} ); // promise
@@ -1494,6 +1525,7 @@ const PagePropertiesForms = ( function () {
 		managePropertiesSpecialPage,
 		windowManager,
 		windowManagerSearch,
+		windowManagerAlert,
 		forms,
 		semanticProperties
 	) {
@@ -1501,6 +1533,7 @@ const PagePropertiesForms = ( function () {
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
 			SemanticProperties = semanticProperties;
 			WindowManager = windowManager;
+			WindowManagerAlert = windowManagerAlert;
 			Forms = forms;
 			WindowManagerSearch = windowManagerSearch;
 		}

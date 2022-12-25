@@ -5,6 +5,13 @@
 	"pageproperties": "A label message",
 	"manageproperties": "A label message",
 
+	"pageproperties-editsemantic-titlenotset": "A label message",
+	"pageproperties-editsemantic-contentsnotsaved": "A label message",
+	"pageproperties-editsemantic-creating": "A label message",
+	"pageproperties-editsemantic-editing": "A label message",
+	"pageproperties-editsemantic-semantic": "A label message",
+	"pageproperties-editsemantic-newpageforms": "A label message",
+
 	"pageproperties-form-section-forms": "A label message",
 	"pageproperties-jsmodule-forms-fields": "A label message",
 	"pageproperties-jsmodule-forms-create-form": "A label message",
@@ -52,6 +59,9 @@
 	"pageproperties-forms-label": "A label message",
 	"pageproperties-jsmodule-formedit-pagetitle": "A label message",
 	"pageproperties-jsmodule-formedit-freetext": "A label message",
+	"pageproperties-jsmodule-formedit-properties": "A label message",
+	"pageproperties-jsmodule-formedit-wiki": "A label message",
+
 	"pageproperties-jsmodule-pageproperties-addremoveforms": "A label message",
 	"pageproperties-jsmodule-pageproperties-manage-categories": "A label message",
 	"pageproperties-jsmodule-pageproperties-manage-forms": "A label message",

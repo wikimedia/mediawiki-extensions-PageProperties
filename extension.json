@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.4",
+	"version": "1.2.4b",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -353,7 +353,9 @@
 				"pageproperties-jsmodule-forms-notrequired",
 				"pageproperties-jsmodule-forms-addfield",
 				"pageproperties-permissions-error",
-				"pageproperties-jsmodule-formedit-freetext"
+				"pageproperties-jsmodule-formedit-freetext",
+				"pageproperties-jsmodule-formedit-properties",
+				"pageproperties-jsmodule-formedit-wiki"
 			]
 		}
 	},

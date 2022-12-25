@@ -99,7 +99,9 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 			$label_ = ( $prop )->getLabel();
 			$pageproperties['semantic-properties'][$label_] = $value;
 		}
-		\PageProperties::setPageProperties( $user, $propertyTitle, $pageproperties );
+
+		$errors = [];
+		\PageProperties::setPageProperties( $user, $propertyTitle, $pageproperties, $errors );
 		// get updated property
 		$property = SMW\DIProperty::newFromUserLabel( $label );
 		$ret = \PageProperties::getSemanticProperties( $property, $pageproperties['semantic-properties'] );

@@ -439,7 +439,7 @@ class PageProperties {
 
 			foreach ( $values as $value ) {
 				$property = SMW\DIProperty::newFromUserLabel( $label );
-				$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, $value, $valueCaption );
+				$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, $value, $valueCaption, $subject );
 				$semanticData->addDataValue( $dataValue );
 			}
 		}
@@ -449,9 +449,10 @@ class PageProperties {
 	 * @see includes/api/ApiBase.php
 	 * @param User $user
 	 * @param Title $title
+	 * @param array &$errors
 	 * @return bool
 	 */
-	public static function checkWritePermissions( $user, $title ) {
+	public static function checkWritePermissions( $user, $title, &$errors ) {
 		$actions = [ 'edit' ];
 		if ( !$title->isKnown() ) {
 			$actions[] = 'create';
@@ -484,16 +485,18 @@ class PageProperties {
 	 * @param User $user
 	 * @param Title $title
 	 * @param array $obj
+	 * @param array &$errors
 	 * @param null|string $mainSlotContent
 	 * @return null|bool
 	 */
-	public static function setPageProperties( $user, $title, $obj, $mainSlotContent = null ) {
-		$canWrite = self::checkWritePermissions( $user, $title );
+	public static function setPageProperties( $user, $title, $obj, &$errors, $mainSlotContent = null ) {
+		$canWrite = self::checkWritePermissions( $user, $title, $errors );
 
 		if ( !$canWrite ) {
 			return false;
 		}
 
+		// @todo refactor here
 		if ( !empty( $obj['semantic-properties'] ) ) {
 			// remove empty values and implode arrays with
 			// single values
@@ -1108,27 +1111,6 @@ class PageProperties {
 				JobQueueGroup::singleton()->push( $jobs );
 			}
 		}
-	}
-
-	/**
-	 * @param UserGroupManager $userGroupManager
-	 * @param User $user
-	 * @param bool $replace_asterisk
-	 * @return array
-	 */
-	public static function getUserGroups( $userGroupManager, $user, $replace_asterisk = false ) {
-		$user_groups = $userGroupManager->getUserEffectiveGroups( $user );
-
-		if ( array_search( '*', $user_groups ) === false ) {
-			$user_groups[] = '*';
-		}
-
-		if ( $replace_asterisk ) {
-			$key = array_search( '*', $user_groups );
-			$user_groups[ $key ] = 'all';
-		}
-
-		return $user_groups;
 	}
 
 	/**

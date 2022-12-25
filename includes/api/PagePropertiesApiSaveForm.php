@@ -127,7 +127,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		}
 
 		$inheritableBooleanKeys = [ 'multiple' ];
-		$types = [ 'required' => 'bool', 'help-message' => 'string', 'preferred-input' => 'string',
+		$types = [ 'required' => 'bool', 'help-message' => 'array', 'preferred-input' => 'string',
 			 'multiple' => 'bool', 'on-create-only' => 'bool', 'value-formula' => 'string' ];
 		$obj['fields'] = [];
 		foreach ( $fields as $property => $values ) {

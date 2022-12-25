@@ -33,6 +33,7 @@ const ManageProperties = ( function () {
 	var DataLoading = false;
 	var DataTable;
 	var WindowManager;
+	var WindowManagerAlert;
 	var ManagePropertiesSpecialPage;
 
 	var optionsInputs = [
@@ -460,6 +461,19 @@ const ManageProperties = ( function () {
 				return new mw.widgets.datetime.DateTimeInputWidget( config );
 			case 'intl-tel-input':
 				return new PagePropertiesintlTelInput( config );
+			case 'mw.widgets.CategoryMultiselectWidget':
+				var values = ( config.selected ? config.selected : config.value );
+				delete config.selected;
+				delete config.value;
+				var widget = new mw.widgets.CategoryMultiselectWidget( config );
+
+				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
+				if ( Array.isArray( values ) ) {
+					for ( var value of values ) {
+						widget.addTag( value );
+					}
+				}
+				return widget;
 		}
 
 		var arr = inputName.split( '.' );
@@ -1013,7 +1027,7 @@ const ManageProperties = ( function () {
 							// eslint-disable-next-line no-underscore-dangle
 							!inArray( obj.__pageproperties_preferred_input, optionsInputs )
 						) {
-							OO.ui.alert(
+							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
 								new OO.ui.HtmlSnippet(
 									mw.msg(
 										'pageproperties-jsmodule-manageproperties-suggestion1'
@@ -1029,7 +1043,7 @@ const ManageProperties = ( function () {
 							// eslint-disable-next-line no-underscore-dangle
 							obj._PVALI === ''
 						) {
-							OO.ui.alert(
+							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion2' ),
 								{
 									size: 'medium'
@@ -1060,20 +1074,22 @@ const ManageProperties = ( function () {
 											var data =
 												res[ 'pageproperties-manageproperties-saveproperty' ];
 											if ( data[ 'result-action' ] === 'error' ) {
-												OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
-													size: 'medium'
-												} );
+												PagePropertiesFunctions.OOUIAlert(
+													WindowManagerAlert,
+													new OO.ui.HtmlSnippet( data.error ), {
+														size: 'medium'
+													} );
 											} else {
 												if (
 													updateData( data ) === true
 												) {
 													WindowManager.removeWindows( [ 'myDialog' ] );
 												} else {
-													OO.ui.alert( 'unknown error', { size: 'medium' } );
+													PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 												}
 											}
 										} else {
-											OO.ui.alert( 'unknown error', { size: 'medium' } );
+											PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 										}
 									} )
 									.fail( function ( res ) {
@@ -1084,7 +1100,7 @@ const ManageProperties = ( function () {
 										// The following messages are used here:
 										// * pageproperties-permissions-error
 										// * pageproperties-permissions-error-b
-										OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
+										PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
 									} );
 							} );
 						} ); // promise
@@ -1352,6 +1368,7 @@ const ManageProperties = ( function () {
 
 	function initialize(
 		windowManager,
+		windowManagerAlert,
 		semanticProperties,
 		managePropertiesSpecialPage
 	) {
@@ -1359,6 +1376,7 @@ const ManageProperties = ( function () {
 
 		if ( arguments.length ) {
 			WindowManager = windowManager;
+			WindowManagerAlert = windowManagerAlert;
 			SemanticProperties = semanticProperties;
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
 		}

@@ -85,7 +85,8 @@ class PagePropertiesJob extends Job {
 			unset( $page_properties[ 'semantic-properties' ][ $label ] );
 		}
 
-		\PageProperties::setPageProperties( $user, $title, $page_properties );
+		$errors = [];
+		\PageProperties::setPageProperties( $user, $title, $page_properties, $errors );
 
 		return true;
 	}

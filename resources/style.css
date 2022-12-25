@@ -213,6 +213,15 @@
 	background: #f8f9fa;
 }
 
+.PanelProperties-panel-section:first-child {
+	border-top: 1px solid #ccc;
+}
+
 .PanelProperties-panel-section:last-child {
 	border-bottom: 1px solid #ccc;
+}
+
+#semantic-properties-wrapper .oo-ui-toolbar-position-top > .oo-ui-toolbar-bar {
+	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
+	border-bottom: none;
 }

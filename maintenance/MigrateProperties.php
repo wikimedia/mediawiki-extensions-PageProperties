@@ -135,7 +135,8 @@ class MigrateProperties extends Maintenance {
 
 		// print_r($page_properties);
 
-		$contentSaved = \PageProperties::setPageProperties( $this->user, $title, $page_properties );
+		$errors = [];
+		$contentSaved = \PageProperties::setPageProperties( $this->user, $title, $page_properties, $errors );
 
 		return $contentSaved;
 	}

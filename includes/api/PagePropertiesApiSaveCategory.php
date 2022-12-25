@@ -122,7 +122,8 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 			$pageproperties['semantic-properties'][$label_] = $value;
 		}
 
-		\PageProperties::setPageProperties( $user, $propertyTitle, $pageproperties );
+		$errors = [];
+		\PageProperties::setPageProperties( $user, $propertyTitle, $pageproperties, $errors );
 
 		// get updated category
 		// see SpecialManageProperties.php -> getCategories

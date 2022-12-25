@@ -28,12 +28,8 @@ const PagePropertiesCategories = ( function () {
 	var Categories;
 	var ImportedVocabulariesWidgetCategories;
 	var DataTable;
-
-	var windowManager = new OO.ui.WindowManager( {
-		classes: [ 'pageproperties-ooui-window' ]
-	} );
-
-	$( document.body ).append( windowManager.$element );
+	var WindowManager;
+	var WindowManagerAlert;
 
 	function getPropertyValue( property ) {
 		if ( property in Model ) {
@@ -214,16 +210,18 @@ const PagePropertiesCategories = ( function () {
 											var data =
 												res[ 'pageproperties-manageproperties-savecategory' ];
 											if ( data[ 'result-action' ] === 'error' ) {
-												OO.ui.alert( new OO.ui.HtmlSnippet( data.error ), {
-													size: 'medium'
-												} );
+												PagePropertiesFunctions.OOUIAlert(
+													WindowManagerAlert,
+													new OO.ui.HtmlSnippet( data.error ), {
+														size: 'medium'
+													} );
 											} else {
 												if ( updateData( data ) === true ) {
-													windowManager.removeWindows( [ 'myDialog' ] );
+													WindowManager.removeWindows( [ 'myDialog' ] );
 												}
 											}
 										} else {
-											OO.ui.alert( 'unknown error', { size: 'medium' } );
+											PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 										}
 									} )
 									.fail( function ( res ) {
@@ -234,7 +232,7 @@ const PagePropertiesCategories = ( function () {
 										// The following messages are used here:
 										// * pageproperties-permissions-error
 										// * pageproperties-permissions-error-b
-										OO.ui.alert( mw.msg( msg ), { size: 'medium' } );
+										PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
 									} );
 							} );
 						} ); // promise
@@ -250,7 +248,7 @@ const PagePropertiesCategories = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				windowManager.removeWindows( [ 'myDialog' ] );
+				WindowManager.removeWindows( [ 'myDialog' ] );
 			}, this );
 	};
 
@@ -272,23 +270,15 @@ const PagePropertiesCategories = ( function () {
 			SelectedItem = Categories[ label ];
 		}
 
-		/*
-		if ( !DataLoaded ) {
-			// eslint-disable-next-line no-console
-			console.log( 'data not loaded' );
-			return;
-		}
-*/
-
 		Model = {};
 
 		processDialog = new ProcessDialog( {
 			size: 'larger'
 		} );
 
-		windowManager.addWindows( [ processDialog ] );
+		WindowManager.addWindows( [ processDialog ] );
 
-		windowManager.openWindow( processDialog );
+		WindowManager.openWindow( processDialog );
 	}
 
 	function initializeDataTable() {
@@ -376,10 +366,12 @@ const PagePropertiesCategories = ( function () {
 		return toolbar;
 	}
 
-	function initialize( categories ) {
+	function initialize( categories, windowManager, windowManagerAlert ) {
 
 		if ( arguments.length ) {
 			Categories = categories;
+			WindowManager = windowManager;
+			WindowManagerAlert = windowManagerAlert;
 		}
 
 		$( '#categories-wrapper' ).empty();

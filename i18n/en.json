@@ -5,6 +5,13 @@
 	"pageproperties": "Page Properties",
 	"manageproperties": "Manage Properties",
 
+	"pageproperties-editsemantic-titlenotset": "title not set",
+	"pageproperties-editsemantic-contentsnotsaved": "contents not saved",
+	"pageproperties-editsemantic-creating": "Creating",
+	"pageproperties-editsemantic-editing": "Editing",
+	"pageproperties-editsemantic-semantic": "(semantic)",
+	"pageproperties-editsemantic-newpageforms": "Create $1",
+
 	"pageproperties-form-section-forms": "Forms",
 	"pageproperties-jsmodule-forms-fields": "Fields",
 	"pageproperties-jsmodule-forms-create-form": "Create form",
@@ -55,6 +62,8 @@
 	"pageproperties-forms-label": "Forms",
 	"pageproperties-jsmodule-formedit-pagetitle": "Page title",
 	"pageproperties-jsmodule-formedit-freetext": "Freetext",
+	"pageproperties-jsmodule-formedit-properties": "properties",
+	"pageproperties-jsmodule-formedit-wiki": "wiki",
 
 	"pageproperties-jsmodule-pageproperties-addremoveforms": "Add/remove forms",
 	"pageproperties-jsmodule-pageproperties-manage-categories": "Manage categories",

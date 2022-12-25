@@ -136,6 +136,22 @@ const PagePropertiesFunctions = ( function () {
 		$( '#' + id ).empty();
 	}
 
+	// https://medium.com/javascript-inside/safely-accessing-deeply-nested-values-in-javascript-99bf72a0855a
+	function getNestedProp( path, obj ) {
+		return path.reduce( ( xs, x ) => ( xs && xs[ x ] ) ? xs[ x ] : null, obj );
+	}
+
+	function OOUIAlert( windowManager, text, options ) {
+		windowManager.addWindows( [ new OO.ui.MessageDialog() ] );
+
+		return windowManager.openWindow( 'message', $.extend( {
+			message: text,
+			actions: [ OO.ui.MessageDialog.static.actions[ 0 ] ]
+		}, options ) ).closed.then( function () {
+			return undefined;
+		} );
+	}
+
 	return {
 		createToolGroup,
 		sortObjectByKeys,
@@ -143,6 +159,8 @@ const PagePropertiesFunctions = ( function () {
 		getKeyByValue,
 		createWindowManager,
 		removeNbspFromLayoutHeader,
-		destroyDataTable
+		destroyDataTable,
+		getNestedProp,
+		OOUIAlert
 	};
 }() );

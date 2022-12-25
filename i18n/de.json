@@ -60,9 +60,9 @@
 	"pageproperties-form-section-seo": "SEO",
 
 	"pageproperties-form-section-main-label": "&#8203;",
-	"pageproperties-form-section-seo-label": "Hier können beliebige Metadaten für die Seite und ihre Unterseiten angegeben werden. Wenn die Erweiterung <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen.<br /><br />",
+	"pageproperties-form-section-seo-label": "Hier können beliebige Metadaten für die Seite und ihre Unterseiten angegeben werden. Wenn die Erweiterung [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen.<br /><br />",
 
-	"pageproperties-form-section-main-label-entire-wiki": "Hier können beliebige Metadaten für diese Seite, ihre Unterseiten und sogar das gesamte Wiki angegeben werden. Wenn die Erweiterung <a target=\"_blank\" href=\"https://www.mediawiki.org/wiki/Extension:WikiSEO\">WikiSEO</a> installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen. <br /><br />",
+	"pageproperties-form-section-main-label-entire-wiki": "Hier können beliebige Metadaten für diese Seite, ihre Unterseiten und sogar das gesamte Wiki angegeben werden. Wenn die Erweiterung [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen. <br /><br />",
 
 	"pageproperties-form-displaytitle-label": "Anzeigetitel",
 	"pageproperties-form-displaytitle-help": "kann leer bleiben",
