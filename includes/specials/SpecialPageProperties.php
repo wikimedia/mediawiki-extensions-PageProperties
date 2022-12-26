@@ -72,7 +72,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 	/** @inheritDoc */
 	public function execute( $par ) {
-		$this->requireLogin();
+		// $this->requireLogin();
 
 		$this->setParameter( $par );
 		$this->setHeaders();
@@ -84,12 +84,12 @@ class SpecialPageProperties extends FormSpecialPage {
 		// This will throw exceptions if there's a problem
 		$this->checkExecutePermissions( $user );
 
-		$securityLevel = $this->getLoginSecurityLevel();
+		// $securityLevel = $this->getLoginSecurityLevel();
 
-		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-			$this->displayRestrictionError();
-			return;
-		}
+		// if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+		// 	$this->displayRestrictionError();
+		// 	return;
+		// }
 
 		$this->addHelpLink( 'Extension:PageProperties' );
 

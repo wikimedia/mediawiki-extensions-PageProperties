@@ -46,9 +46,7 @@ class SpecialManageProperties extends FormSpecialPage {
 
 	/** @inheritDoc */
 	public function execute( $par ) {
-		$this->requireLogin();
-
-		// $this->setParameter( $par );
+		// $this->requireLogin();
 		$this->setHeaders();
 
 		$user = $this->getUser();
@@ -58,19 +56,19 @@ class SpecialManageProperties extends FormSpecialPage {
 		// This will throw exceptions if there's a problem
 		$this->checkExecutePermissions( $user );
 
-		$securityLevel = $this->getLoginSecurityLevel();
+		// $securityLevel = $this->getLoginSecurityLevel();
 
-		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-			$this->displayRestrictionError();
-			return;
-		}
+		// if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+		// 	$this->displayRestrictionError();
+		// 	return;
+		// }
+
+		$this->addHelpLink( 'Extension:PageProperties' );
 
 		if ( !defined( 'SMW_VERSION' ) ) {
 			$this->displayRestrictionError();
 			return;
 		}
-
-		$this->addHelpLink( 'Extension:PageProperties' );
 
 		$this->canEditProperties = $user->isAllowed( 'pageproperties-caneditproperties' );
 		$this->canManageProperties = $user->isAllowed( 'pageproperties-canmanageproperties' );

@@ -578,6 +578,9 @@ class PageProperties {
 
 		// The 'main' content slot MUST be set when creating a new page
 		if ( $oldRevisionRecord === null && !array_key_exists( MediaWiki\Revision\SlotRecord::MAIN, $slots ) ) {
+
+			// *** attention !! with a null content *sometimes* the properties
+			// don't show immediately in the factbox !
 			$main_content = ContentHandler::makeContent( "", $title );
 			$pageUpdater->setContent( SlotRecord::MAIN, $main_content );
 		}
