@@ -378,7 +378,8 @@ class SpecialEditProperties extends FormSpecialPage {
 	 */
 	private function getSemanticData( $title, $pageProperties ) {
 		// this could contain properties manually annotated on the page
-		$semanticData = \PageProperties::getSemanticData( $title );
+		// $semanticData = \PageProperties::getSemanticData( $title );
+		$semanticData = [];
 
 		$registeredPageProperties = [];
 		foreach ( $pageProperties['semantic-properties'] as $key => $value ) {
@@ -547,7 +548,7 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		$ret = \PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors, $freetext );
 
-		if ( $ret ) {
+		if ( !count( $errors ) ) {
 			header( 'Location: ' . $title->getFullURL() );
 			return true;
 		}
