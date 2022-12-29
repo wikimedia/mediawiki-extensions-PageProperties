@@ -25,6 +25,7 @@
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 use MediaWiki\Content\IContentHandlerFactory;
+use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
 
@@ -563,7 +564,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$languages = MediaWikiServices::getInstance()
 			->getLanguageNameUtils()
-			->getLanguageNames( $userLang, 'mwfile' );
+			->getLanguageNames( $userLang, LanguageNameUtils::SUPPORTED );
 
 		$options = [];
 		foreach ( $languages as $code => $name ) {
