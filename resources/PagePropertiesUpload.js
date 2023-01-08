@@ -22,7 +22,8 @@
 ( function () {
 	// @credits resources/src/mediawiki.Upload.BookletLayout/BookletLayout.js
 
-	const PagePropertiesUpload = function ( config ) {
+	// eslint-disable-next-line no-implicit-globals
+	PagePropertiesUpload = function ( config ) {
 		// Parent constructor
 		PagePropertiesUpload.parent.call( this, config );
 

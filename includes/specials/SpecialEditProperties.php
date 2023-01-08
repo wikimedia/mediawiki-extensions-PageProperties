@@ -448,10 +448,10 @@ class SpecialEditProperties extends FormSpecialPage {
 	 * @return string
 	 */
 	private function replaceFormula( $data, $formula ) {
-		preg_match_all( '/<\s*([^<>]+)\s*>/', $formula, $pagenameMatches, PREG_PATTERN_ORDER );
+		preg_match_all( '/<\s*([^<>]+)\s*>/', $formula, $matches, PREG_PATTERN_ORDER );
 
 		foreach ( $data as $property => $values ) {
-			if ( in_array( $property, $pagenameMatches[1] ) ) {
+			if ( in_array( $property, $matches[1] ) ) {
 				$formula = preg_replace( '/\<\s*' . $property . '\s*\>/', \PageProperties::array_last( $values ), $formula );
 			}
 		}
@@ -466,7 +466,7 @@ class SpecialEditProperties extends FormSpecialPage {
 	 * @return true|array
 	 */
 	public function onFormSubmit( $data, &$errors ) {
-		$canonicalNamespaceNames = $this->getConfig()->get( 'wgCanonicalNamespaceNames' );
+		$canonicalNamespaceNames = $this->getConfig()->get( 'CanonicalNamespaceNames' );
 
 		// @todo, use instead the form 'semantic-properties-freetext-',
 		// 'semantic-properties-filekey-', etc.
@@ -484,7 +484,23 @@ class SpecialEditProperties extends FormSpecialPage {
 				foreach ( $values as $k => $v ) {
 					if ( !empty( $v ) && !empty( $data[$prop][$k] ) ) {
 						// record only the reference, to handle transformations
+						// *** this is only required in conjunction with value-formula
 						$filekeys[$prop][$k] = $v;
+					}
+				}
+
+				unset( $data[$key] );
+			}
+		}
+
+		$prefixes = [];
+		foreach ( $data as $key => $values ) {
+			if ( strpos( $key, '__prefix-' ) === 0 ) {
+				$prop = substr( $key, strlen( '__prefix-' ) );
+
+				foreach ( $values as $k => $v ) {
+					if ( !empty( $data[$prop][$k] ) ) {
+						$prefixes[$prop][$k] = $v;
 					}
 				}
 
@@ -591,10 +607,18 @@ class SpecialEditProperties extends FormSpecialPage {
 		}
 
 		// reassign filenames after transformations
+		// *** this is only required in conjunction with value-formula
 		$upload = [];
 		foreach ( $filekeys as $label => $values ) {
 			foreach ( $values as $key => $filekey ) {
-				$upload[$filekey] = preg_replace( '/^' . $canonicalNamespaceNames[6] . ':/', '', $data[$label][$key] );
+				$upload[$filekey] = $data[$label][$key];
+			}
+		}
+
+		// assign prefixes (if any) after transformations
+		foreach ( $prefixes as $prop => $values ) {
+			foreach ( $values as $key => $value ) {
+				$data[$prop][$key] = $value . $data[$label][$key];
 			}
 		}
 

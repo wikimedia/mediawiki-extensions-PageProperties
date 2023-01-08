@@ -19,6 +19,8 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
+/* eslint-disable no-tabs */
+
 // eslint-disable-next-line no-unused-vars
 const PagePropertiesForms = ( function () {
 	var Model = {};
@@ -850,11 +852,11 @@ const PagePropertiesForms = ( function () {
 		Model.fields[ SelectedProperty.label ][ 'on-create-only' ] =
 			toggleInputOnCreate;
 
-		var valueFormulaInput = new OO.ui.TextInputWidget( {
-			value: getPropertyValue( null, 'value-formula' )
-		} );
+		// var valueFormulaInput = new OO.ui.TextInputWidget( {
+		// 	value: getPropertyValue( null, 'value-formula' )
+		// } );
 
-		Model.fields[ SelectedProperty.label ][ 'value-formula' ] = valueFormulaInput;
+		// Model.fields[ SelectedProperty.label ][ 'value-formula' ] = valueFormulaInput;
 
 		let optionsList = new ListWidget();
 
@@ -1068,14 +1070,15 @@ const PagePropertiesForms = ( function () {
 				help: mw.msg( 'pageproperties-jsmodule-forms-field-oncreateonly-help' ),
 				helpInline: true,
 				align: 'top'
+			// eslint-disable-next-line comma-dangle
 			} ),
 
-			new OO.ui.FieldLayout( valueFormulaInput, {
-				label: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue' ),
-				help: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue-help' ),
-				helpInline: true,
-				align: 'top'
-			} )
+			// new OO.ui.FieldLayout( valueFormulaInput, {
+			// 	label: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue' ),
+			// 	help: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue-help' ),
+			// 	helpInline: true,
+			// 	align: 'top'
+			// } )
 		] );
 
 		var frame = new OO.ui.PanelLayout( {

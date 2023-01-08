@@ -240,9 +240,22 @@ const PageProperties = ( function () {
 						value = value ? 1 : 0;
 					}
 
-					var inputValue = Array.isArray( value ) ?
-						value.map( ( x ) => prefix + x ) :
-						prefix + value;
+					// @todo handle prefix server-side
+					// var inputValue = Array.isArray( value ) ?
+					// 	value.map( ( x ) => prefix + x ) :
+					// 	prefix + value;
+					var inputValue = value;
+
+					if ( prefix ) {
+						$( '<input>' )
+							.attr( {
+								type: 'hidden',
+								// eslint-disable-next-line no-useless-concat
+								name: 'semantic-properties-input-' + '__prefix-' + encodeURIComponent( property ) + '-' + i,
+								value: prefix
+							} )
+							.appendTo( '#pageproperties-form' );
+					}
 
 					var inputVal = Array.isArray( inputValue ) ? inputValue[ 0 ] : inputValue;
 
@@ -439,6 +452,9 @@ const PageProperties = ( function () {
 			config.property,
 			config.index,
 			config.value,
+			// @todo, enable after adding the logic
+			// for file move server-side on filename edit
+			// , disabled: true
 			{ required: required }
 		);
 
@@ -1824,6 +1840,8 @@ const PageProperties = ( function () {
 }() );
 
 $( document ).ready( function () {
+	var submitted = false;
+
 	var managePropertiesSpecialPage = mw.config.get(
 		'pageproperties-managePropertiesSpecialPage'
 	);
@@ -1945,6 +1963,11 @@ $( document ).ready( function () {
 	}
 
 	$( '#pageproperties-form' ).submit( function () {
+		if ( submitted ) {
+			return false;
+		}
+
+		submitted = true;
 		var obj = PageProperties.getModel( true );
 
 		// eslint-disable-next-line no-underscore-dangle
