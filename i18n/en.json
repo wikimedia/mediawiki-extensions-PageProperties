@@ -12,6 +12,9 @@
 	"pageproperties-editsemantic-semantic": "(semantic)",
 	"pageproperties-editsemantic-newpageforms": "Create $1",
 
+	"pageproperties-editsemantic-publishfileerror": "publish file error ($1)",
+	"pageproperties-editsemantic-publishfilejoberror": "publish file error: $1 (file $2)",
+
 	"pageproperties-form-section-forms": "Forms",
 	"pageproperties-jsmodule-forms-fields": "Fields",
 	"pageproperties-jsmodule-forms-create-form": "Create form",
@@ -55,6 +58,9 @@
 	"pageproperties-jsmodule-forms-field-multiplevalue": "multiple values",
 	"pageproperties-jsmodule-forms-defineform": "Define form",
 	"pageproperties-jsmodule-forms-alert-formname": "Please enter form name",
+	"pageproperties-jsmodule-forms-alert-propertyname": "Please enter a property name",
+	"pageproperties-jsmodule-forms-alert-categoryname": "Please enter a category name",
+
 	"pageproperties-jsmodule-forms-alert-fields": "Please add at least one field",
 	"pageproperties-form-section-forms-label": "",
 	"pageproperties-jsmodule-forms-definefield": "Define field",
@@ -99,6 +105,9 @@
 	"pageproperties-jsmodule-import-selectproperty": "Select property",
 	"pageproperties-jsmodule-import-importpreview": "Import preview",
 
+	"pageproperties-jsmodule-forms-contentmodels": "Content model",
+	"pageproperties-jsmodule-forms-contentmodels-help": "Default content model for pages created through this form",
+
 	"pageproperties-import-api-totalpages": "total pages",
 	"pageproperties-import-api-skipped": "skipped",
 	"pageproperties-import-api-invalidtitles": "invalid titles",
@@ -126,13 +135,21 @@
 	"pageproperties-property-allows-multiple-values": "Allows multiple values",
 	"pageproperties-permissions-error": "Permission error: cannot manage or edit page properties",
 
-	"right-pageproperties-canmanageproperties": "Can manage property declarations (Page Properties)",
-	"right-pageproperties-caneditproperties": "Can edit page properties (Page Properties)",
-	"action-pageproperties-canmanageproperties": "can manage property declarations (Page Properties)",
-	"action-pageproperties-caneditproperties": "can edit page properties (Page Properties)",
+	"right-pageproperties-caneditpageproperties": "Can edit page properties (Page Properties)",
+	"right-pageproperties-caneditsemanticproperties": "Can edit semantic properties (Page Properties)",
+	"right-pageproperties-canmanagesemanticproperties": "Can manage semantic properties (Page Properties)",
+	"right-pageproperties-cancomposeforms": "Can compose forms (Page Properties)",
+	"right-pageproperties-canaddsingleproperties": "Can add single properties (Page Properties)",
+	"action-pageproperties-caneditpageproperties": "can edit page properties (Page Properties)",
+	"action-pageproperties-caneditsemanticproperties": "can edit semantic properties (Page Properties)",
+	"action-pageproperties-canmanagesemanticproperties": "can manage semantic properties (Page Properties)",
+	"action-pageproperties-cancomposeforms": "can compose forms (Page Properties)",
+	"action-pageproperties-canaddsingleproperties": "can add single properties (Page Properties)",
 
-	"group-pageproperties-admin-member": "editor of property declarations (Page Properties)",
-	"group-pageproperties-editor-member": "editor of page properties (Page Properties)",
+	"group-pageproperties-admin-member": "admin of page properties or semantic properties (Page Properties)",
+	"group-pageproperties-editor-member": "editor of page properties or semantic properties (Page Properties)",
+	"group-pageproperties-pagepropertieseditor-member": "editor of page properties (Page Properties)",
+	"group-pageproperties-semanticpropertieseditor-member": "editor of semantic properties (Page Properties)",
 
 	"pageproperties-jsmodule-manageproperties-suggestion1": "<b>Tip</b>: with allowed values constraint set one of the following as preferred input:</br>",
 	"pageproperties-jsmodule-manageproperties-suggestion2": "Please add default values or change preferred input",
@@ -169,6 +186,7 @@
 	"pageproperties-jsmodule-manageproperties-cancel": "Cancel",
 	"pageproperties-jsmodule-manageproperties-delete": "Delete",
 	"pageproperties-jsmodule-manageproperties-delete-confirm": "Are you sure you want to delete this property ?",
+	"pageproperties-jsmodule-manageproperties-upload": "upload",
 
 	"pageproperties-jsmodule-pageproperties-delete-confirm": "Are you sure you want to delete this field ?",
 	"pageproperties-jsmodule-pageproperties-create-property": "Create property",

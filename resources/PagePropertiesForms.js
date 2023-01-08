@@ -38,6 +38,7 @@ const PagePropertiesForms = ( function () {
 	var SelectedProperty;
 	var ManagePropertiesSpecialPage;
 	var WindowManagerAlert;
+	var ContentModels;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -81,20 +82,10 @@ const PagePropertiesForms = ( function () {
 	}
 
 	function getFieldsValues() {
-		var properties = [];
-		if ( $.fn.DataTable.isDataTable( '#pageproperties-forms-datatable-dialog' ) ) {
-			// eslint-disable-next-line no-unused-vars, array-callback-return
-			DataTableB.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-				var data = this.data();
-				properties.push( data[ 0 ] );
-			} );
-		} else {
-			properties = Object.keys( SelectedForm.fields );
-		}
-
 		var fields = SelectedForm.fields;
-
 		var property = SelectedProperty.label;
+
+		fields[ property ] = {};
 
 		for ( var field of [
 			'required',
@@ -185,17 +176,6 @@ const PagePropertiesForms = ( function () {
 
 		Model.formName = formNameInput;
 
-		var categories = getPropertyValue( 'categories' );
-		var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
-			// value: categories,
-		} );
-		// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
-		for ( var category of categories ) {
-			categoriesInput.addTag( category, category );
-		}
-
-		Model.categories = categoriesInput;
-
 		var pageNameFormulaValue = getPropertyValue( 'pagename-formula' );
 
 		var selectPagenameInput = new OO.ui.RadioSelectInputWidget( {
@@ -266,12 +246,32 @@ const PagePropertiesForms = ( function () {
 				)
 			} ),
 			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
-
 			$overlay: this.$overlay,
 			value: getPropertyValue( 'freetext-input' )
 		} );
 
 		Model[ 'freetext-input' ] = displayFreeTextInputInput;
+
+		var categories = getPropertyValue( 'categories' );
+		var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
+			// value: categories,
+		} );
+		// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
+		for ( var category of categories ) {
+			categoriesInput.addTag( category, category );
+		}
+
+		Model.categories = categoriesInput;
+
+		var contentModelValue = getPropertyValue( 'content-model' );
+
+		var contentModelsInput = new OO.ui.DropdownInputWidget( {
+			options: ManageProperties.createInputOptions( ContentModels ),
+			$overlay: this.$overlay,
+			value: contentModelValue || 'wikitext'
+		} );
+
+		Model[ 'content-model' ] = contentModelsInput;
 
 		fieldset.addItems( [
 			new OO.ui.FieldLayout( formNameInput, {
@@ -309,6 +309,13 @@ const PagePropertiesForms = ( function () {
 				label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
 				align: 'top',
 				help: mw.msg( 'pageproperties-jsmodule-forms-categories-help' ),
+				helpInline: true
+			} ),
+
+			new OO.ui.FieldLayout( contentModelsInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
+				align: 'top',
+				help: mw.msg( 'pageproperties-jsmodule-forms-contentmodels-help' ),
 				helpInline: true
 			} )
 		] );
@@ -624,8 +631,6 @@ const PagePropertiesForms = ( function () {
 			}
 
 			initializeDataTableB();
-
-			// SelectedForm.fields = getFieldsValues();
 		}
 
 		return new OO.ui.Process( function () {
@@ -1247,7 +1252,7 @@ const PagePropertiesForms = ( function () {
 							delete formFields[ 'pagename-formula' ];
 						}
 
-						if ( formFields.formName === '' ) {
+						if ( formFields.formName.trim() === '' ) {
 							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-forms-alert-formname' ),
 								{
@@ -1273,9 +1278,19 @@ const PagePropertiesForms = ( function () {
 							);
 						}
 
-						// var fields = getFieldsValues();
+						// get ordered fields
+						if ( $.fn.DataTable.isDataTable( '#pageproperties-forms-datatable-dialog' ) ) {
+							// eslint-disable-next-line no-unused-vars, array-callback-return
+							DataTableB.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+								var data = this.data();
+								var label = data[ 0 ];
+								payload.fields[ label ] = SelectedForm.fields[ label ];
+							} );
+						} else {
+							payload.fields = SelectedForm.fields;
+						}
+
 						payload.formFields = formFields;
-						payload.fields = SelectedForm.fields;
 
 					// eslint-disable no-fallthrough
 					case 'delete':
@@ -1352,6 +1367,11 @@ const PagePropertiesForms = ( function () {
 			SelectedForm = { label: '', fields: {} };
 		} else {
 			SelectedForm = jQuery.extend( { label: label, fields: {} }, Forms[ label ] );
+
+			// ensure it is an object
+			for ( var i in SelectedForm.fields ) {
+				SelectedForm.fields[ i ] = jQuery.extend( SelectedForm.fields[ i ], {} );
+			}
 		}
 
 		Model = { fields: {} };
@@ -1527,7 +1547,8 @@ const PagePropertiesForms = ( function () {
 		windowManagerSearch,
 		windowManagerAlert,
 		forms,
-		semanticProperties
+		semanticProperties,
+		contentModels
 	) {
 		if ( arguments.length ) {
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
@@ -1536,6 +1557,7 @@ const PagePropertiesForms = ( function () {
 			WindowManagerAlert = windowManagerAlert;
 			Forms = forms;
 			WindowManagerSearch = windowManagerSearch;
+			ContentModels = contentModels;
 		}
 
 		if ( ManagePropertiesSpecialPage ) {

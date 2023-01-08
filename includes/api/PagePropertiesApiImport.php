@@ -53,7 +53,7 @@ class PagePropertiesApiImport extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 
-		if ( !$user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 

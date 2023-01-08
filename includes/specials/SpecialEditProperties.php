@@ -23,15 +23,17 @@
  */
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
+include_once __DIR__ . '/MimeTypes.php';
+include_once __DIR__ . '/PagePropertiesPublishStashedFile.php';
 
 class SpecialEditProperties extends FormSpecialPage {
 
 	protected $title;
 	protected $wikiPage;
-	protected $canEditProperties;
-	protected $canManageProperties;
+	protected $canManageSemanticProperties;
 	protected $setForms;
 	protected $forms;
+	protected $user;
 
 	/** @inheritDoc */
 	public function __construct() {
@@ -62,6 +64,7 @@ class SpecialEditProperties extends FormSpecialPage {
 	public function execute( $par ) {
 		// $this->requireLogin();
 		// $this->setHeaders();
+		// $this->setParameter( $par );
 
 		$out = $this->getOutput();
 		$out->setArticleRelated( false );
@@ -72,14 +75,14 @@ class SpecialEditProperties extends FormSpecialPage {
 		$this->user = $user;
 
 		// This will throw exceptions if there's a problem
-		// $this->checkExecutePermissions( $user );
+		$this->checkExecutePermissions( $user );
 
-		// $securityLevel = $this->getLoginSecurityLevel();
+		$securityLevel = $this->getLoginSecurityLevel();
 
-		// if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-		// 	$this->displayRestrictionError();
-		// 	return;
-		// }
+		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+			$this->displayRestrictionError();
+			return;
+		}
 
 		if ( !defined( 'SMW_VERSION' ) ) {
 			$this->displayRestrictionError();
@@ -88,6 +91,13 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		$this->addHelpLink( 'Extension:PageProperties' );
 
+		$canEditsemanticProperties = $user->isAllowed( 'pageproperties-caneditsemanticproperties' );
+
+		if ( !$canEditsemanticProperties ) {
+			$this->displayRestrictionError();
+			return;
+		}
+
 		if ( $par ) {
 			// NS_MAIN is ignored if $par is prefixed
 			$title = Title::newFromText( $par, NS_MAIN );
@@ -95,8 +105,7 @@ class SpecialEditProperties extends FormSpecialPage {
 			$this->wikiPage = \PageProperties::getWikiPage( $this->title );
 		}
 
-		$this->canEditProperties = $user->isAllowed( 'pageproperties-caneditproperties' );
-		$this->canManageProperties = $user->isAllowed( 'pageproperties-canmanageproperties' );
+		$this->canManageSemanticProperties = $user->isAllowed( 'pageproperties-canmanagesemanticproperties' );
 
 		// $this->outputHeader();
 
@@ -247,24 +256,59 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		// @todo load only data related to set properties, forms and categories
 		// load all data through the Javascript api
-
 		$this->setForms = $setForms;
 
-		$categories = $this->getCategories();
+		$categories = \PageProperties::getCategoriesSemantic();
+		$contentModels = \PageProperties::getContentModels();
 		$out->addJsConfigVars( [
 			'pageproperties-errors' => json_encode( $errors, true ),
 			'pageproperties-pageContent' => $pageContent,
 			'pageproperties-is-newpage' => ( $this->title && !$this->title->isKnown() ),
 			'pageproperties-set-forms' => json_encode( $setForms, true ),
+
+			// @todo only if canManageSemanticProperties or canComposeForms
 			'pageproperties-forms' => json_encode( $this->forms, true ),
+
 			'pageproperties-managePropertiesSpecialPage' => false,
-			'pageproperties-canManageProperties' => $this->canManageProperties,
+			'pageproperties-canManageSemanticProperties' => $this->canManageSemanticProperties,
+			'pageproperties-canComposeForms' => $this->user->isAllowed( 'pageproperties-cancomposeforms' ),
+			'pageproperties-canAddSingleProperties' => $this->user->isAllowed( 'pageproperties-canaddsingleproperties' ),
+
+			// @todo only if canManageSemanticProperties
 			'pageproperties-categories' => json_encode( $categories, true ),
+
 			'pageproperties-page-categories' => json_encode( $pageCategories, true ),
+
+			// @todo only if canManageSemanticProperties or canAddSingleProperties
+			// otherwise a subset of properties used in forms
 			'pageproperties-semanticProperties' => json_encode( $this->semanticProperties, true ),
+
 			'pageproperties-properties' => json_encode( $semanticData, true ),
 			'pageproperties-target-page' => ( $this->title ? $this->title->getText() : null ),
+			'allowedMimeTypes' => json_encode( $this->getAllowedMimeTypes(), true ),
+			'pageproperties-contentModels' => json_encode( $contentModels, true ),
+
 		] );
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getAllowedMimeTypes() {
+		// phpcs:ignore MediaWiki.NamingConventions.ValidGlobalName.allowedPrefix, MediaWiki.Usage.ExtendClassUsage.FunctionConfigUsage
+		global $MimeTypes;
+		$ret = [];
+		foreach ( $GLOBALS['wgFileExtensions'] as $ext ) {
+			$value = $MimeTypes[$ext];
+			if ( !is_array( $value ) ) {
+				$value = [ $value ];
+			}
+			foreach ( $value as $val ) {
+				$ret[] = $val;
+			}
+		}
+
+		return $ret;
 	}
 
 	/**
@@ -275,11 +319,11 @@ class SpecialEditProperties extends FormSpecialPage {
 		// e.g. semantic-properties-input-Carbon_copy-0
 		foreach ( $_POST as $key => $value ) {
 			if ( strpos( $key, 'semantic-properties-input-' ) === 0 ) {
-				preg_match( '/^semantic\-properties\-input\-(.+?)\-\d+$/', $key, $match );
+				preg_match( '/^semantic\-properties\-input\-(.+?)\-(\d+)$/', $key, $match );
 
 				// replace underscore with space
 				// https://www.php.net/manual/en/language.variables.external.php
-				$ret[ urldecode( $match[1] ) ][] = $value;
+				$ret[ urldecode( $match[1] ) ][$match[2]] = $value;
 			}
 		}
 		return $ret;
@@ -297,64 +341,6 @@ class SpecialEditProperties extends FormSpecialPage {
 		foreach ( $TitleArray as $title ) {
 			$ret[] = $title->getText();
 		}
-		return $ret;
-	}
-
-	/**
-	 * @return array
-	 */
-	private function getCategories() {
-		$dbr = wfGetDB( DB_REPLICA );
-
-		$res = $dbr->select(
-			'category',
-			[ 'cat_title', 'cat_pages' ],
-			null,
-			__METHOD__,
-			[
-				'USE INDEX' => 'cat_title',
-			]
-		);
-
-		if ( !$res->numRows() ) {
-			return [];
-		}
-
-		$ret = [];
-
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
-
-		foreach ( $res as $row ) {
-			$title_ = Title::newFromText( $row->cat_title, NS_CATEGORY );
-			if ( !$title_ || !$title_->isKnown() ) {
-				continue;
-			}
-
-			// $title = new TitleValue( NS_CATEGORY, $row->cat_title );
-			$label = $title_->getText();
-
-			$ret[$label] = [
-				'label' => $label,
-				'properties' => [],
-			];
-
-			$subject = new SMW\DIWikiPage( $title_->getText(), NS_CATEGORY );
-
-			$semanticData = \PageProperties::$SMWStore->getSemanticData( $subject );
-
-			$prop = new SMW\DIProperty( '_IMPO' );
-
-			$values = $semanticData->getPropertyValues( $prop );
-
-			foreach ( $values as $value ) {
-				$dataValue = $dataValueFactory->newDataValueByItem( $value, $prop );
-
-				if ( $dataValue instanceof SMW\DataValues\ImportValue ) {
-					$ret[$label]['properties']['_IMPO'][] = $dataValue->getWikiValue();
-				}
-			}
-		}
-
 		return $ret;
 	}
 
@@ -391,6 +377,24 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		// remove undeclared properties
 		$semanticData = array_intersect_key( $semanticData, $this->semanticProperties );
+
+		// remove namespace prefix for page type
+		// based on the input type (we do it client-side currently)
+		// global wgCanonicalNamespaceNames;
+		// foreach ( $semanticData as $label as $values ) {
+		// 	foreach ( $values as $key as $value ) {
+		// 		if ( $this->semanticProperties[$label]['type'] === '_wpg' ) {
+		//			$namespace = null;
+		//			$inputName = ...
+		//			switch( $inputName) {
+		//				...
+		//			}
+		//			if ( $namespace ) {
+		// 				$semanticData[$label][key] = preg_replace( '/^' . $wgCanonicalNamespaceNames[$namespace] . ':/', '', $value );
+		//			}
+		// 		}
+		// 	}
+		// }
 
 		return $semanticData;
 	}
@@ -462,14 +466,34 @@ class SpecialEditProperties extends FormSpecialPage {
 	 * @return true|array
 	 */
 	public function onFormSubmit( $data, &$errors ) {
-		$arr = [ '__freetext' => null, '__title' => null, '__pagename-formula' => null ];
+		$canonicalNamespaceNames = $this->getConfig()->get( 'wgCanonicalNamespaceNames' );
+
+		// @todo, use instead the form 'semantic-properties-freetext-',
+		// 'semantic-properties-filekey-', etc.
+		$arr = [ '__freetext' => null, '__title' => null, '__pagename-formula' => null, '__content-model' => null ];
 
 		foreach ( $arr as $key => $value ) {
 			$arr[$key] = ( array_key_exists( $key, $data ) && count( $data[$key] ) ? $data[$key][0] : null );
 		}
 
+		$filekeys = [];
+		foreach ( $data as $key => $values ) {
+			if ( strpos( $key, '__filekey-' ) === 0 ) {
+				$prop = substr( $key, strlen( '__filekey-' ) );
+
+				foreach ( $values as $k => $v ) {
+					if ( !empty( $v ) && !empty( $data[$prop][$k] ) ) {
+						// record only the reference, to handle transformations
+						$filekeys[$prop][$k] = $v;
+					}
+				}
+
+				unset( $data[$key] );
+			}
+		}
+
 		// *** when $freetext is null the main slot will not be handled
-		list( $freetext, $targetTitle, $pagenameFormula ) = array_values( $arr );
+		list( $freetext, $targetTitle, $pagenameFormula, $contentModel ) = array_values( $arr );
 
 		$setForms = ( $data['__setforms'] ?? [] );
 		$categories = ( $data['__pagecategories'] ?? [] );
@@ -491,8 +515,17 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		$pageProperties = array_merge( $default_values, $pageProperties );
 
-		unset( $data['__pagename-formula'], $data['__setforms'], $data['__freetext'], $data['__title'], $data['__pagecategories'] );
+		unset( $data['__pagename-formula'], $data['__setforms'], $data['__freetext'],
+			$data['__title'], $data['__pagecategories'], $data['__content-model'] );
 
+		// untransformed data on error
+		$pageProperties['semantic-properties'] = $data;
+
+		$pageProperties['semantic-forms'] = $setForms;
+		$pageProperties['page-properties']['categories'] = $categories;
+		$update_obj = $pageProperties;
+
+		// replacements <fieldName> to <fieldValue>
 		$valueFormulas = [];
 		$createOnly = [];
 		foreach ( $setForms as $value ) {
@@ -508,37 +541,35 @@ class SpecialEditProperties extends FormSpecialPage {
 			}
 		}
 
-		$output = $this->getOutput();
-
+		// replace field values, without parsing wikitext yet
 		foreach ( $valueFormulas as $label => $values ) {
 			foreach ( $data[$label] as $key => $field ) {
 				foreach ( $values as $formula ) {
 					$data[$label][$key] = $this->replaceFormula( $data, $formula );
 				}
-				// *** or use trim(strip_tags())
-				$data[$label][$key] = Parser::stripOuterParagraph( $output->parseAsContent( $data[$label][$key] ) );
 			}
 		}
 
-		$pageProperties['semantic-properties'] = $data;
-		$pageProperties['semantic-forms'] = $setForms;
-		$pageProperties['page-properties']['categories'] = $categories;
-
-		$update_obj = $pageProperties;
-
+		$output = $this->getOutput();
 		$title = ( $this->title ?? Title::newFromText( $targetTitle, NS_MAIN ) );
 
 		if ( !$title && !empty( $pagenameFormula ) ) {
-			$pagenameFormula = $this->replaceFormula( $data, $pagenameFormula );
+
+			// get pagename formula with a parsed version of submitted data
+			$data_ = $data;
+			foreach ( $valueFormulas as $label => $values ) {
+				foreach ( $data_[$label] as $key => $field ) {
+					// *** or use trim(strip_tags())
+					$data_[$label][$key] = Parser::stripOuterParagraph( $output->parseAsContent( $data[$label][$key] ) );
+				}
+			}
+
+			$pagenameFormula = $this->replaceFormula( $data_, $pagenameFormula );
 
 			// *** or use trim(strip_tags())
 			$pagenameFormula = Parser::stripOuterParagraph( $output->parseAsContent( $pagenameFormula ) );
 
 			$title = Title::newFromText( $pagenameFormula );
-
-			foreach ( $createOnly as $field ) {
-				unset( $update_obj['semantic-properties'][$field] );
-			}
 		}
 
 		if ( !$title ) {
@@ -546,9 +577,61 @@ class SpecialEditProperties extends FormSpecialPage {
 			return $pageProperties;
 		}
 
-		$ret = \PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors, $freetext );
+		// now set the output with the target title
+		$context = new RequestContext();
+		$context->setTitle( $title );
+		$output = $context->getOutput();
+
+		// parse wikitext, with the target context title
+		foreach ( $valueFormulas as $label => $values ) {
+			foreach ( $data[$label] as $key => $field ) {
+				// *** or use trim(strip_tags())
+				$data[$label][$key] = Parser::stripOuterParagraph( $output->parseAsContent( $data[$label][$key] ) );
+			}
+		}
+
+		// reassign filenames after transformations
+		$upload = [];
+		foreach ( $filekeys as $label => $values ) {
+			foreach ( $values as $key => $filekey ) {
+				$upload[$filekey] = preg_replace( '/^' . $canonicalNamespaceNames[6] . ':/', '', $data[$label][$key] );
+			}
+		}
+
+		if ( !$this->title ) {
+			foreach ( $createOnly as $field ) {
+				unset( $data['semantic-properties'][$field] );
+			}
+		}
+
+		$update_obj['semantic-properties'] = $data;
+
+		$newPage = ( $title->isKnown() === false );
+		$onCreate = !$this->title;
+
+		$ret = \PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors, $freetext, $contentModel );
+
+		// publish stashed files
+		foreach ( $upload as $filekey => $filename ) {
+			// see includes/api/ApiUpload.php
+			$job = new PagePropertiesPublishStashedFile( Title::makeTitle( NS_FILE, $filename ),
+				[
+					'filename' => $filename,
+					'filekey' => $filekey,
+					'comment' => "",
+					// 'tags' => "",
+					'text' => false,
+					'watch' => false,
+					// 'watchlistexpiry' => $watchlistExpiry,
+					// 'session' => $this->getContext()->exportSession()
+				] );
+			if ( !$job->run() ) {
+				$errors[] = $this->msg( "pageproperties-editsemantic-publishfilejoberror", $job->getLastError(), $filename )->parse();
+			}
+		}
 
 		if ( !count( $errors ) ) {
+			Hooks::run( 'PageProperties::OnEditSemanticSave', [ $this->user, $title, $update_obj, $freetext, $onCreate, $newPage ] );
 			header( 'Location: ' . $title->getFullURL() );
 			return true;
 		}

@@ -25,6 +25,7 @@
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 use MediaWiki\Content\IContentHandlerFactory;
+use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
 
@@ -36,8 +37,6 @@ class SpecialPageProperties extends FormSpecialPage {
 	protected $content_model_error;
 	protected $pageProperties = [];
 	protected $wikiPage;
-	protected $canEditProperties;
-	protected $canManageProperties;
 
 	/**
 	 * @param IContentHandlerFactory $contentHandlerFactory
@@ -73,9 +72,12 @@ class SpecialPageProperties extends FormSpecialPage {
 	/** @inheritDoc */
 	public function execute( $par ) {
 		// $this->requireLogin();
+		// $this->setParameter( $par );
+		// $this->setHeaders();
 
-		$this->setParameter( $par );
-		$this->setHeaders();
+		$out = $this->getOutput();
+		$out->setArticleRelated( false );
+		$out->setRobotPolicy( $this->getRobotPolicy() );
 
 		$user = $this->getUser();
 
@@ -84,14 +86,21 @@ class SpecialPageProperties extends FormSpecialPage {
 		// This will throw exceptions if there's a problem
 		$this->checkExecutePermissions( $user );
 
-		// $securityLevel = $this->getLoginSecurityLevel();
+		$securityLevel = $this->getLoginSecurityLevel();
 
-		// if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-		// 	$this->displayRestrictionError();
-		// 	return;
-		// }
+		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+			$this->displayRestrictionError();
+			return;
+		}
 
 		$this->addHelpLink( 'Extension:PageProperties' );
+
+		$canEditPageProperties = $user->isAllowed( 'pageproperties-caneditpageproperties' );
+
+		if ( !$canEditPageProperties ) {
+			$this->displayRestrictionError();
+			return;
+		}
 
 		if ( !$par ) {
 			// @todo show proper error
@@ -115,17 +124,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$this->wikiPage = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title ) : WikiPage::factory( $title ) );
 
-		$this->canEditProperties = $user->isAllowed( 'pageproperties-caneditproperties' );
-		$this->canManageProperties = $user->isAllowed( 'pageproperties-canmanageproperties' );
-
-		if ( !$this->canEditProperties && !$this->canManageProperties ) {
-			$this->displayRestrictionError();
-			return;
-		}
-
 		$this->outputHeader();
-
-		$out = $this->getOutput();
 
 		$context = $this->getContext();
 
@@ -563,7 +562,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$languages = MediaWikiServices::getInstance()
 			->getLanguageNameUtils()
-			->getLanguageNames( $userLang, 'mwfile' );
+			->getLanguageNames( $userLang, LanguageNameUtils::SUPPORTED );
 
 		$options = [];
 		foreach ( $languages as $code => $name ) {

@@ -192,19 +192,37 @@ const PagePropertiesCategories = ( function () {
 							obj[ property ] = getPropertyValue( property );
 						}
 
+						var alert = null;
+						if ( obj.label.trim() === '' ) {
+							alert = mw.msg( 'pageproperties-jsmodule-forms-alert-categoryname' );
+						}
+
+						if ( alert ) {
+							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
+								new OO.ui.HtmlSnippet( alert ),
+								{ size: 'medium' }
+							);
+
+							return ProcessDialog.super.prototype.getActionProcess.call(
+								this,
+								action
+							);
+						}
+
 					// eslint-disable no-fallthrough
 					case 'delete':
+						var payload = {
+							action: 'pageproperties-manageproperties-savecategory',
+							dialogAction: action,
+							previousLabel: SelectedItem.label,
+							format: 'json',
+							data: JSON.stringify( obj )
+						};
 						// eslint-disable-next-line compat/compat, no-unused-vars
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								new mw.Api()
-									.postWithToken( 'csrf', {
-										action: 'pageproperties-manageproperties-savecategory',
-										dialogAction: action,
-										previousLabel: SelectedItem.label,
-										format: 'json',
-										data: JSON.stringify( obj )
-									} )
+									.postWithToken( 'csrf', payload )
 									.done( function ( res ) {
 										if ( 'pageproperties-manageproperties-savecategory' in res ) {
 											var data =

@@ -41,7 +41,7 @@ class PagePropertiesEditAction extends Action {
 		$title = $article->getTitle();
 
 		$specialEditProperties = new SpecialEditProperties();
-		$specialEditProperties->execute( $title->getText() );
+		$specialEditProperties->execute( $title->getFullText() );
 
 		return false;
 	}

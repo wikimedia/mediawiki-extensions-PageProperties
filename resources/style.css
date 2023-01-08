@@ -229,3 +229,34 @@
 .iti__country-list {
 	z-index: 1000;
 }
+
+.InnerItemWidgetFile {
+	padding-bottom: 8px;
+	display: block;
+	/* font-size: smaller; */
+}
+
+.InnerItemWidgetFile .oo-ui-inputWidget-input {
+	background: #f5f5f5;
+	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
+	border: none;
+	font-weight: bold;
+	color: #15c;
+}
+
+.InnerItemWidgetFile .oo-ui-actionFieldLayout .oo-ui-actionFieldLayout-input .oo-ui-widget:not( .oo-ui-textInputWidget ) {
+	margin-right: 1px;
+}
+
+.InnerItemWidgetFile .oo-ui-buttonElement-framed > .oo-ui-buttonElement-button {
+	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
+	border: none;
+}
+
+.mw-prefs-buttons-nosticky {
+	padding-top: 14px;
+}
+
+.pageproperties-upload-messagewidget > div {
+	margin-left: 28px;
+}

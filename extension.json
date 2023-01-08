@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.4b",
+	"version": "1.2.4c",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -43,6 +43,7 @@
 		"PagePropertiesMagic": "PagePropertiesMagic.i18n.magic.php"
 	},
 	"Hooks": {
+		"ParserFirstCallInit": "PagePropertiesHooks::onParserFirstCallInit",
 		"SMW::Property::initProperties": "PagePropertiesHooks::onSMWPropertyinitProperties",
 		"BeforeInitialize": "PagePropertiesHooks::onBeforeInitialize",
 		"MediaWikiServices": "PagePropertiesHooks::onMediaWikiServices",
@@ -91,37 +92,70 @@
 	],
 	"GroupPermissions": {
 		"sysop": {
-			"pageproperties-caneditproperties": true,
-			"pageproperties-canmanageproperties": true
+			"pageproperties-caneditpageproperties": true,
+			"pageproperties-caneditsemanticproperties": true,
+			"pageproperties-canmanagesemanticproperties": true,
+			"pageproperties-cancomposeforms": true,
+			"pageproperties-canaddsingleproperties": true
 		},
 		"bureaucrat": {
-			"pageproperties-caneditproperties": true,
-			"pageproperties-canmanageproperties": true
+			"pageproperties-caneditpageproperties": true,
+			"pageproperties-caneditsemanticproperties": true,
+			"pageproperties-canmanagesemanticproperties": true,
+			"pageproperties-cancomposeforms": true,
+			"pageproperties-canaddsingleproperties": true
 		},
 		"pageproperties-admin": {
-			"pageproperties-canmanageproperties": true,
-			"pageproperties-caneditproperties": true
+			"pageproperties-caneditpageproperties": true,
+			"pageproperties-caneditsemanticproperties": true,
+			"pageproperties-canmanagesemanticproperties": true,
+			"pageproperties-cancomposeforms": true,
+			"pageproperties-canaddsingleproperties": true
 		},
 		"pageproperties-editor": {
-			"pageproperties-canmanageproperties": false,
-			"pageproperties-caneditproperties": true
+			"pageproperties-caneditpageproperties": true,
+			"pageproperties-caneditsemanticproperties": true,
+			"pageproperties-canmanagesemanticproperties": false,
+			"pageproperties-cancomposeforms": true,
+			"pageproperties-canaddsingleproperties": true
+		},
+		"pageproperties-pagepropertieseditor": {
+			"pageproperties-caneditpageproperties": true,
+			"pageproperties-caneditsemanticproperties": false,
+			"pageproperties-canmanagesemanticproperties": false,
+			"pageproperties-cancomposeforms": false,
+			"pageproperties-canaddsingleproperties": false
+		},
+		"pageproperties-semanticpropertieseditor": {
+			"pageproperties-caneditpageproperties": false,
+			"pageproperties-caneditsemanticproperties": true,
+			"pageproperties-canmanagesemanticproperties": true,
+			"pageproperties-cancomposeforms": true,
+			"pageproperties-canaddsingleproperties": true
 		}
 	},
 	"AddGroups": {
 		"pageproperties-admin": [
 			"pageproperties-admin",
-			"pageproperties-editor"
+			"pageproperties-editor",
+			"pageproperties-pagepropertieseditor",
+			"pageproperties-semanticpropertieseditor"
 		]
 	},
 	"RemoveGroups": {
 		"pageproperties-admin": [
 			"pageproperties-admin",
-			"pageproperties-editor"
+			"pageproperties-editor",
+			"pageproperties-pagepropertieseditor",
+			"pageproperties-semanticpropertieseditor"
 		]
 	},
 	"AvailableRights": [
-		"pageproperties-caneditproperties",
-		"pageproperties-canmanageproperties"
+		"pageproperties-caneditpageproperties",
+		"pageproperties-caneditsemanticproperties",
+		"pageproperties-canmanagesemanticproperties",
+		"pageproperties-cancomposeforms",
+		"pageproperties-canaddsingleproperties"
 	],
 	"ResourceFileModulePaths": {
 		"localBasePath": "resources",
@@ -155,7 +189,8 @@
 			"position": "top",
 			"scripts": [
 				"intl-tel-input/js/intlTelInput.js",
-				"PagePropertiesintlTelInput.js"
+				"PagePropertiesintlTelInput.js",
+				"PagePropertiesUpload.js"
 			],
 			"styles": [
 				"intl-tel-input/css/intlTelInput.min.css",
@@ -181,7 +216,8 @@
 				"mediawiki.widgets.TitlesMultiselectWidget",
 				"mediawiki.widgets.CategoryMultiselectWidget",
 				"mediawiki.widgets.UserInputWidget",
-				"mediawiki.widgets.UsersMultiselectWidget"
+				"mediawiki.widgets.UsersMultiselectWidget",
+				"mediawiki.Upload"
 			]
 		},
 		"ext.PageProperties.Import": {
@@ -355,7 +391,12 @@
 				"pageproperties-permissions-error",
 				"pageproperties-jsmodule-formedit-freetext",
 				"pageproperties-jsmodule-formedit-properties",
-				"pageproperties-jsmodule-formedit-wiki"
+				"pageproperties-jsmodule-formedit-wiki",
+				"pageproperties-jsmodule-forms-contentmodels",
+				"pageproperties-jsmodule-forms-contentmodels-help",
+				"pageproperties-jsmodule-forms-alert-propertyname",
+				"pageproperties-jsmodule-forms-alert-categoryname",
+				"pageproperties-jsmodule-manageproperties-upload"
 			]
 		}
 	},

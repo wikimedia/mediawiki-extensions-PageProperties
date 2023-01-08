@@ -859,7 +859,7 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 		}
 
 		// create dropdown options
-		var options = header.map( ( x ) => {
+		var options = header.map( function ( x ) {
 			return { data: x, label: x };
 		} );
 

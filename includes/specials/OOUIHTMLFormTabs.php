@@ -50,6 +50,28 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	}
 
 	/**
+	 * @inheritDoc
+	 */
+	public function wrapForm( $html ) {
+		# Include a <fieldset> wrapper for style, if requested.
+		if ( $this->mWrapperLegend !== false ) {
+			$legend = is_string( $this->mWrapperLegend ) ? $this->mWrapperLegend : false;
+			$html = Xml::fieldset( $legend, $html, $this->mWrapperAttributes );
+		}
+
+		$attributes = $this->getFormAttributes();
+
+		// force 'multipart/form-data' to allow file upload
+		$attributes['enctype'] = 'multipart/form-data';
+
+		return Html::rawElement(
+			'form',
+			$attributes,
+			$html
+		);
+	}
+
+	/**
 	 * @see includes/specials/forms/PreferencesFormOOUI.php
 	 * @return string
 	 */
@@ -162,6 +184,9 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 			] );
 
 			$html = Xml::tags( 'div', [ 'class' => 'mw-prefs-buttons' ], $html );
+
+		} else {
+			$html = Xml::tags( 'div', [ 'class' => 'mw-prefs-buttons-nosticky' ], $html );
 		}
 
 		return $html;

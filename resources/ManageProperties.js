@@ -35,6 +35,7 @@ const ManageProperties = ( function () {
 	var WindowManager;
 	var WindowManagerAlert;
 	var ManagePropertiesSpecialPage;
+	var AllowedMimeTypes;
 
 	var optionsInputs = [
 		'OO.ui.DropdownInputWidget',
@@ -54,10 +55,6 @@ const ManageProperties = ( function () {
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
 	}
-
-	// function getKeyByValue(obj, value) {
-	//    return Object.keys(obj).find(key => obj[key] === value);
-	// }
 
 	function disableMultipleFields( propertyType, inputLabel ) {
 		var singleValues = [ '_boo' ];
@@ -81,38 +78,6 @@ const ManageProperties = ( function () {
 			ret = parts[ 0 ] + '.' + parts.pop().replace( /[\(\)]/g, '' );
 		}
 		return ret;
-	}
-
-	function titleNamespace( name ) {
-		switch ( name ) {
-			case 'Media':
-				return -2;
-			case 'Special':
-				return -1;
-			case '(Main)':
-				return 0;
-			case 'Main':
-				return 0;
-			case 'Talk':
-				return 1;
-			case 'User':
-				return 2;
-			case 'Project':
-				return 4;
-			case 'File':
-				return 6;
-			case 'MediaWiki':
-				return 8;
-			case 'Template':
-				return 10;
-			case 'Help':
-				return 12;
-			case 'Category':
-				return 14;
-			// SMW_NS_PROPERTY
-			case 'Property':
-				return 102;
-		}
 	}
 
 	function getAvailableInputs( dataType ) {
@@ -214,7 +179,7 @@ const ManageProperties = ( function () {
 
 			// telephone
 			case '_tel':
-				ret = [ 'intl-tel-input', 'OO.ui.TextInputWidget (tel)' ];
+				ret = [ 'intl-tel-input', 'OO.ui.TextInputWidget (tel)', 'OO.ui.TagMultiselectWidget' ];
 				break;
 
 			// boolean
@@ -235,7 +200,8 @@ const ManageProperties = ( function () {
 					'mw.widgets.TitlesMultiselectWidget',
 					'mw.widgets.TitleInputWidget',
 					'mw.widgets.UsersMultiselectWidget',
-					'mw.widgets.UserInputWidget'
+					'mw.widgets.UserInputWidget',
+					'OO.ui.SelectFileWidget'
 				];
 				break;
 
@@ -244,7 +210,8 @@ const ManageProperties = ( function () {
 					'OO.ui.TextInputWidget',
 					'OO.ui.TagMultiselectWidget',
 					'OO.ui.MultilineTextInputWidget',
-					'mw.widgets.CategoryMultiselectWidget'
+					'mw.widgets.CategoryMultiselectWidget',
+					'OO.ui.SelectFileWidget'
 				];
 		}
 
@@ -474,6 +441,24 @@ const ManageProperties = ( function () {
 					}
 				}
 				return widget;
+			case 'OO.ui.SelectFileWidget':
+				// prevents error "Failed to set the 'value' property on 'HTMLInputElement':
+				// This input element accepts a filename, which may only be programmatically
+				// set to the empty string"
+				delete config.value;
+				config.accept = AllowedMimeTypes;
+				config.buttonOnly = true;
+				config.button = {
+					flags: [ 'progressive' ],
+					icon: 'add',
+					label: mw.msg( 'pageproperties-jsmodule-manageproperties-upload' )
+				};
+				return new OO.ui.SelectFileWidget( config );
+
+			case 'OO.ui.MultilineTextInputWidget':
+				config.autosize = true;
+				config.rows = 2;
+				break;
 		}
 
 		var arr = inputName.split( '.' );
@@ -482,7 +467,9 @@ const ManageProperties = ( function () {
 			switch ( arr[ 2 ] ) {
 				case 'TitleInputWidget':
 				case 'TitlesMultiselectWidget':
-					config.namespace = titleNamespace( value );
+					// titleNamespace( value );
+					config.namespace =
+						PagePropertiesFunctions.getKeyByValue( mw.config.get( 'wgFormattedNamespaces' ), value );
 					break;
 				case 'TextInputWidget':
 					config.type = value;
@@ -491,13 +478,6 @@ const ManageProperties = ( function () {
 					config.precision = value;
 					break;
 			}
-		}
-
-		switch ( arr[ 2 ] ) {
-			case 'MultilineTextInputWidget':
-				config.autosize = true;
-				config.rows = 2;
-				break;
 		}
 
 		var constructor =
@@ -515,7 +495,7 @@ const ManageProperties = ( function () {
 		var allowsMultipleValues = propertyAllowsMultipleValues( property );
 
 		if ( property in Model ) {
-			if ( allowsMultipleValues && property !== '_SUBP' ) {
+			if ( !( 'getValue' in Model[ property ] ) ) {
 				var values = [];
 				for ( var i in Model[ property ] ) {
 					var value = Model[ property ][ i ].getValue().trim();
@@ -1020,21 +1000,17 @@ const ManageProperties = ( function () {
 						for ( var property in Model ) {
 							obj[ property ] = getPropertyValue( property );
 						}
-
-						if (
+						var alert = null;
+						if ( obj.label.trim() === '' ) {
+							alert = mw.msg( 'pageproperties-jsmodule-forms-alert-propertyname' );
+						} else if (
 							// eslint-disable-next-line no-underscore-dangle
 							( obj._PVAL.length || obj._PVALI !== '' ) &&
 							// eslint-disable-next-line no-underscore-dangle
 							!inArray( obj.__pageproperties_preferred_input, optionsInputs )
 						) {
-							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
-								new OO.ui.HtmlSnippet(
-									mw.msg(
-										'pageproperties-jsmodule-manageproperties-suggestion1'
-									) + optionsInputs.join( '</br>' )
-								),
-								{ size: 'medium' }
-							);
+							alert = mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion1' ) +
+								optionsInputs.join( '</br>' );
 						} else if (
 							// eslint-disable-next-line no-underscore-dangle
 							inArray( obj.__pageproperties_preferred_input, optionsInputs ) &&
@@ -1043,11 +1019,13 @@ const ManageProperties = ( function () {
 							// eslint-disable-next-line no-underscore-dangle
 							obj._PVALI === ''
 						) {
+							alert = mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion2' );
+						}
+
+						if ( alert ) {
 							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
-								mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion2' ),
-								{
-									size: 'medium'
-								}
+								new OO.ui.HtmlSnippet( alert ),
+								{ size: 'medium' }
 							);
 
 							return ProcessDialog.super.prototype.getActionProcess.call(
@@ -1055,19 +1033,22 @@ const ManageProperties = ( function () {
 								action
 							);
 						}
+
 					// eslint-disable no-fallthrough
 					case 'delete':
+						var payload = {
+							action: 'pageproperties-manageproperties-saveproperty',
+							dialogAction: action,
+							previousLabel: SelectedProperty.label,
+							format: 'json',
+							data: JSON.stringify( obj )
+						};
+						// console.log( 'payload', payload );
 						// eslint-disable-next-line compat/compat, no-unused-vars
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								new mw.Api()
-									.postWithToken( 'csrf', {
-										action: 'pageproperties-manageproperties-saveproperty',
-										dialogAction: action,
-										previousLabel: SelectedProperty.label,
-										format: 'json',
-										data: JSON.stringify( obj )
-									} )
+									.postWithToken( 'csrf', payload )
 									.done( function ( res ) {
 										resolve();
 										if ( 'pageproperties-manageproperties-saveproperty' in res ) {
@@ -1370,7 +1351,8 @@ const ManageProperties = ( function () {
 		windowManager,
 		windowManagerAlert,
 		semanticProperties,
-		managePropertiesSpecialPage
+		managePropertiesSpecialPage,
+		allowedMimeTypes
 	) {
 		Model = {};
 
@@ -1379,6 +1361,7 @@ const ManageProperties = ( function () {
 			WindowManagerAlert = windowManagerAlert;
 			SemanticProperties = semanticProperties;
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
+			AllowedMimeTypes = allowedMimeTypes;
 		}
 
 		if ( managePropertiesSpecialPage ) {

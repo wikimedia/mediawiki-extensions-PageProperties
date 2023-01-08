@@ -45,7 +45,7 @@ class PagePropertiesApiLoadData extends ApiBase {
 		// $params = $this->extractRequestParams();
 		$user = $this->getUser();
 
-		if ( !$user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 

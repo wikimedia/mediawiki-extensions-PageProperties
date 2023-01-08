@@ -76,6 +76,15 @@ class PagePropertiesHooks {
 	}
 
 	/**
+	 * Register any render callbacks with the parser
+	 *
+	 * @param Parser $parser
+	 */
+	public static function onParserFirstCallInit( Parser $parser ) {
+		$parser->setFunctionHook( 'pageproperties', [ \PageProperties::class, 'parserFunctionPageproperties' ] );
+	}
+
+	/**
 	 * @see https://github.com/SemanticMediaWiki/SemanticMediaWiki/blob/master/docs/examples/hook.property.initproperties.md
 	 * @param SMW\PropertyRegistry $propertyRegistry
 	 * @return void
@@ -341,7 +350,7 @@ class PagePropertiesHooks {
 			return;
 		}
 		$user = $skin->getUser();
-		if ( $user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
 			$specialpage_title = SpecialPage::getTitleFor( 'ManageProperties' );
 			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
 				'text'   => wfMessage( 'manageproperties-label' )->text(),
@@ -354,7 +363,7 @@ class PagePropertiesHooks {
 			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );
 			$title = Title::newFromText( $par, NS_MAIN );
 		}
-		if ( $user->isAllowed( 'pageproperties-caneditproperties' ) ) {
+		if ( $user->isAllowed( 'pageproperties-caneditpageproperties' ) ) {
 			// is article
 			if ( $title && $title->isKnown() && $title->isContentPage() ) {
 				$bar[ wfMessage( 'pageproperties' )->text() ][] = [
@@ -392,7 +401,7 @@ class PagePropertiesHooks {
 		}
 
 		$user = $skin->getUser();
-		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditproperties' ) || $user->isAllowed( 'pageproperties-canmanageproperties' ) );
+		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditpageproperties' ) );
 
 		if ( !$is_allowed ) {
 			return;
@@ -428,7 +437,9 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		if ( defined( 'SMW_VERSION' ) ) {
+		$canEditsemanticProperties = $user->isAllowed( 'pageproperties-caneditsemanticproperties' );
+
+		if ( defined( 'SMW_VERSION' ) && $canEditsemanticProperties ) {
 			$link = [
 				'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
 				'text' => 'Edit semantic',
@@ -480,13 +491,8 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		$is_allowed = ( $user->isAllowed( 'pageproperties-caneditproperties' ) || $user->isAllowed( 'pageproperties-canmanageproperties' ) );
-
-		if ( !$is_allowed ) {
-			return;
-		}
-
-		if ( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) {
+		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) &&
+			( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) ) {
 			$title_ = SpecialPage::getTitleFor( 'ManageProperties' );
 			$links[ 'actions' ][] = [
 				'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
@@ -495,10 +501,12 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		$title_ = SpecialPage::getTitleFor( 'PageProperties' );
-		$links[ 'actions' ][] = [
-			'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
-		];
+		if ( $user->isAllowed( 'pageproperties-caneditpageproperties' ) ) {
+			$title_ = SpecialPage::getTitleFor( 'PageProperties' );
+			$links[ 'actions' ][] = [
+				'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+			];
+		}
 	}
 
 	/**

@@ -44,7 +44,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 
-		if ( !$user->isAllowed( 'pageproperties-caneditproperties' ) && !$user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
+		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 
@@ -130,9 +130,13 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		$types = [ 'required' => 'bool', 'help-message' => 'array', 'preferred-input' => 'string',
 			 'multiple' => 'bool', 'on-create-only' => 'bool', 'value-formula' => 'string' ];
 		$obj['fields'] = [];
+
 		foreach ( $fields as $property => $values ) {
 			$obj['fields'][$property] = [];
 			foreach ( $values as $key => $value ) {
+				if ( $value === "" ) {
+					continue;
+				}
 				if ( !empty( $value ) || in_array( $key, $inheritableBooleanKeys ) ) {
 					if ( array_key_exists( $key, $types ) ) {
 						settype( $value, $types[$key] );
@@ -140,10 +144,6 @@ class PagePropertiesApiSaveForm extends ApiBase {
 					$obj['fields'][$property][$key] = $value;
 				}
 			}
-
-			// if ( !count( $obj['fields'][$property] ) ) {
-			// 	unset( $obj['fields'][$property] );
-			// }
 		}
 
 		$modelId = 'json';

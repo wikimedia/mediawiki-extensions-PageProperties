@@ -21,12 +21,16 @@
 
 // see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
 
+/* eslint-disable no-tabs */
+
 const PageProperties = ( function () {
 	var SemanticProperties;
 	var Properties;
 
 	// eslint-disable-next-line no-unused-vars
-	var CanManageProperties;
+	var CanManageSemanticProperties;
+	var CanComposeForms;
+	var CanAddSingleProperties;
 	var Model;
 	var OuterStack;
 	var ManagePropertiesSpecialPage;
@@ -41,6 +45,7 @@ const PageProperties = ( function () {
 	var PageCategories;
 	var processDialogSearch;
 	var Errors;
+	var ContentModels;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -86,19 +91,13 @@ const PageProperties = ( function () {
 		return value === false;
 	}
 
-	function getInputWidget( inputName, property, index, value, required ) {
+	function getInputWidget( inputName, property, index, value, config ) {
 		if ( Array.isArray( value ) ) {
 			for ( var i in value ) {
 				if ( value[ i ].trim() === '' ) {
 					delete value[ i ];
-				} else if ( inputName === 'mw.widgets.UsersMultiselectWidget' ) {
-					// @todo, use localized namespace
-					value[ i ] = value[ i ].replace( /^User:/, '' );
 				}
 			}
-		} else if ( inputName === 'mw.widgets.UserInputWidget' ) {
-			// @todo, use localized namespace
-			value = value.replace( /^User:/, '' );
 		}
 
 		switch ( inputName ) {
@@ -107,7 +106,7 @@ const PageProperties = ( function () {
 				break;
 		}
 
-		var config = {
+		var config = $.extend( {
 			// workaround for this issue https://www.php.net/manual/en/language.variables.external.php
 			// otherwise we don't kwnow when to remove underscores ...
 			name:
@@ -115,9 +114,9 @@ const PageProperties = ( function () {
 				encodeURIComponent( property ) +
 				'-' +
 				index,
-			value: value,
-			required: required
-		};
+			value: value
+		}, ( config || {} )
+		);
 
 		if ( isMultiselect( inputName ) ) {
 			config.selected = value;
@@ -149,10 +148,31 @@ const PageProperties = ( function () {
 		return PageCategories;
 	}
 
+	function getPreferredInput( form, property ) {
+		var propertyObj = SemanticProperties[ property ];
+
+		if ( form && ( 'preferred-input' in Forms[ form ].fields[ property ] ) ) {
+			return Forms[ config.form ].fields[ property ][ 'preferred-input' ];
+		}
+
+		if ( '__pageproperties_preferred_input' in propertyObj.properties ) {
+			return ManageProperties.inputNameFromLabel(
+				// eslint-disable-next-line no-underscore-dangle
+				propertyObj.properties.__pageproperties_preferred_input[ 0 ]
+			);
+		}
+
+		return ManageProperties.inputNameFromLabel(
+			ManageProperties.getAvailableInputs( propertyObj.type )[ 0 ]
+		);
+
+	}
+
 	function getModel( submit ) {
 		var ret = {};
-
+		var formattedNamespaces = mw.config.get( 'wgFormattedNamespaces' );
 		var propertiesInForms = getPropertiesInForms();
+
 		for ( var property in Model ) {
 			if ( !submit && property.indexOf( '__' ) === 0 ) {
 				continue;
@@ -177,22 +197,43 @@ const PageProperties = ( function () {
 					// OoUiTagMultiselectWidget => OO.ui.TagMultiselectWidget
 					// MwWidgetsUsersMultiselectWidget => mw.widgets.UsersMultiselectWidget
 
-					var inputNameAttr =
-						'semantic-properties-input-' + encodeURIComponent( property ) + '-';
-
-					var inputEl = $( ":input[name='" + ( inputNameAttr + i ) + "']" );
-
 					var inputName = Model[ property ][ i ].constructor.name
 						.replace( /^OoUi/, 'OO.ui.' )
 						.replace( /^MwWidgets/, 'mw.widgets.' );
 
 					let prefix = '';
+
+					// add namespace prefix for page type
+					// based on the input type
+					if ( ( property in SemanticProperties ) && SemanticProperties[ property ].type === '_wpg' ) {
+						let namespace = null;
+						switch ( inputName ) {
+							// case 'OO.ui.SelectFileWidget':
+							// namespace = 6;
+							// break;
+							case 'OO.ui.TextInputWidget':
+								// @todo, do it server-side
+								if ( ( '__filekey-' + property ) in Model ) {
+									// 'File:';
+									namespace = 6;
+								}
+								break;
+							case 'mw.widgets.UserInputWidget':
+							case 'mw.widgets.UsersMultiselectWidget':
+								// User:
+								namespace = 2;
+								break;
+						}
+
+						if ( namespace ) {
+							prefix = formattedNamespaces[ namespace ] + ':';
+						}
+					}
+
 					switch ( inputName ) {
-						case 'mw.widgets.UsersMultiselectWidget':
-						case 'mw.widgets.UserInputWidget':
-							// @todo, use localized namespace
-							prefix = 'User:';
-							break;
+						case 'OO.ui.SelectFileInputWidget':
+						case 'OO.ui.SelectFileWidget':
+							continue;
 					}
 
 					if ( typeof value === 'boolean' ) {
@@ -204,6 +245,12 @@ const PageProperties = ( function () {
 						prefix + value;
 
 					var inputVal = Array.isArray( inputValue ) ? inputValue[ 0 ] : inputValue;
+
+					// @todo, replace '-input-' with the value of special fields (like '__freetext')
+					var inputNameAttr =
+						'semantic-properties-input-' + encodeURIComponent( property ) + '-';
+
+					var inputEl = $( ":input[name='" + ( inputNameAttr + i ) + "']" );
 
 					if ( !inputEl.get( 0 ) ) {
 						$( '<input>' )
@@ -283,7 +330,7 @@ const PageProperties = ( function () {
 	OO.inheritClass( ListWidget, OO.ui.Widget );
 	OO.mixinClass( ListWidget, OO.ui.mixin.GroupWidget );
 
-	ListWidget.prototype.onItemDelete = function ( itemWidget ) {
+	ListWidget.prototype.onItemDelete = function ( itemWidget, isFile ) {
 		if ( itemWidget.parentWidget ) {
 			if (
 				!inputIsEmpty(
@@ -299,7 +346,7 @@ const PageProperties = ( function () {
 
 			var length = this.getItems().length;
 
-			if ( length > 1 ) {
+			if ( length > 1 || isFile ) {
 				this.removeItems( [ itemWidget ] );
 				delete Model[ itemWidget.parentWidget.property ][ itemWidget.index ];
 			} else {
@@ -355,6 +402,142 @@ const PageProperties = ( function () {
 		return this;
 	};
 
+	var InnerItemWidgetFile = function ( config ) {
+		config = config || {};
+		InnerItemWidgetFile.super.call( this, config );
+
+		this.parentWidget = config.parentWidget;
+		this.index = config.index;
+		var self = this;
+
+		OO.ui.mixin.GroupWidget.call(
+			this,
+			$.extend(
+				{
+					$group: this.$element
+				},
+				config
+			)
+		);
+
+		var deleteButton = new OO.ui.ButtonWidget( {
+			icon: 'close'
+			// flags: ["destructive"],
+		} );
+
+		var required = true;
+
+		// initialize this here to be used by getInputWidget
+		// @todo replace File: server-side and simplify here
+		Model[ '__filekey-' + config.property ][ config.index ] = { getValue: function () {
+			return '';
+		} };
+
+		var inputWidget = getInputWidget(
+			// 'OO.ui.TextInputWidget'
+			config.inputName,
+			config.property,
+			config.index,
+			config.value,
+			{ required: required }
+		);
+
+		Model[ config.property ][ config.index ] = inputWidget;
+
+		var filePreview = new OO.ui.Widget( {
+			classes: [ 'mw-upload-bookletLayout-filePreview' ]
+		} );
+		var progressBarWidget = new OO.ui.ProgressBarWidget( {
+			progress: 0
+		} );
+
+		// var hiddenInputWidget = new OO.ui.HiddenInputWidget( { name: hiddenInputName } );
+
+		/*
+'semantic-properties-input-' + '__title' + '-' + '0',
+
+		var hiddenInputName = 'semantic-properties-input-' + '__files' +
+				encodeURIComponent( config.property ) +
+				'-' +
+				config.index;
+
+		var hiddenInputWidget = new OO.ui.HiddenInputWidget( { name: hiddenInputName } );
+*/
+		this.progressBarWidget = progressBarWidget;
+		this.textInputWidget = inputWidget;
+		// this.hiddenInputWidget = hiddenInputWidget;
+
+		this.messageWidget = new OO.ui.MessageWidget( {
+			type: 'error',
+			label: '',
+			invisibleLabel: true,
+			classes: [ 'pageproperties-upload-messagewidget' ]
+		} );
+
+		filePreview.$element.append( progressBarWidget.$element );
+		filePreview.$element.append( inputWidget.$element );
+		filePreview.$element.append( this.messageWidget.$element );
+
+		progressBarWidget.toggle( !config.loaded );
+		inputWidget.toggle( config.loaded );
+		this.messageWidget.toggle( false );
+
+		// eslint-disable-next-line no-unused-vars
+		this.progress = function ( progress, estimatedRemainingTime ) {
+			self.progressBarWidget.setProgress( progress * 100 );
+		};
+
+		this.property = config.property;
+		this.index = config.index;
+
+		this.uploadComplete = function ( file, res ) {
+			self.progressBarWidget.toggle( false );
+			self.textInputWidget.toggle( true );
+
+			// @todo, use instead the form 'semantic-properties-freetext-',
+			// 'semantic-properties-filekey-', etc.
+			Model[ '__filekey-' + self.property ][ self.index ] = { getValue: function () {
+				return res.upload.filekey;
+			} };
+
+		};
+
+		this.errorMessage = function ( errorMessage ) {
+			self.textInputWidget.toggle( false );
+			self.progressBarWidget.toggle( false );
+
+			self.messageWidget.$element.append( errorMessage.getMessage() );
+			self.messageWidget.toggle( true );
+		};
+
+		// eslint-disable-next-line no-unused-vars
+		this.fail = function ( res ) {
+
+		};
+
+		var widget = new OO.ui.ActionFieldLayout( filePreview, deleteButton, {
+			label: '',
+			align: 'top',
+			// This can produce:
+			// * inputName-mw.widgets.DateInputWidget
+			// * inputName-mw.widgets...
+			classes: [ 'inputName-' + config.inputName ]
+		} );
+
+		this.$element.append( widget.$element );
+
+		deleteButton.connect( this, {
+			click: 'onDeleteButtonClick'
+		} );
+	};
+
+	OO.inheritClass( InnerItemWidgetFile, OO.ui.Widget );
+	OO.mixinClass( InnerItemWidgetFile, OO.ui.mixin.GroupWidget );
+
+	InnerItemWidgetFile.prototype.onDeleteButtonClick = function () {
+		this.emit( 'delete', 'file' );
+	};
+
 	var InnerItemWidget = function ( config ) {
 		config = config || {};
 		InnerItemWidget.super.call( this, config );
@@ -387,7 +570,7 @@ const PageProperties = ( function () {
 			config.property,
 			config.index,
 			config.value,
-			required
+			{ required: required }
 		);
 
 		Model[ config.property ][ config.index ] = inputWidget;
@@ -463,6 +646,7 @@ const PageProperties = ( function () {
 			)
 		);
 
+		var self = this;
 		this.property = config.property;
 
 		var deleteButton = new OO.ui.ButtonWidget( {
@@ -472,23 +656,7 @@ const PageProperties = ( function () {
 
 		var propertyObj = SemanticProperties[ config.property ];
 
-		var inputName;
-
-		if (
-			'form' in config &&
-			'preferred-input' in Forms[ config.form ].fields[ config.property ]
-		) {
-			inputName = Forms[ config.form ].fields[ config.property ][ 'preferred-input' ];
-		} else if ( '__pageproperties_preferred_input' in propertyObj.properties ) {
-			inputName = ManageProperties.inputNameFromLabel(
-				// eslint-disable-next-line no-underscore-dangle
-				propertyObj.properties.__pageproperties_preferred_input[ 0 ]
-			);
-		} else {
-			inputName = ManageProperties.inputNameFromLabel(
-				ManageProperties.getAvailableInputs( propertyObj.type )[ 0 ]
-			);
-		}
+		var inputName = getPreferredInput( ( 'form' in config ? config.form : null ), config.property );
 
 		var multiple = false;
 
@@ -519,9 +687,54 @@ const PageProperties = ( function () {
 
 		var values = getPropertyValue( config.property );
 
+		// remove namespace prefix for page type
+		// based on the input type
+		if ( SemanticProperties[ config.property ].type === '_wpg' ) {
+			var formattedNamespaces = mw.config.get( 'wgFormattedNamespaces' );
+			for ( var i in values ) {
+				var namespace;
+				switch ( inputName ) {
+					case 'OO.ui.SelectFileWidget':
+						// File:
+						namespace = 6;
+						break;
+					case 'mw.widgets.UserInputWidget':
+					case 'mw.widgets.UsersMultiselectWidget':
+						// User:
+						namespace = 2;
+						break;
+				}
+
+				if ( namespace ) {
+					var re = new RegExp( '^' + formattedNamespaces[ namespace ] + ':' );
+					values[ i ] = values[ i ].replace( re, '' );
+				}
+			}
+		}
+
 		Model[ config.property ] = {};
 
-		if ( !isMultiselect( inputName ) ) {
+		if ( inputName === 'OO.ui.SelectFileWidget' ) {
+			Model[ '__filekey-' + config.property ] = {};
+
+			values = values.filter( ( x ) => x !== '' );
+			for ( var i in values ) {
+				optionsList.addItems( [
+					new InnerItemWidgetFile( {
+						classes: [ 'InnerItemWidgetFile' ],
+						property: config.property,
+						inputName: 'OO.ui.TextInputWidget',
+						value: values[ i ],
+						parentWidget: this,
+						index: optionsList.items.length,
+						multiple: multiple,
+						form: config.form,
+						loaded: true,
+						last: ( i * 1 ) === values.length - 1
+					} )
+				] );
+			}
+		} else if ( !isMultiselect( inputName ) ) {
 			for ( var i in values ) {
 				optionsList.addItems( [
 					new InnerItemWidget( {
@@ -555,44 +768,109 @@ const PageProperties = ( function () {
 			] );
 		}
 
-		// if (CanManageProperties) {
-		// eslint-disable-next-line no-constant-condition
-		if ( false ) {
-			var editButton = new OO.ui.ButtonWidget( {
-				icon: 'settings',
-				flags: [ 'progressive' ]
+		// uncomment to allow "inline" edit of semantic properties
+		// this is not the most appropriate in conjunction with forms
+		// since forms can in turn override attributes of semantic properties
+		// if (CanManageSemanticProperties) {
+		// 	var editButton = new OO.ui.ButtonWidget( {
+		// 		icon: 'settings',
+		// 		flags: [ 'progressive' ]
+		// 	} );
+		//
+		// 	editButton.on( 'click', function () {
+		// 		ManageProperties.openDialog( config.property );
+		// 	} );
+		//
+		// 	var items = [
+		// 		// eslint-disable-next-line mediawiki/class-doc
+		// 		new OO.ui.ActionFieldLayout( optionsList, editButton, {
+		// 			label: config.property,
+		// 			align: 'top',
+		//
+		// 			// The following classes are used here:
+		// 			// * inputName-mw.widgets.DateInputWidget
+		// 			classes: [ 'inputName-' + inputName ]
+		// 		} )
+		// 	];
+		// } else {
+		var items = [
+			// eslint-disable-next-line mediawiki/class-doc
+			new OO.ui.FieldLayout( optionsList, {
+				label: config.property,
+				align: 'top',
+
+				// The following classes are used here:
+				// * inputName-mw.widgets.DateInputWidget
+				classes: [ 'inputName-' + inputName ]
+			} )
+		];
+		// }
+
+		if ( inputName === 'OO.ui.SelectFileWidget' ) {
+			var required = config.form &&
+				'required' in Forms[ config.form ].fields[ config.property ] &&
+				Forms[ config.form ].fields[ config.property ].required === true;
+
+			var inputWidget = getInputWidget(
+				inputName,
+				config.property + '-SelectFileWidget',
+				0,
+				'',
+				{ required: required, multiple: multiple }
+			);
+
+			var loadedFiles = {};
+
+			// eslint-disable-next-line no-unused-vars
+			this.on( 'fileUploaded', function ( file ) {
+				// console.log("event fileUploaded", file)
 			} );
 
-			editButton.on( 'click', function () {
-				ManageProperties.openDialog( config.property );
+			this.on( 'fileUploadInit', function ( file ) {
+				var innerItemWidgetFile = new InnerItemWidgetFile( {
+					classes: [ 'InnerItemWidgetFile' ],
+					property: config.property,
+					inputName: 'OO.ui.TextInputWidget',
+					value: file.name,
+					parentWidget: self,
+					index: optionsList.items.length,
+					multiple: multiple,
+					form: config.form,
+					loaded: false,
+					last: false
+				} );
+
+				loadedFiles[ file.name ] = innerItemWidgetFile;
+				optionsList.addItems( [ innerItemWidgetFile ] );
+
 			} );
 
-			var items = [
-				// eslint-disable-next-line mediawiki/class-doc
-				new OO.ui.ActionFieldLayout( optionsList, editButton, {
-					label: config.property,
-					align: 'top',
+			this.on( 'fileUploadProgress', function ( file, progress, estimatedRemainingTime ) {
+				loadedFiles[ file.name ].progress( progress, estimatedRemainingTime );
+			}
+			);
 
-					// The following classes are used here:
-					// * inputName-mw.widgets.DateInputWidget
-					classes: [ 'inputName-' + inputName ]
-				} )
-			];
-		} else {
-			var items = [
-				// eslint-disable-next-line mediawiki/class-doc
-				new OO.ui.FieldLayout( optionsList, {
-					label: config.property,
-					align: 'top',
+			this.on( 'fileUploadComplete', function ( file, res ) {
+				loadedFiles[ file.name ].uploadComplete( file, res );
+			}
+			);
 
-					// The following classes are used here:
-					// * inputName-mw.widgets.DateInputWidget
-					classes: [ 'inputName-' + inputName ]
-				} )
-			];
-		}
+			this.on( 'fileUploadErrorMessage', function ( file, errorMessage ) {
+				loadedFiles[ file.name ].errorMessage( errorMessage );
+			}
+			);
 
-		if ( multiple ) {
+			this.on( 'fileUploadFail', function ( file, res ) {
+				loadedFiles[ file.name ].fail( res );
+			}
+			);
+
+			var upload = new PagePropertiesUpload();
+			upload.initialize( inputWidget, this );
+			inputWidget.on( 'change', upload.uploadFiles.bind( upload ) );
+			items.push( inputWidget );
+
+		} else if ( multiple ) {
 			var addOption = new OO.ui.ButtonWidget( {
 				// label: "add field",
 				icon: 'add'
@@ -826,20 +1104,26 @@ const PageProperties = ( function () {
 			this.setActive( false );
 		};
 
-		var toolGroup = [
-			{
+		var toolGroup = [];
+
+		if ( CanComposeForms ) {
+			toolGroup.push( {
 				name: 'addremoveforms',
 				icon: 'add',
 				title: mw.msg( 'pageproperties-jsmodule-pageproperties-addremoveforms' ),
 				onSelect: onSelect
-			},
-			{
+			} );
+		}
+
+		if ( CanAddSingleProperties ) {
+			toolGroup.push( {
 				name: 'addremoveproperties',
 				icon: 'add',
 				title: mw.msg( 'pageproperties-jsmodule-forms-addremoveproperties' ),
 				onSelect: onSelect
-			}
-		];
+			} );
+		}
+
 		PagePropertiesFunctions.createToolGroup( toolFactory, 'group', toolGroup );
 
 		toolbar.setup( [
@@ -1126,6 +1410,44 @@ const PageProperties = ( function () {
 					} )
 				);
 			}
+
+			if ( data.contentModels ) {
+				// show radio
+				if ( data.contentModels.length > 1 ) {
+					var options = [];
+					for ( var contentModel of data.contentModels ) {
+						options.push( {
+							data: ContentModels[ contentModel ],
+							label: contentModel
+						} );
+					}
+
+					var selectContentModelsInput = new OO.ui.RadioSelectInputWidget( {
+						options: options,
+						// eslint-disable-next-line no-useless-concat
+						name: 'semantic-properties-input-' + '__content-model' + '-' + '0'
+					} );
+
+					Model[ '__content-model' ] = { 0: selectContentModelsInput };
+
+					items.push(
+						new OO.ui.FieldLayout( selectContentModelsInput, {
+							label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
+							align: 'top',
+							classes: [ 'ItemWidget' ]
+						} )
+					);
+
+				// @todo do the same for '__pagename-formula' and remove
+				// the block on submit
+				} else {
+					Model[ '__content-model' ] = { 0: { getValue: function () {
+						// eslint-disable-next-line no-shadow
+						var contentModel = data.contentModels[ 0 ];
+						return ContentModels[ contentModel ];
+					} } };
+				}
+			}
 		}
 
 		this.fieldset.addItems( items );
@@ -1202,6 +1524,7 @@ const PageProperties = ( function () {
 		var freeText = false;
 		var formProperties = [];
 		var formCategories = [];
+		var formContentModels = [];
 		for ( var form of SetForms ) {
 			if ( !TargetPage ) {
 				if ( Forms[ form ][ 'pagename-formula' ] ) {
@@ -1226,6 +1549,12 @@ const PageProperties = ( function () {
 					continue;
 				}
 				formProperties.push( i );
+			}
+
+			if ( Forms[ form ][ 'content-model' ] ) {
+				if ( !inArray( Forms[ form ][ 'content-model' ], formContentModels ) ) {
+					formContentModels.push( Forms[ form ][ 'content-model' ] );
+				}
 			}
 
 			if ( Forms[ form ].categories ) {
@@ -1284,6 +1613,7 @@ const PageProperties = ( function () {
 		// create title and free text input
 		if (
 			Object.keys( pagenameFormula ).length ||
+			formContentModels.length ||
 			userDefined ||
 			freeText ||
 			formCategories
@@ -1297,6 +1627,7 @@ const PageProperties = ( function () {
 					data: {
 						label: mw.msg( 'pageproperties-jsmodule-formedit-wiki' ),
 						pagenameFormula: pagenameFormula,
+						contentModels: formContentModels,
 						userDefined: userDefined,
 						freeText: freeText,
 						categories: formCategories
@@ -1324,7 +1655,9 @@ const PageProperties = ( function () {
 
 	function initialize(
 		managePropertiesSpecialPage,
-		canManageProperties,
+		canManageSemanticProperties,
+		canComposeForms,
+		canAddSingleProperties,
 		semanticProperties,
 		properties,
 		forms,
@@ -1334,15 +1667,17 @@ const PageProperties = ( function () {
 		pageContent,
 		pageCategories,
 		windowManagerSearch,
-		errors
+		errors,
+		contentModels
 	) {
 		Model = {};
-
 		$( '#semantic-properties-wrapper' ).empty();
 
 		if ( arguments.length ) {
 			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
-			CanManageProperties = canManageProperties;
+			CanManageSemanticProperties = canManageSemanticProperties;
+			CanComposeForms = canComposeForms;
+			CanAddSingleProperties = canAddSingleProperties;
 			SemanticProperties = semanticProperties;
 			Properties = properties;
 			Forms = forms;
@@ -1353,6 +1688,7 @@ const PageProperties = ( function () {
 			PageCategories = pageCategories;
 			WindowManagerSearch = windowManagerSearch;
 			Errors = errors;
+			ContentModels = contentModels;
 		}
 
 		PropertiesStack = new OO.ui.StackLayout( {
@@ -1368,7 +1704,7 @@ const PageProperties = ( function () {
 		if ( Errors.length ) {
 			var messageWidget = new OO.ui.MessageWidget( {
 				type: 'error',
-				label: Errors.join( '<br /> ' )
+				label: new OO.ui.HtmlSnippet( Errors.join( '<br /> ' ) )
 			} );
 
 			frameAContent.splice( 1, 0, messageWidget.$element, $( '<br />' ) );
@@ -1381,84 +1717,95 @@ const PageProperties = ( function () {
 			data: { name: 'pageproperties' }
 		} );
 
-		// https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/layouts.js
+		var items = [ frameA ];
 
-		var toolbarB = ManageProperties.createToolbar();
+		if ( canManageSemanticProperties ) {
 
-		var contentFrameB = new OO.ui.PanelLayout( {
-			$content: $(
-				'<table id="pageproperties-datatable-manage" class="pageproperties-datatable display" width="100%"></table>'
-			),
-			expanded: false,
-			padded: true
-		} );
+			// https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/layouts.js
+			var toolbarB = ManageProperties.createToolbar();
 
-		var frameB = new OO.ui.PanelLayout( {
-			$content: [ toolbarB.$element, contentFrameB.$element ],
-			expanded: false,
-			framed: true,
-			data: { name: 'manageproperties' }
-		} );
+			var contentFrameB = new OO.ui.PanelLayout( {
+				$content: $(
+					'<table id="pageproperties-datatable-manage" class="pageproperties-datatable display" width="100%"></table>'
+				),
+				expanded: false,
+				padded: true
+			} );
 
-		var toolbarC = PagePropertiesCategories.createToolbar();
+			var frameB = new OO.ui.PanelLayout( {
+				$content: [ toolbarB.$element, contentFrameB.$element ],
+				expanded: false,
+				framed: true,
+				data: { name: 'manageproperties' }
+			} );
 
-		var contentFrameC = new OO.ui.PanelLayout( {
-			$content: $(
-				'<table id="pageproperties-categories-datatable" class="pageproperties-datatable display" width="100%"></table>'
-			),
-			expanded: false,
-			padded: true
-		} );
+			var toolbarC = PagePropertiesCategories.createToolbar();
 
-		var frameC = new OO.ui.PanelLayout( {
-			$content: [ toolbarC.$element, contentFrameC.$element ],
-			expanded: false,
-			framed: true,
-			data: { name: 'managecategories' }
-		} );
+			var contentFrameC = new OO.ui.PanelLayout( {
+				$content: $(
+					'<table id="pageproperties-categories-datatable" class="pageproperties-datatable display" width="100%"></table>'
+				),
+				expanded: false,
+				padded: true
+			} );
 
-		var toolbarD = PagePropertiesForms.createToolbarA();
+			var frameC = new OO.ui.PanelLayout( {
+				$content: [ toolbarC.$element, contentFrameC.$element ],
+				expanded: false,
+				framed: true,
+				data: { name: 'managecategories' }
+			} );
 
-		var contentFrameD = new OO.ui.PanelLayout( {
-			$content: $(
-				'<table id="pageproperties-forms-datatable" class="pageproperties-datatable display" width="100%"></table>'
-			),
-			expanded: false,
-			padded: true
-		} );
+			var toolbarD = PagePropertiesForms.createToolbarA();
 
-		var frameD = new OO.ui.PanelLayout( {
-			$content: [ toolbarD.$element, contentFrameD.$element ],
-			expanded: false,
-			framed: true,
-			data: { name: 'manageforms' }
-		} );
+			var contentFrameD = new OO.ui.PanelLayout( {
+				$content: $(
+					'<table id="pageproperties-forms-datatable" class="pageproperties-datatable display" width="100%"></table>'
+				),
+				expanded: false,
+				padded: true
+			} );
+
+			var frameD = new OO.ui.PanelLayout( {
+				$content: [ toolbarD.$element, contentFrameD.$element ],
+				expanded: false,
+				framed: true,
+				data: { name: 'manageforms' }
+			} );
+
+			items = items.concat( [ frameB, frameC, frameD ] );
+		}
 
 		OuterStack = new OO.ui.StackLayout( {
-			items: [ frameA, frameB, frameC, frameD ],
+			items: items,
 			expanded: true,
 			continuous: false
 		} );
 
-		var actionToolbar = createActionToolbar();
-		toolbarA.$actions.append( actionToolbar.$element );
+		if ( canManageSemanticProperties ) {
+			var actionToolbar = createActionToolbar();
+			toolbarA.$actions.append( actionToolbar.$element );
 
-		actionToolbar = createActionToolbar();
-		toolbarB.$actions.append( actionToolbar.$element );
+			actionToolbar = createActionToolbar();
+			toolbarB.$actions.append( actionToolbar.$element );
 
-		actionToolbar = createActionToolbar();
-		toolbarC.$actions.append( actionToolbar.$element );
+			actionToolbar = createActionToolbar();
+			toolbarC.$actions.append( actionToolbar.$element );
 
-		actionToolbar = createActionToolbar();
-		toolbarD.$actions.append( actionToolbar.$element );
+			actionToolbar = createActionToolbar();
+			toolbarD.$actions.append( actionToolbar.$element );
+		}
 
 		$( '#semantic-properties-wrapper' ).append( OuterStack.$element );
 
 		toolbarA.initialize();
 		// toolbarA.emit( 'updateState' );
-		toolbarB.initialize();
-		toolbarC.initialize();
-		toolbarD.initialize();
+
+		if ( canManageSemanticProperties ) {
+			toolbarB.initialize();
+			toolbarC.initialize();
+			toolbarD.initialize();
+		}
 
 		setTimeout( function () {
 			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
@@ -1481,6 +1828,8 @@ $( document ).ready( function () {
 		'pageproperties-managePropertiesSpecialPage'
 	);
 
+	// console.log("mw.config", mw.config )
+
 	// console.log( 'managePropertiesSpecialPage', managePropertiesSpecialPage );
 
 	var errors = JSON.parse( mw.config.get( 'pageproperties-errors' ) );
@@ -1497,14 +1846,27 @@ $( document ).ready( function () {
 	var properties = JSON.parse( mw.config.get( 'pageproperties-properties' ) );
 	// console.log( 'properties', properties );
 
-	var canManageProperties = !!mw.config.get(
-		'pageproperties-canManageProperties'
+	var canManageSemanticProperties = !!mw.config.get(
+		'pageproperties-canManageSemanticProperties'
 	);
+	// console.log( 'canManageSemanticProperties', canManageSemanticProperties );
 
-	// console.log( 'canManageProperties', canManageProperties );
+	var canComposeForms = !!mw.config.get( 'pageproperties-canComposeForms' );
+	// console.log( 'canComposeForms', canComposeForms );
+
+	var canAddSingleProperties = !!mw.config.get( 'pageproperties-canAddSingleProperties' );
+	// console.log( 'canAddSingleProperties', canAddSingleProperties );
+
+	var allowedMimeTypes = JSON.parse( mw.config.get( 'allowedMimeTypes' ) );
+	// console.log( 'allowedMimeTypes', allowedMimeTypes );
+
+	// console.log( 'canManageSemanticProperties', canManageSemanticProperties );
 
 	var forms = JSON.parse( mw.config.get( 'pageproperties-forms' ) );
 	// console.log( 'forms', forms );
+
+	var contentModels = JSON.parse( mw.config.get( 'pageproperties-contentModels' ) );
+	// console.log( 'pageproperties-contentModels', contentModels );
 
 	// the order is important !! ( first is behind)
 	var windowManagerCommon = PagePropertiesFunctions.createWindowManager();
@@ -1527,7 +1889,9 @@ $( document ).ready( function () {
 
 		PageProperties.initialize(
 			managePropertiesSpecialPage,
-			canManageProperties,
+			canManageSemanticProperties,
+			canComposeForms,
+			canAddSingleProperties,
 			semanticProperties,
 			properties,
 			forms,
@@ -1537,7 +1901,8 @@ $( document ).ready( function () {
 			pageContent,
 			pageCategories,
 			windowManagerSearch,
-			errors
+			errors,
+			contentModels
 		);
 	}
 
@@ -1545,7 +1910,8 @@ $( document ).ready( function () {
 		windowManagerManageProperties,
 		windowManagerAlert,
 		semanticProperties,
-		managePropertiesSpecialPage
+		managePropertiesSpecialPage,
+		allowedMimeTypes
 	);
 
 	PagePropertiesCategories.initialize( categories, windowManagerCommon, windowManagerAlert );
@@ -1556,7 +1922,8 @@ $( document ).ready( function () {
 		windowManagerSearch,
 		windowManagerAlert,
 		forms,
-		semanticProperties
+		semanticProperties,
+		contentModels
 	);
 
 	if ( managePropertiesSpecialPage ) {
@@ -1572,13 +1939,12 @@ $( document ).ready( function () {
 		);
 	}
 
-	if ( canManageProperties ) {
+	if ( canManageSemanticProperties ) {
 		// load importedVocabularies
 		ManageProperties.loadData( semanticProperties );
 	}
 
 	$( '#pageproperties-form' ).submit( function () {
-
 		var obj = PageProperties.getModel( true );
 
 		// eslint-disable-next-line no-underscore-dangle
@@ -1615,11 +1981,7 @@ $( document ).ready( function () {
 	} );
 
 	// display every 3 days
-	if (
-		managePropertiesSpecialPage &&
-		canManageProperties &&
-		!mw.cookie.get( 'pageproperties-check-latest-version' )
-	) {
+	if ( canManageSemanticProperties && !mw.cookie.get( 'pageproperties-check-latest-version' ) ) {
 		mw.loader.using( 'mediawiki.api', function () {
 			new mw.Api()
 				.postWithToken( 'csrf', {

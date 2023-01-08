@@ -25,8 +25,6 @@
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 class SpecialManageProperties extends FormSpecialPage {
-	protected $canEditProperties;
-	protected $canManageProperties;
 
 	/** @inheritDoc */
 	public function __construct() {
@@ -47,7 +45,12 @@ class SpecialManageProperties extends FormSpecialPage {
 	/** @inheritDoc */
 	public function execute( $par ) {
 		// $this->requireLogin();
-		$this->setHeaders();
+		// $this->setParameter( $par );
+		// $this->setHeaders();
+
+		$out = $this->getOutput();
+		$out->setArticleRelated( false );
+		$out->setRobotPolicy( $this->getRobotPolicy() );
 
 		$user = $this->getUser();
 
@@ -56,31 +59,28 @@ class SpecialManageProperties extends FormSpecialPage {
 		// This will throw exceptions if there's a problem
 		$this->checkExecutePermissions( $user );
 
-		// $securityLevel = $this->getLoginSecurityLevel();
+		$securityLevel = $this->getLoginSecurityLevel();
 
-		// if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-		// 	$this->displayRestrictionError();
-		// 	return;
-		// }
-
-		$this->addHelpLink( 'Extension:PageProperties' );
+		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
+			$this->displayRestrictionError();
+			return;
+		}
 
 		if ( !defined( 'SMW_VERSION' ) ) {
 			$this->displayRestrictionError();
 			return;
 		}
 
-		$this->canEditProperties = $user->isAllowed( 'pageproperties-caneditproperties' );
-		$this->canManageProperties = $user->isAllowed( 'pageproperties-canmanageproperties' );
+		$this->addHelpLink( 'Extension:PageProperties' );
 
-		if ( !$this->canEditProperties && !$this->canManageProperties ) {
+		$canManageSemanticProperties = $user->isAllowed( 'pageproperties-canmanagesemanticproperties' );
+
+		if ( !$canManageSemanticProperties ) {
 			$this->displayRestrictionError();
 			return;
 		}
 
 		$this->outputHeader();
-
-		$out = $this->getOutput();
 
 		$context = $this->getContext();
 
@@ -135,82 +135,26 @@ class SpecialManageProperties extends FormSpecialPage {
 	private function addJsConfigVars( $par, $out ) {
 		$semanticProperties = \PageProperties::getSemanticProperties();
 		$pageProperties = [];
-		$categories = $this->getCategoriesSemantic();
+		$categories = \PageProperties::getCategoriesSemantic();
 		$forms = $this->getForms();
 		$setForms = [];
+		$contentModels = \PageProperties::getContentModels();
 
 		$out->addJsConfigVars( [
 			'pageproperties-managePropertiesSpecialPage' => true,
 			'pageproperties-set-forms' => json_encode( $setForms, true ),
-			'pageproperties-canManageProperties' => $this->canManageProperties,
+			'pageproperties-canManageSemanticProperties' => true,
 			'pageproperties-categories' => json_encode( $categories, true ),
 			'pageproperties-forms' => json_encode( $forms, true ),
 			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
 			'pageproperties-properties' => json_encode( $pageProperties, true ),
+			'pageproperties-contentModels' => json_encode( $contentModels, true ),
 
 			// @see UploadWizard -> UploadWizard.config.php
 			'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
 			'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
 			// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
 		] );
-	}
-
-	/**
-	 * @return array
-	 */
-	private function getCategoriesSemantic() {
-		$dbr = wfGetDB( DB_REPLICA );
-
-		$res = $dbr->select(
-			'category',
-			[ 'cat_title', 'cat_pages' ],
-			null,
-			__METHOD__,
-			[
-				'USE INDEX' => 'cat_title',
-			]
-		);
-
-		if ( !$res->numRows() ) {
-			return [];
-		}
-
-		$ret = [];
-
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
-
-		foreach ( $res as $row ) {
-			$title_ = Title::newFromText( $row->cat_title, NS_CATEGORY );
-			if ( !$title_ || !$title_->isKnown() ) {
-				continue;
-			}
-
-			// $title = new TitleValue( NS_CATEGORY, $row->cat_title );
-			$label = $title_->getText();
-
-			$ret[$label] = [
-				'label' => $label,
-				'properties' => [],
-			];
-
-			$subject = new SMW\DIWikiPage( $title_->getText(), NS_CATEGORY );
-
-			$semanticData = \PageProperties::$SMWStore->getSemanticData( $subject );
-
-			$prop = new SMW\DIProperty( '_IMPO' );
-
-			$values = $semanticData->getPropertyValues( $prop );
-
-			foreach ( $values as $value ) {
-				$dataValue = $dataValueFactory->newDataValueByItem( $value, $prop );
-
-				if ( $dataValue instanceof SMW\DataValues\ImportValue ) {
-					$ret[$label]['properties']['_IMPO'][] = $dataValue->getWikiValue();
-				}
-			}
-		}
-
-		return $ret;
 	}
 
 	/**

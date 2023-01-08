@@ -138,6 +138,136 @@ class PageProperties {
 		self::$User = RequestContext::getMain()->getUser();
 		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
 		self::initSMW();
+
+		if ( !array_key_exists( 'wgPagePropertiesShowSlotsNavigation', $GLOBALS ) ) {
+			$GLOBALS['wgPagePropertiesShowSlotsNavigation'] = self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' );
+		}
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param string $template
+	 * @param array $argv
+	 * @return string
+	 */
+	private static function templateRender( $parser, $template, $argv ) {
+		$templateRenderer = new SMW\MediaWiki\Renderer\HtmlTemplateRenderer(
+			( new SMW\MediaWiki\Renderer\WikitextTemplateRenderer() ),
+			$parser
+		);
+
+		foreach ( $argv as $key => $value ) {
+			$templateRenderer->addField( $key, $value );
+		}
+
+		$templateRenderer->packFieldsForTemplate( $template );
+
+		return $templateRenderer->render();
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param mixed ...$argv
+	 * @return array
+	 */
+	public static function parserFunctionPageproperties( Parser $parser, ...$argv ) {
+		$parser->getOutput()->setFlag( 'pageproperties' );
+
+/*
+
+{{#pageproperties: {{FULLPAGENAME}}
+|?File
+|?Caption
+|template=DisplayPictures
+|template?File=DisplayPicture
+|separator=,<nowiki> </nowiki>
+|values-separator=<br>
+}}
+
+*/
+
+		$title = Title::newFromText( array_shift( $argv ) );
+
+		if ( !$title || !$title->isKnown() ) {
+			$title = $parser->getTitle();
+		}
+
+		$page_properties = self::getPageProperties( $title );
+
+		if ( empty( $page_properties ) ) {
+			return "";
+		}
+
+		$page_properties = $page_properties['semantic-properties'];
+
+		// $templateParser = new TemplateParser();
+		// $templateParser->processTemplate()
+		$mainTemplate = null;
+		$props = [];
+		$propsTemplate = [];
+		$separator = '';
+		$valuesSeparator = '';
+		foreach ( $argv as $val ) {
+
+			if ( strpos( $val, 'separator=' ) === 0 ) {
+				$separator = substr( $val, strlen( 'separator=' ) );
+				continue;
+			}
+
+			if ( strpos( $val, 'values-separator=' ) === 0 ) {
+				$valuesSeparator = substr( $val, strlen( 'values-separator=' ) );
+				continue;
+			}
+
+			if ( strpos( $val, '?' ) === 0 ) {
+				$props[substr( $val, 1 )] = null;
+				continue;
+			}
+
+			if ( strpos( $val, 'template=' ) === 0 ) {
+				$mainTemplate = substr( $val, strlen( 'template=' ) );
+				continue;
+			}
+
+			if ( strpos( $val, 'template?' ) === 0 ) {
+				list( $prop,  $template ) = explode( '=', substr( $val, strlen( 'template?' ) ), 2 ) + [ null, null ];
+				$propsTemplate[$prop] = $template;
+			}
+		}
+
+		$props = array_merge( $props, $propsTemplate );
+
+		$IDs = [];
+		foreach ( $props as $prop => $value ) {
+			if ( $prop && !empty( $page_properties[$prop] ) ) {
+				$props[$prop] = $page_properties[$prop];
+
+				if ( !is_array( $props[$prop] ) ) {
+					$props[$prop] = [ $props[$prop] ];
+				}
+
+				if ( array_key_exists( $prop, $propsTemplate ) ) {
+					foreach ( $props[$prop] as $k => $v ) {
+						$unique_id = uniqid();
+						$IDs[$unique_id] = self::templateRender( $parser, $propsTemplate[$prop], [ $prop => $v ] );
+						$props[$prop][$k] = $unique_id;
+					}
+				}
+
+				// https://www.semantic-mediawiki.org/wiki/Help:Setting_values/Working_with_the_separator_parameter
+				// $sep = '|+sep';
+				$props[$prop] = implode( $valuesSeparator, $props[$prop] );
+			}
+		}
+
+		$ret = ( $mainTemplate ? self::templateRender( $parser, $mainTemplate, $props ) : implode( $separator, $props ) );
+
+		foreach ( $IDs as $key => $value ) {
+			$ret = str_replace( $key, $value, $ret );
+		}
+
+		// 'noparse' => true,
+		return [ $ret, 'isHTML' => true ];
 	}
 
 	/**
@@ -484,41 +614,43 @@ class PageProperties {
 	/**
 	 * @param User $user
 	 * @param Title $title
-	 * @param array $obj
+	 * @param array &$obj
 	 * @param array &$errors
 	 * @param null|string $mainSlotContent
+	 * @param null|string $mainSlotContentModel
 	 * @return null|bool
 	 */
-	public static function setPageProperties( $user, $title, $obj, &$errors, $mainSlotContent = null ) {
+	public static function setPageProperties( $user, $title, &$obj, &$errors,
+		$mainSlotContent = null, $mainSlotContentModel = null ) {
 		$canWrite = self::checkWritePermissions( $user, $title, $errors );
 
 		if ( !$canWrite ) {
 			return false;
 		}
 
-		// @todo refactor here
+		// remove empty values and implode arrays with
+		// single values
+		$semanticProperties = [];
 		if ( !empty( $obj['semantic-properties'] ) ) {
-			// remove empty values and implode arrays with
-			// single values
 			foreach ( $obj['semantic-properties'] as $key => $val ) {
-				if ( is_array( $val ) ) {
-					foreach ( $val as $k => $v ) {
-						if ( trim( $v ) === "" ) {
-							unset( $obj['semantic-properties'][$key][$k] );
-						}
-					}
-					if ( count( $obj['semantic-properties'][$key] ) === 1 ) {
-						$obj['semantic-properties'][$key] = current( $obj['semantic-properties'][$key] );
-					}
+				$semanticProperties[$key] = $val;
+
+				if ( !is_array( $semanticProperties[$key] ) ) {
+					$semanticProperties[$key] = [ $semanticProperties[$key] ];
 				}
-				if ( is_array( $obj['semantic-properties'][$key] ) ) {
-					if ( empty( $obj['semantic-properties'][$key] ) ) {
-						unset( $obj['semantic-properties'][$key] );
-					}
-				} elseif ( trim( $obj['semantic-properties'][$key] ) === "" ) {
-					unset( $obj['semantic-properties'][$key] );
+
+				$semanticProperties[$key] = array_filter( array_values( $semanticProperties[$key] ) );
+
+				if ( count( $semanticProperties[$key] ) === 1 ) {
+					$semanticProperties[$key] = $semanticProperties[$key][0];
+				}
+
+				if ( empty( $semanticProperties[$key] ) ) {
+					unset( $semanticProperties[$key] );
 				}
 			}
+
+			$obj['semantic-properties'] = $semanticProperties;
 		}
 
 		if ( !empty( $obj['SEO'] ) ) {
@@ -552,7 +684,7 @@ class PageProperties {
 
 		$slots[SLOT_ROLE_PAGEPROPERTIES] = ( !empty( $obj ) ? json_encode( $obj ) : '' );
 
-		$ret = self::recordSlots( $user, $title, $slots );
+		$ret = self::recordSlots( $user, $title, $slots, $mainSlotContentModel );
 
 		// the slot cache was preventively populated with the planned revision
 		// (see WSSlotsPageProperties.php)
@@ -568,9 +700,10 @@ class PageProperties {
 	 * @param User $user
 	 * @param Title $title
 	 * @param array $slots
+	 * @param string $mainSlotContentModel
 	 * @return bool
 	 */
-	private static function recordSlots( $user, $title, $slots ) {
+	private static function recordSlots( $user, $title, $slots, $mainSlotContentModel ) {
 		$wikiPage = self::getWikiPage( $title );
 		$pageUpdater = $wikiPage->newPageUpdater( $user );
 		$oldRevisionRecord = $wikiPage->getRevisionRecord();
@@ -586,22 +719,23 @@ class PageProperties {
 		}
 
 		foreach ( $slots as $slotName => $text ) {
-			if ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
-				$modelId = $oldRevisionRecord->getSlot( $slotName )
-					->getContent()->getContentHandler()->getModelID();
-			} else {
-				$modelId = $slotRoleRegistry->getRoleHandler( $slotName )
-					->getDefaultModel( $title );
-			}
-
-			// Remove the slot if $text is empty and the slot name is not MAIN
 			if ( $text === "" && $slotName !== SlotRecord::MAIN ) {
 				$pageUpdater->removeSlot( $slotName );
+				continue;
+			}
+
+			if ( $slotName === SlotRecord::MAIN && $mainSlotContentModel ) {
+				$modelId = $mainSlotContentModel;
+
+			} elseif ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
+				$modelId = $oldRevisionRecord->getSlot( $slotName )->getContent()->getContentHandler()->getModelID();
 
 			} else {
-				$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
-				$pageUpdater->setContent( $slotName, $slotContent );
+				$modelId = $slotRoleRegistry->getRoleHandler( $slotName )->getDefaultModel( $title );
 			}
+
+			$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
+			$pageUpdater->setContent( $slotName, $slotContent );
 		}
 
 		// *** this ensures that onContentAlterParserOutput relies
@@ -1114,6 +1248,101 @@ class PageProperties {
 				JobQueueGroup::singleton()->push( $jobs );
 			}
 		}
+	}
+
+	/**
+	 * @see includes/specials/SpecialChangeContentModel.php
+	 * @return array
+	 */
+	public static function getContentModels() {
+		$services = Mediawiki\MediaWikiServices::getInstance();
+		$contentHandlerFactory = $services->getContentHandlerFactory();
+		$models = $contentHandlerFactory->getContentModels();
+		$options = [];
+
+		foreach ( $models as $model ) {
+			$handler = $contentHandlerFactory->getContentHandler( $model );
+
+			if ( !$handler->supportsDirectEditing() ) {
+				continue;
+			}
+
+			$options[ ContentHandler::getLocalizedName( $model ) ] = $model;
+		}
+
+		ksort( $options );
+
+		return $options;
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getCategories() {
+		$dbr = wfGetDB( DB_REPLICA );
+
+		$res = $dbr->select(
+			'category',
+			[ 'cat_title', 'cat_pages' ],
+			null,
+			__METHOD__,
+			[
+				'USE INDEX' => 'cat_title',
+			]
+		);
+
+		if ( !$res->numRows() ) {
+			return [];
+		}
+
+		$ret = [];
+		foreach ( $res as $row ) {
+			$title_ = Title::newFromText( $row->cat_title, NS_CATEGORY );
+			if ( !$title_ || !$title_->isKnown() ) {
+				continue;
+			}
+			$ret[] = $title_;
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getCategoriesSemantic() {
+		$categories = self::getCategories();
+
+		$dataValueFactory = SMW\DataValueFactory::getInstance();
+
+		$ret = [];
+		foreach ( $categories as $title_ ) {
+			// $title = new TitleValue( NS_CATEGORY, $row->cat_title );
+			$label = $title_->getText();
+
+			$ret[$label] = [
+				'label' => $label,
+				'properties' => [],
+			];
+
+			$subject = new SMW\DIWikiPage( $title_->getText(), NS_CATEGORY );
+
+			$semanticData = self::$SMWStore->getSemanticData( $subject );
+
+			$prop = new SMW\DIProperty( '_IMPO' );
+
+			$values = $semanticData->getPropertyValues( $prop );
+
+			foreach ( $values as $value ) {
+				$dataValue = $dataValueFactory->newDataValueByItem( $value, $prop );
+
+				if ( $dataValue instanceof SMW\DataValues\ImportValue ) {
+					$ret[$label]['properties']['_IMPO'][] = $dataValue->getWikiValue();
+				}
+			}
+		}
+
+		return $ret;
 	}
 
 	/**
