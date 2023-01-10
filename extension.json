@@ -396,7 +396,9 @@
 				"pageproperties-jsmodule-forms-contentmodels-help",
 				"pageproperties-jsmodule-forms-alert-propertyname",
 				"pageproperties-jsmodule-forms-alert-categoryname",
-				"pageproperties-jsmodule-manageproperties-upload"
+				"pageproperties-jsmodule-manageproperties-upload",
+				"pageproperties-jsmodule-forms-dialogsearch-selectforms",
+				"pageproperties-jsmodule-forms-dialogsearch-selectproperties"
 			]
 		}
 	},

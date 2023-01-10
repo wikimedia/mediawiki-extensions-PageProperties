@@ -158,11 +158,14 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		$result->addValue( [ $this->getModuleName() ], 'result-action', $resultAction );
 		$result->addValue( [ $this->getModuleName() ], 'result', $ret );
 
-		// @todo modify and use the ApiResult -> getResultData function
-		// or use the following ApiResult::META_BC_BOOLS = $bools;
-		array_walk_recursive( $obj, static function ( &$value ) {
+		// @see include/api/ApiResult.php -> getResultData
+		// "- Boolean-valued items are changed to '' if true or removed if false"
+		// @todo use ApiResult::META_BC_BOOLS
+		// $bools = [];
+		array_walk_recursive( $obj, static function ( &$value, $key ) {
 			if ( is_bool( $value ) ) {
 				$value = (int)$value;
+				// $bools = $key;
 			}
 		} );
 
@@ -184,6 +187,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			}
 		}
 
+		// ApiResult::META_BC_BOOLS => $bools,
 		$result->addValue( [ $this->getModuleName() ], 'forms', [ $label => $obj ] );
 	}
 

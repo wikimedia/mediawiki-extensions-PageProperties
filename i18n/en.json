@@ -21,6 +21,8 @@
 	"pageproperties-jsmodule-forms-pagenameformula-help": "Templates and parser functions allowed, to retrieve the input value of a field associated to a given property use <property> where \"property\" is the name of a property/field included in the form",
 	"pageproperties-jsmodule-forms-addremoveproperties": "Add/remove properties",
 	"pageproperties-jsmodule-forms-selectfield": "Select properties",
+	"pageproperties-jsmodule-forms-dialogsearch-selectforms": "Select forms",
+	"pageproperties-jsmodule-forms-dialogsearch-selectproperties": "Select properties",
 	"pageproperties-jsmodule-pageproperties-columns-forms-dialog": "name, type, input, required, ",
 	"pageproperties-jsmodule-forms-searchdialog-save": "done",
 	"pageproperties-jsmodule-forms-field-required": "required",
@@ -77,7 +79,7 @@
 
 	"pageproperties-jsmodule-import-goback": "go back",
 	"pageproperties-jsmodule-import-goforward": "go forward",
-	"pageproperties-jsmodule-import-selectfile": "Select a csv or json file",
+	"pageproperties-jsmodule-import-selectfile": "Select a csv file",
 	"pageproperties-jsmodule-import-upload": "upload",
 	"pageproperties-jsmodule-import-pause": "pause",
 	"pageproperties-jsmodule-import-play": "play",

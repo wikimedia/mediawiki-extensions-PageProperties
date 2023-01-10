@@ -26,8 +26,6 @@
 const PageProperties = ( function () {
 	var SemanticProperties;
 	var Properties;
-
-	// eslint-disable-next-line no-unused-vars
 	var CanManageSemanticProperties;
 	var CanComposeForms;
 	var CanAddSingleProperties;
@@ -305,7 +303,7 @@ const PageProperties = ( function () {
 		for ( var form of SetForms ) {
 			for ( var i in Forms[ form ].fields ) {
 
-				if ( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] === true ) {
+				if ( isTrue( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] ) ) {
 					continue;
 				}
 
@@ -579,7 +577,7 @@ const PageProperties = ( function () {
 		var required =
 			config.form &&
 			'required' in Forms[ config.form ].fields[ config.property ] &&
-			Forms[ config.form ].fields[ config.property ].required === true;
+			isTrue( Forms[ config.form ].fields[ config.property ].required );
 
 		var inputWidget = getInputWidget(
 			config.inputName,
@@ -825,7 +823,7 @@ const PageProperties = ( function () {
 		if ( inputName === 'OO.ui.SelectFileWidget' ) {
 			var required = config.form &&
 				'required' in Forms[ config.form ].fields[ config.property ] &&
-				Forms[ config.form ].fields[ config.property ].required === true;
+				isTrue( Forms[ config.form ].fields[ config.property ].required );
 
 			var inputWidget = getInputWidget(
 				inputName,
@@ -934,9 +932,7 @@ const PageProperties = ( function () {
 	}
 	OO.inheritClass( ProcessDialogSearch, OO.ui.ProcessDialog );
 	ProcessDialogSearch.static.name = DialogSearchName;
-	ProcessDialogSearch.static.title = mw.msg(
-		'pageproperties-jsmodule-forms-selectfield'
-	);
+
 	ProcessDialogSearch.prototype.initialize = function () {
 		ProcessDialogSearch.super.prototype.initialize.apply( this, arguments );
 		var self = this;
@@ -1094,7 +1090,13 @@ const PageProperties = ( function () {
 
 		WindowManagerSearch.addWindows( [ processDialogSearch ] );
 
-		WindowManagerSearch.openWindow( processDialogSearch );
+		// see https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs
+		WindowManagerSearch.openWindow( processDialogSearch, { title: mw.msg(
+			// The following messages are used here:
+			// * pageproperties-jsmodule-forms-dialogsearch-selectforms
+			// * pageproperties-jsmodule-forms-dialogsearch-selectproperties
+			'pageproperties-jsmodule-forms-dialogsearch-select' + ( toolName === 'addremoveforms' ? 'forms' : 'properties' )
+		) } );
 	}
 
 	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.Toolbar
@@ -1286,7 +1288,7 @@ const PageProperties = ( function () {
 
 			for ( var i in form.fields ) {
 
-				if ( TargetPage && form.fields[ i ][ 'on-create-only' ] === true ) {
+				if ( isTrue( TargetPage && form.fields[ i ][ 'on-create-only' ] ) ) {
 					continue;
 				}
 
@@ -1559,9 +1561,8 @@ const PageProperties = ( function () {
 
 			for ( var i in Forms[ form ].fields ) {
 				// *** on-create-only field don't get recorded when creating the form
-				// but even if they belong to the form can be added later as single
-				// properties
-				if ( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] === true ) {
+				// so exclude them from the form to let them be added as single property
+				if ( isTrue( TargetPage && Forms[ form ].fields[ i ][ 'on-create-only' ] ) ) {
 					continue;
 				}
 				formProperties.push( i );
@@ -1664,6 +1665,13 @@ const PageProperties = ( function () {
 		}, 30 );
 	}
 
+	// @todo this is used as long as Mediawiki's api
+	// prevents to return boolean values (see include/api/ApiResult.php -> getResultData)
+	// "- Boolean-valued items are changed to '' if true or removed if false"
+	function isTrue( val ) {
+		return val === true || val === 1;
+	}
+
 	function updateForms( forms ) {
 		Forms = forms;
 		updatePanels();
@@ -1735,7 +1743,7 @@ const PageProperties = ( function () {
 
 		var items = [ frameA ];
 
-		if ( canManageSemanticProperties ) {
+		if ( CanManageSemanticProperties ) {
 
 			// https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/layouts.js
 			var toolbarB = ManageProperties.createToolbar();
@@ -1798,7 +1806,7 @@ const PageProperties = ( function () {
 			continuous: false
 		} );
 
-		if ( canManageSemanticProperties ) {
+		if ( CanManageSemanticProperties ) {
 			var actionToolbar = createActionToolbar();
 			toolbarA.$actions.append( actionToolbar.$element );
 
@@ -1817,7 +1825,7 @@ const PageProperties = ( function () {
 		toolbarA.initialize();
 		// toolbarA.emit( 'updateState' );
 
-		if ( canManageSemanticProperties ) {
+		if ( CanManageSemanticProperties ) {
 			toolbarB.initialize();
 			toolbarC.initialize();
 			toolbarD.initialize();
