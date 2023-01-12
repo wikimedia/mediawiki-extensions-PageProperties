@@ -194,7 +194,7 @@ class PageProperties {
 
 		$page_properties = self::getPageProperties( $title );
 
-		if ( empty( $page_properties ) ) {
+		if ( empty( $page_properties ) || empty( $page_properties['semantic-properties'] ) ) {
 			return "";
 		}
 
