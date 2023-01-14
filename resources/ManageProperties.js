@@ -211,7 +211,8 @@ const ManageProperties = ( function () {
 					'OO.ui.TagMultiselectWidget',
 					'OO.ui.MultilineTextInputWidget',
 					'mw.widgets.CategoryMultiselectWidget',
-					'OO.ui.SelectFileWidget'
+					'OO.ui.SelectFileWidget',
+					'OO.ui.TextInputWidget (password)'
 				];
 		}
 

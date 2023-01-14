@@ -590,7 +590,7 @@ class SpecialEditProperties extends FormSpecialPage {
 
 		if ( !$title ) {
 			$errors[] = $this->msg( "pageproperties-editsemantic-titlenotset" )->text();
-			return $pageProperties;
+			return [ $pageProperties, $freetext ];
 		}
 
 		// now set the output with the target title
