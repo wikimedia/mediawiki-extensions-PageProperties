@@ -394,7 +394,9 @@ const PagePropertiesForms = ( function () {
 			searching: false,
 			paging: false,
 			info: false,
-			rowReorder: true,
+			rowReorder: {
+				update: false
+			},
 			scrollX: true,
 			columnDefs: [
 				{

@@ -34,6 +34,7 @@ class SpecialEditProperties extends FormSpecialPage {
 	protected $setForms;
 	protected $forms;
 	protected $user;
+	protected $semanticProperties;
 
 	/** @inheritDoc */
 	public function __construct() {

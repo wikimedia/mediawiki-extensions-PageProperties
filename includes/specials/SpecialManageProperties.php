@@ -26,6 +26,9 @@ include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 class SpecialManageProperties extends FormSpecialPage {
 
+	protected $user;
+	protected $semanticProperties;
+
 	/** @inheritDoc */
 	public function __construct() {
 		$listed = defined( 'SMW_VERSION' );
@@ -133,7 +136,7 @@ class SpecialManageProperties extends FormSpecialPage {
 	 * @return void
 	 */
 	private function addJsConfigVars( $par, $out ) {
-		$semanticProperties = \PageProperties::getSemanticProperties();
+		$this->semanticProperties = \PageProperties::getSemanticProperties();
 		$pageProperties = [];
 		$categories = \PageProperties::getCategoriesSemantic();
 		$forms = $this->getForms();
@@ -146,7 +149,7 @@ class SpecialManageProperties extends FormSpecialPage {
 			'pageproperties-canManageSemanticProperties' => true,
 			'pageproperties-categories' => json_encode( $categories, true ),
 			'pageproperties-forms' => json_encode( $forms, true ),
-			'pageproperties-semanticProperties' => json_encode( $semanticProperties, true ),
+			'pageproperties-semanticProperties' => json_encode( $this->semanticProperties, true ),
 			'pageproperties-properties' => json_encode( $pageProperties, true ),
 			'pageproperties-contentModels' => json_encode( $contentModels, true ),
 
@@ -168,7 +171,10 @@ class SpecialManageProperties extends FormSpecialPage {
 			$wikiPage = \PageProperties::getWikiPage( $title );
 			$text = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
 			if ( !empty( $text ) ) {
-				$ret[$title->getText()] = json_decode( $text, true );
+				$obj = json_decode( $text, true );
+				$obj['fields'] = array_intersect_key( $obj['fields'], $this->semanticProperties );
+
+				$ret[$title->getText()] = $obj;
 			}
 		}
 		return $ret;
