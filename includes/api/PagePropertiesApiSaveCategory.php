@@ -58,20 +58,30 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 		$previousLabel = $params['previousLabel'];
 
 		$errors = [];
-		$update_properties = [];
+		$update_items = [];
 
 		if ( $dialogAction === 'delete' ) {
+			$update_items[$previousLabel] = null;
+
+			if ( empty( $params['confirmJobExecution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
+
 			$title_ = Title::makeTitleSafe( NS_CATEGORY, $previousLabel );
 			$wikiPage_ = \PageProperties::getWikiPage( $title_ );
 			$reason = '';
 			\PageProperties::deletePage( $wikiPage_, $user, $reason );
 
-			$update_properties[$previousLabel] = null;
-
-			// \PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
 
 			$result->addValue( [ $this->getModuleName() ], 'result-action', 'delete' );
-			$result->addValue( [ $this->getModuleName() ], 'deleted-properties', array_keys( $update_properties ) );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
+			$result->addValue( [ $this->getModuleName() ], 'deleted-properties', array_keys( $update_items ) );
 			return true;
 		}
 
@@ -83,6 +93,17 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 
 		// rename
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
+			$update_items[$previousLabel] = $label;
+
+			if ( empty( $params['confirmJobExecution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
+
 			$title_from = Title::makeTitleSafe( NS_CATEGORY, $previousLabel );
 			$title_to = $propertyTitle;
 			$move_result = \PageProperties::movePage( $user, $title_from, $title_to );
@@ -98,11 +119,10 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 				return true;
 			}
 
-			$update_properties[$previousLabel] = $label;
-
-			// \PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
 
 			$result->addValue( [ $this->getModuleName() ], 'label', $label );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
 			$result->addValue( [ $this->getModuleName() ], 'previous-label', $previousLabel );
 			$resultAction = 'rename';
 		}
@@ -158,6 +178,17 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 	}
 
 	/**
+	 * @param array $arr
+	 * @param bool|null $evaluate
+	 * @return int
+	 */
+	private function createJobs( $arr, $evaluate = false ) {
+		$user = $this->getUser();
+		$jobs = \PageProperties::updateFormsJobs( $user, $arr, 'category' );
+		return ( $evaluate ? $jobs : \PageProperties::pushJobs( $jobs ) );
+	}
+
+	/**
 	 * @see includes/htmlform/HTMLForm.php
 	 * @param string $value
 	 * @return Message
@@ -180,6 +211,10 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 				ApiBase::PARAM_REQUIRED => true
 			],
 			'previousLabel' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false
+			],
+			'confirmJobExecution' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			]

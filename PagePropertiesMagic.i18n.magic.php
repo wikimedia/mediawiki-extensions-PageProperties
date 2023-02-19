@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -30,4 +30,6 @@ $magicWords = [];
 
 $magicWords['en'] = [
 	'pageproperties' => [ 0, 'pageproperties' ],
+	'pagepropertiesform' => [ 0, 'pagepropertiesform' ],
+	'pagepropertiesformbutton' => [ 0, 'pagepropertiesformbutton' ],
 ];

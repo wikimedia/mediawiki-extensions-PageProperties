@@ -21,6 +21,7 @@
 
 // eslint-disable-next-line no-unused-vars
 const ImportProperties = ( function () {
+	var Config;
 	var Model;
 	var frameA;
 	var frameB;
@@ -49,8 +50,6 @@ const ImportProperties = ( function () {
 	var RateCallApiPreview = 500;
 	var ThresholdCallApi = 100;
 	var RateCallApi = 20;
-	var MaxPhpUploadSize;
-	var MaxMwUploadSize;
 	// var WgMaxArticleSize;
 	var FieldMaxSize = 1000;
 	var WindowManager;
@@ -514,8 +513,9 @@ const ImportProperties = ( function () {
 			format: 'json'
 		};
 
-		if ( new Blob( [ payload.file ] ).size > Math.min( MaxPhpUploadSize, MaxMwUploadSize ) ) {
-			reject( mw.msg( 'pageproperties-jsmodule-import-file-upload-max-size', PagePropertiesFunctions.formatBytes( Math.min( MaxPhpUploadSize, MaxMwUploadSize ) ) ) );
+		if ( new Blob( [ payload.file ] ).size >
+			Math.min( Config.maxPhpUploadSize, Config.maxMwUploadSize ) ) {
+			reject( mw.msg( 'pageproperties-jsmodule-import-file-upload-max-size', PagePropertiesFunctions.formatBytes( Math.min( Config.maxPhpUploadSize, Config.maxMwUploadSize ) ) ) );
 		}
 
 		// *** we use a polyfill
@@ -1220,13 +1220,11 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 	}
 
 	// , wgMaxArticleSize
-	function initialize( semanticProperties, windowManager, windowManagerAlert,
-		maxPhpUploadSize, maxMwUploadSize ) {
+	function initialize( config, semanticProperties, windowManager, windowManagerAlert ) {
+		Config = config;
 		SemanticProperties = semanticProperties;
 		WindowManager = windowManager;
 		WindowManagerAlert = windowManagerAlert;
-		MaxPhpUploadSize = maxPhpUploadSize;
-		MaxMwUploadSize = maxMwUploadSize;
 		// WgMaxArticleSize = wgMaxArticleSize;
 
 		Model = {};

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This file is part of the MediaWiki extension PageProperties.
  *
@@ -129,6 +128,7 @@ class PagePropertiesApiImport extends ApiBase {
 		// should persist during subsequent calls of the same
 		// process !! use $_SESSION[] with the process id as key
 
+		// @TODO use standard Mediawiki's sessions interface
 		if ( empty( $_SESSION['pageproperties-import-data'] ) ||
 			$_SESSION['pageproperties-import-data']['process-id'] !== $config['processId'] ) {
 
@@ -315,7 +315,7 @@ class PagePropertiesApiImport extends ApiBase {
 			if ( !empty( $properties ) ) {
 				$contents[] = [
 					'role' => SLOT_ROLE_PAGEPROPERTIES,
-					'model' => 'json',
+					'model' => CONTENT_MODEL_PAGEPROPERTIES_SEMANTIC,
 					'text' => json_encode( $properties )
 				];
 			}

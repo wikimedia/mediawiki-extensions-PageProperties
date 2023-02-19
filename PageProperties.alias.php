@@ -13,5 +13,6 @@ $specialPageAliases = [];
 $specialPageAliases['en'] = [
 	'PageProperties' => [ 'PageProperties' ],
 	'ManageProperties' => [ 'ManageProperties' ],
-	'EditProperties' => [ 'EditProperties' ]
+	'EditSemantic' => [ 'EditSemantic' ],
+	'PagePropertiesSubmit' => [ 'PagePropertiesSubmit' ]
 ];

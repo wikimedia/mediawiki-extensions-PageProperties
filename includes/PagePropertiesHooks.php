@@ -18,15 +18,15 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
 use MediaWiki\MediaWikiServices;
 
 define( 'SLOT_ROLE_PAGEPROPERTIES', 'pageproperties' );
-define( 'CONTENT_MODEL_PAGEPROPERTIES', 'json' );
 define( 'CONTENT_MODEL_PAGEPROPERTIES_HTML', 'html' );
+define( 'CONTENT_MODEL_PAGEPROPERTIES_SEMANTIC', 'pageproperties-semantic' );
 
 class PagePropertiesHooks {
 	/**
@@ -66,7 +66,7 @@ class PagePropertiesHooks {
 	public static function onMediaWikiServices( $services ) {
 		$services->addServiceManipulator( 'SlotRoleRegistry', static function ( \MediaWiki\Revision\SlotRoleRegistry $registry ) {
 			if ( !$registry->isDefinedRole( SLOT_ROLE_PAGEPROPERTIES ) ) {
-				$registry->defineRoleWithModel( SLOT_ROLE_PAGEPROPERTIES, CONTENT_MODEL_PAGEPROPERTIES, [
+				$registry->defineRoleWithModel( SLOT_ROLE_PAGEPROPERTIES, CONTENT_MODEL_PAGEPROPERTIES_SEMANTIC, [
 					"display" => "none",
 					"region" => "center",
 					"placement" => "append"
@@ -82,6 +82,8 @@ class PagePropertiesHooks {
 	 */
 	public static function onParserFirstCallInit( Parser $parser ) {
 		$parser->setFunctionHook( 'pageproperties', [ \PageProperties::class, 'parserFunctionPageproperties' ] );
+		$parser->setFunctionHook( 'pagepropertiesform', [ \PageProperties::class, 'parserFunctionPagepropertiesForm' ] );
+		$parser->setFunctionHook( 'pagepropertiesformbutton', [ \PageProperties::class, 'parserFunctionPagepropertiesFormButton' ] );
 	}
 
 	/**
@@ -106,6 +108,14 @@ class PagePropertiesHooks {
 				'alias' => 'pageproperties-property-allows-multiple-values',
 				'viewable' => true,
 				'annotable' => true
+			],
+			'__pageproperties_semantic_form' => [
+				'label' => 'Semantic form',
+				'type' => '_txt',
+				// MW message key
+				'alias' => 'pageproperties-semantic-form',
+				'viewable' => false,
+				'annotable' => false
 			]
 		];
 
@@ -217,7 +227,9 @@ class PagePropertiesHooks {
 
 		if ( !empty( $page_properties['page-properties']['categories'] ) ) {
 			foreach ( $page_properties['page-properties']['categories'] as $category ) {
-				$parserOutput->addCategory( str_replace( ' ', '_', $category ), ( version_compare( MW_VERSION, '1.38', '<' ) ? $parserOutput->getProperty( 'defaultsort' ) : null ) );
+				if ( !empty( $category ) ) {
+					$parserOutput->addCategory( str_replace( ' ', '_', $category ), ( version_compare( MW_VERSION, '1.38', '<' ) ? $parserOutput->getProperty( 'defaultsort' ) : null ) );
+				}
 			}
 		}
 
@@ -335,6 +347,20 @@ class PagePropertiesHooks {
 	 */
 	public static function onOutputPageParserOutput( OutputPage $out, ParserOutput $parserOutput ) {
 		$parserOutput->addWrapperDivClass( 'pageproperties-content-model-' . $out->getTitle()->getContentModel() );
+
+		if ( $parserOutput->getFlag( 'pagepropertiesform' ) ) {
+			$pageForms = $parserOutput->getExtensionData( 'pagepropertiesforms' );
+
+			\PageProperties::addJsConfigVars( $out, [
+				'pageForms' => $pageForms,
+				'config' => [
+					'context' => 'parserfunction',
+					// 'loadedData' => [],
+				]
+			] );
+
+			$out->addModules( 'ext.PageProperties.EditSemantic' );
+		}
 	}
 
 	/**
@@ -349,14 +375,16 @@ class PagePropertiesHooks {
 		if ( !defined( 'SMW_VERSION' ) ) {
 			return;
 		}
+
+		$specialpage_title = SpecialPage::getTitleFor( 'EditSemantic' );
+		$bar[ wfMessage( 'pageproperties' )->text() ][] = [
+			'text'   => wfMessage( 'pageproperties-new-article' )->text(),
+			'class'   => "pageproperties-new-article",
+			'href'   => $specialpage_title->getLocalURL()
+		];
+
 		$user = $skin->getUser();
-		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
-			$specialpage_title = SpecialPage::getTitleFor( 'ManageProperties' );
-			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
-				'text'   => wfMessage( 'manageproperties-label' )->text(),
-				'href'   => $specialpage_title->getLocalURL()
-			];
-		}
+
 		$title = $skin->getTitle();
 		$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
 		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
@@ -372,8 +400,17 @@ class PagePropertiesHooks {
 				];
 			}
 		}
+
+		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
+			$specialpage_title = SpecialPage::getTitleFor( 'ManageProperties' );
+			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
+				'text'   => wfMessage( 'manageproperties-label' )->text(),
+				'href'   => $specialpage_title->getLocalURL()
+			];
+		}
+
 		$forms = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
-		$specialpage_title = SpecialPage::getTitleFor( 'EditProperties' );
+		$specialpage_title = SpecialPage::getTitleFor( 'EditSemantic' );
 		// $specialpage_title = SpecialPage::getTitleFor( 'PagePropertiesFormEdit' );
 		foreach ( $forms as $value ) {
 			$bar[ wfMessage( 'pageproperties-forms-label' )->text() ][] = [
@@ -563,7 +600,8 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onLinkerMakeExternalLink( &$url, &$text, &$link, &$attribs, $linktype ) {
-		if ( !array_key_exists( 'target', $attribs ) ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesOpenExternalLinksInNewTab'] )
+			&& !array_key_exists( 'target', $attribs ) ) {
 			$attribs['target'] = '_blank';
 		}
 	}

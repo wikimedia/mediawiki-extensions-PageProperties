@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -40,8 +40,8 @@ class PagePropertiesEditAction extends Action {
 		$output = $this->getOutput();
 		$title = $article->getTitle();
 
-		$specialEditProperties = new SpecialEditProperties();
-		$specialEditProperties->execute( $title->getFullText() );
+		$specialEditSemantic = new SpecialEditSemantic();
+		$specialEditSemantic->execute( $title->getFullText() );
 
 		return false;
 	}

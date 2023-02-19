@@ -22,7 +22,7 @@
 ( function () {
 	// eslint-disable-next-line no-implicit-globals
 	PagePropertiesintlTelInput = function ( config ) {
-		var that = this;
+		var self = this;
 		this.$element = $( '<input>' ).attr( {
 			type: 'tel',
 			name: config.name,
@@ -34,7 +34,7 @@
 		};
 
 		this.getValue = function () {
-			return that.iti.getNumber( intlTelInputUtils.numberFormat.INTERNATIONAL );
+			return self.iti.getNumber( intlTelInputUtils.numberFormat.INTERNATIONAL );
 		};
 
 		this.getInputId = function () {
@@ -54,7 +54,7 @@
 		};
 
 		setTimeout( function () {
-			that.iti = window.intlTelInput( $( "input[name='" + config.name + "']" ).get( 0 ), {
+			self.iti = window.intlTelInput( $( "input[name='" + config.name + "']" ).get( 0 ), {
 				utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@16.0.3/build/js/utils.js',
 				initialCountry: 'auto',
 				geoIpLookup: function ( callback ) {
@@ -64,7 +64,7 @@
 					} );
 				}
 			} );
-			// that.iti.setNumber(config.value);
+			// self.iti.setNumber(config.value);
 			$( "input[name='" + config.name + "']" ).closest( '.iti' ).width( '100%' ).wrap( "<div class='oo-ui-widget oo-ui-widget-enabled oo-ui-inputWidget oo-ui-textInputWidget oo-ui-textInputWidget-type-text'></div>" );
 
 		}, 10 );

@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -23,11 +23,11 @@
 
 // eslint-disable-next-line no-unused-vars
 const PagePropertiesForms = ( function () {
+	var PageProperties;
+	var Config;
 	var Model = {};
 	var SelectedForm;
-
 	var Forms;
-	// var ImportedVocabulariesWidgetCategories;
 	var DataTable;
 	var DataTableB;
 	var DialogName = 'dialogForms';
@@ -38,9 +38,7 @@ const PagePropertiesForms = ( function () {
 	var WindowManager;
 	var WindowManagerSearch;
 	var SelectedProperty;
-	var ManagePropertiesSpecialPage;
 	var WindowManagerAlert;
-	var ContentModels;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -51,10 +49,11 @@ const PagePropertiesForms = ( function () {
 			if ( property in Model ) {
 				return 'getValue' in Model[ property ] ?
 					Model[ property ].getValue() :
-					Object.keys( Model[ property ] ).map( function ( k ) {
-						return Model[ property ][ k ];
-					} ).map( ( x ) => x.getValue() );
-
+					Object.keys( Model[ property ] )
+						.map( function ( k ) {
+							return Model[ property ][ k ];
+						} )
+						.map( ( x ) => x.getValue() );
 			}
 
 			if ( property in SelectedForm ) {
@@ -68,9 +67,11 @@ const PagePropertiesForms = ( function () {
 		if ( property in Model.fields && field in Model.fields[ property ] ) {
 			return 'getValue' in Model.fields[ property ][ field ] ?
 				Model.fields[ property ][ field ].getValue() :
-				Object.keys( Model.fields[ property ][ field ] ).map( function ( k ) {
-					return Model.fields[ property ][ field ][ k ];
-				} ).map( ( x ) => x.getValue() );
+				Object.keys( Model.fields[ property ][ field ] )
+					.map( function ( k ) {
+						return Model.fields[ property ][ field ][ k ];
+					} )
+					.map( ( x ) => x.getValue() );
 		}
 
 		if (
@@ -95,7 +96,15 @@ const PagePropertiesForms = ( function () {
 			'preferred-input',
 			'multiple',
 			'on-create-only',
-			'value-formula'
+			'value-formula',
+			'options-values',
+			'options-wikilist',
+			'options-askquery',
+			'askquery-printouts',
+			'askquery-subject',
+			'options-formula',
+			'options-limit',
+			'alternate-input'
 		] ) {
 			switch ( field ) {
 				case 'help-message':
@@ -127,6 +136,19 @@ const PagePropertiesForms = ( function () {
 			}
 
 			fields[ property ][ field ] = getPropertyValue( property, field );
+
+			// clear unused options (necessary to determine the used method)
+			if (
+				inArray( field, [
+					'options-values',
+					'options-wikilist',
+					'options-askquery'
+				] ) &&
+				property in Model.fields &&
+				Model.fields[ property ].selectOptionsFrom.getValue() !== field
+			) {
+				fields[ property ][ field ] = '';
+			}
 		}
 
 		return fields;
@@ -156,7 +178,7 @@ const PagePropertiesForms = ( function () {
 				break;
 		}
 
-		if ( !ManagePropertiesSpecialPage ) {
+		if ( Config.context !== 'ManageProperties' ) {
 			PageProperties.updateForms( Forms );
 		}
 
@@ -254,6 +276,14 @@ const PagePropertiesForms = ( function () {
 
 		Model[ 'freetext-input' ] = displayFreeTextInputInput;
 
+		var displayCategoriesInputValue = getPropertyValue( 'show-categories-input' );
+
+		var displayCategoriesInputInput = new OO.ui.ToggleSwitchWidget( {
+			value: displayCategoriesInputValue
+		} );
+
+		Model[ 'show-categories-input' ] = displayCategoriesInputInput;
+
 		var categories = getPropertyValue( 'categories' );
 		var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
 			// value: categories,
@@ -265,10 +295,22 @@ const PagePropertiesForms = ( function () {
 
 		Model.categories = categoriesInput;
 
+		var fieldCategoriesInput = new OO.ui.FieldLayout( categoriesInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
+			align: 'top',
+			help: mw.msg( 'pageproperties-jsmodule-forms-categories-help' ),
+			helpInline: true
+		} );
+
+		// eslint-disable-next-line no-unused-vars
+		displayCategoriesInputInput.on( 'change', function ( value ) {
+			// fieldCategoriesInput.toggle( value );
+		} );
+
 		var contentModelValue = getPropertyValue( 'content-model' );
 
 		var contentModelsInput = new OO.ui.DropdownInputWidget( {
-			options: ManageProperties.createInputOptions( ContentModels ),
+			options: ManageProperties.createInputOptions( Config.contentModels ),
 			$overlay: this.$overlay,
 			value: contentModelValue || 'wikitext'
 		} );
@@ -307,12 +349,14 @@ const PagePropertiesForms = ( function () {
 			}),
 */
 
-			new OO.ui.FieldLayout( categoriesInput, {
-				label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
-				align: 'top',
-				help: mw.msg( 'pageproperties-jsmodule-forms-categories-help' ),
-				helpInline: true
+			new OO.ui.FieldLayout( displayCategoriesInputInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-displaycategories' ),
+				// help: mw.msg( 'pageproperties-jsmodule-manageproperties-multiple-fields-help' ),
+				helpInline: true,
+				align: 'top'
 			} ),
+
+			fieldCategoriesInput,
 
 			new OO.ui.FieldLayout( contentModelsInput, {
 				label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
@@ -331,6 +375,7 @@ const PagePropertiesForms = ( function () {
 		this.$element.append( this.content.$element );
 
 		fieldpagenameFormula.toggle( pageNameFormulaValue );
+		// fieldCategoriesInput.toggle( displayCategoriesInputValue );
 		// fieldPagenameRoot.toggle(!pageNameFormulaValue);
 	}
 	OO.inheritClass( PageOneLayout, OO.ui.PageLayout );
@@ -340,13 +385,37 @@ const PagePropertiesForms = ( function () {
 		);
 	};
 
+	function orderSelectedFormFields( fields ) {
+		if ( !$.fn.DataTable.isDataTable( '#pageproperties-forms-datatable-dialog' ) ) {
+			return fields;
+		}
+		var ret = {};
+		// eslint-disable-next-line no-unused-vars, array-callback-return
+		DataTableB.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+			var data = this.data();
+			var label = data[ 1 ];
+			ret[ label ] = fields[ label ];
+		} );
+
+		return ret;
+	}
+
 	function initializeDataTableB() {
 		PagePropertiesFunctions.destroyDataTable(
 			'pageproperties-forms-datatable-dialog'
 		);
+
 		var data = [];
 
+		var n = 0;
 		for ( var i in SelectedForm.fields ) {
+			// it has been deleted after rendering
+			// @TODO if a property has been renamed or
+			// deleted refresh forms table as well
+			if ( !( i in SemanticProperties ) ) {
+				continue;
+			}
+
 			var preferredInput = '';
 			if ( SelectedForm.fields[ i ][ 'preferred-input' ] ) {
 				preferredInput = SelectedForm.fields[ i ][ 'preferred-input' ];
@@ -361,6 +430,7 @@ const PagePropertiesForms = ( function () {
 			}
 
 			data.push( [
+				n,
 				// name
 				i,
 				// type
@@ -378,6 +448,7 @@ const PagePropertiesForms = ( function () {
 				),
 				''
 			] );
+			n++;
 		}
 
 		if ( !data.length ) {
@@ -389,23 +460,31 @@ const PagePropertiesForms = ( function () {
 			// pageLength: 20,
 			// https://datatables.net/reference/option/dom
 			dom: '<"pageproperties-datatable-left"f><"pageproperties-datatable-right"l>rtip',
-			ordering: false,
+
+			// ***Attention!! this conflicts with "rowReorder"
+			// use instead an hidden column and set orderable to false
+			// for all visible columns
+			// ordering: false,
 			iDisplayLength: 100,
 			searching: false,
 			paging: false,
 			info: false,
 			rowReorder: {
-				update: false
+				// update: false,
+				// dataSrc: 0,
+				selector: 'td:not(:last-child)'
 			},
 			scrollX: true,
 			columnDefs: [
+				{ targets: 0, orderable: true, visible: false },
+				{ orderable: false, targets: '_all' },
 				{
-					targets: 4,
+					targets: 5,
 					// eslint-disable-next-line no-unused-vars
 					render: function ( data_, type, row, meta ) {
 						return (
 							'<span class="buttons-wrapper" data-property="' +
-							row[ 0 ] +
+							row[ 1 ] +
 							'"></span>'
 						);
 					}
@@ -433,7 +512,7 @@ const PagePropertiesForms = ( function () {
 
 				// @todo, uncomment if the other panels can be re-initialized
 				// without affecting the view
-				if ( ManagePropertiesSpecialPage ) {
+				if ( Config.context === 'ManageProperties' ) {
 					var buttonWidgetSettings = new OO.ui.ButtonWidget( {
 						icon: 'settings',
 						flags: [ 'progressive' ]
@@ -459,7 +538,7 @@ const PagePropertiesForms = ( function () {
 					openEditFieldDialog();
 				} );
 
-				if ( ManagePropertiesSpecialPage ) {
+				if ( Config.context === 'ManageProperties' ) {
 					buttonWidgetSettings.on( 'click', function () {
 						ManageProperties.openDialog( label );
 					} );
@@ -471,7 +550,7 @@ const PagePropertiesForms = ( function () {
 					// buttonWidgetDelete.$element
 				);
 
-				if ( ManagePropertiesSpecialPage ) {
+				if ( Config.context === 'ManageProperties' ) {
 					$( this ).append( buttonWidgetSettings.$element );
 				}
 			}
@@ -616,7 +695,6 @@ const PagePropertiesForms = ( function () {
 		var dialog = this;
 
 		if ( action === 'save' ) {
-
 			// var items = dialog.searchWidgetResults.findSelectedItems();
 			// var selectedItems = items.map( ( x ) => x.data );
 
@@ -695,14 +773,24 @@ const PagePropertiesForms = ( function () {
 		} );
 
 		deleteButton.on( 'click', function () {
-			if ( PagePropertiesFunctions.getNestedProp( [ SelectedProperty.label,
-				config.field, config.index ], Model.fields ) ) {
+			if (
+				PagePropertiesFunctions.getNestedProp(
+					[ SelectedProperty.label, config.field, config.index ],
+					Model.fields
+				)
+			) {
 				delete Model.fields[ SelectedProperty.label ][ config.field ][ config.index ];
 			}
-			if ( PagePropertiesFunctions.getNestedProp( [ SelectedProperty.label,
-				config.field, config.index ], SelectedForm.fields ) ) {
-				// eslint-disable-next-line max-len
-				delete SelectedForm.fields[ SelectedProperty.label ][ config.field ][ config.index ];
+			if (
+				PagePropertiesFunctions.getNestedProp(
+					[ SelectedProperty.label, config.field, config.index ],
+					SelectedForm.fields
+				)
+			) {
+
+				delete SelectedForm.fields[ SelectedProperty.label ][ config.field ][
+					config.index
+				];
 			}
 		} );
 
@@ -812,9 +900,9 @@ const PagePropertiesForms = ( function () {
 	OO.inheritClass( ProcessDialogEditField, OO.ui.ProcessDialog );
 
 	ProcessDialogEditField.static.name = DialogEditFieldName;
-	ProcessDialogEditField.static.title = mw.msg(
-		'pageproperties-jsmodule-forms-definefield'
-	);
+	// ProcessDialogEditField.static.title = mw.msg(
+	// 	"pageproperties-jsmodule-forms-definefield"
+	// );
 	ProcessDialogEditField.static.actions = [
 		/*
 		{
@@ -854,11 +942,11 @@ const PagePropertiesForms = ( function () {
 		Model.fields[ SelectedProperty.label ][ 'on-create-only' ] =
 			toggleInputOnCreate;
 
-		// var valueFormulaInput = new OO.ui.TextInputWidget( {
-		// 	value: getPropertyValue( null, 'value-formula' )
-		// } );
+		var valueFormulaInput = new OO.ui.TextInputWidget( {
+			value: getPropertyValue( null, 'value-formula' )
+		} );
 
-		// Model.fields[ SelectedProperty.label ][ 'value-formula' ] = valueFormulaInput;
+		Model.fields[ SelectedProperty.label ][ 'value-formula' ] = valueFormulaInput;
 
 		let optionsList = new ListWidget();
 
@@ -945,14 +1033,15 @@ const PagePropertiesForms = ( function () {
 
 		var availableInputs = new OO.ui.DropdownInputWidget( {
 			options: ManageProperties.createInputOptions(
-				ManageProperties.getAvailableInputs( SelectedProperty.type ),
+				ManageProperties.getAvailableInputs( SelectedProperty.type ).concat(
+					'OO.ui.HiddenInputWidget'
+				),
 				{
 					key: 'value'
 				}
 			),
-			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
-
-			$overlay: this.$overlay,
+			// @see https://www.mediawiki.org/wiki/OOUI/Concepts#Overlays
+			$overlay: true,
 			value: preferredInputValue
 		} );
 
@@ -986,8 +1075,193 @@ const PagePropertiesForms = ( function () {
 		Model.fields[ SelectedProperty.label ].selectAvailableInputs =
 			selectAvailableInputs;
 
-		selectAvailableInputs.on( 'change', function ( value ) {
-			fieldAvailableInputs.toggle( value === 'override' );
+		// only for
+
+		// ManageProperties.optionsInputs
+
+		/*
+
+		'OO.ui.DropdownInputWidget',
+		'OO.ui.ComboBoxInputWidget',
+		'OO.ui.MenuTagMultiselectWidget',
+		'OO.ui.RadioSelectInputWidget',
+		'OO.ui.CheckboxMultiselectInputWidget'
+*/
+
+		var optionsAsdefinedValue = getPropertyValue( null, 'options-values' ) || [];
+
+		var wikilistValue = getPropertyValue( null, 'options-wikilist' );
+		var askqueryValue = getPropertyValue( null, 'options-askquery' );
+
+		var selectOptionsFrom = new OO.ui.RadioSelectInputWidget( {
+			options: [
+				{
+					data: 'property',
+					label: mw.msg( 'pageproperties-jsmodule-forms-optionsfrom-property' )
+				},
+				{
+					data: 'options-values',
+					label: mw.msg(
+						'pageproperties-jsmodule-forms-optionsfrom-optionsvalues'
+					)
+				},
+				{
+					data: 'options-wikilist',
+					label: mw.msg(
+						'pageproperties-jsmodule-forms-optionsfrom-optionswikilist'
+					)
+				},
+				{
+					data: 'options-askquery',
+					label: mw.msg(
+						'pageproperties-jsmodule-forms-optionsfrom-optionsaskquery'
+					)
+				}
+			],
+			value: optionsAsdefinedValue.length ?
+				'options-values' :
+				wikilistValue ?
+					'options-wikilist' :
+					askqueryValue ?
+						'options-askquery' :
+						'property'
+		} );
+
+		// used to clear "options-values", "options-wikilist", "options-askquery"
+		Model.fields[ SelectedProperty.label ].selectOptionsFrom = selectOptionsFrom;
+
+		var fieldSelectOptionsFrom = new OO.ui.FieldLayout( selectOptionsFrom, {
+			label: new OO.ui.HtmlSnippet(
+				mw.msg( 'pageproperties-jsmodule-forms-field-options-from' )
+			),
+			align: 'top'
+			// help: ""
+			// helpInline: true,
+		} );
+
+		var optionsAsdefinedInput = new OO.ui.TagMultiselectWidget( {
+			value: optionsAsdefinedValue,
+			allowArbitrary: true,
+			orientation: 'vertical'
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'options-values' ] =
+			optionsAsdefinedInput;
+
+		var fieldOptionsAsdefined = new OO.ui.FieldLayout( optionsAsdefinedInput, {
+			label: '',
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-optionsasdefined' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var wikilistInput = new mw.widgets.TitleInputWidget( {
+			value: wikilistValue
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'options-wikilist' ] = wikilistInput;
+
+		var fieldWikilist = new OO.ui.FieldLayout( wikilistInput, {
+			label: '',
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-wikilist' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var askqueryInput = new OO.ui.TextInputWidget( {
+			value: askqueryValue
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'options-askquery' ] = askqueryInput;
+
+		var fieldAskquery = new OO.ui.FieldLayout( askqueryInput, {
+			label: '',
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-askquery' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var printoutsInputValue =
+			getPropertyValue( null, 'askquery-printouts' ) || [];
+
+		var printoutsInput = new mw.widgets.TitlesMultiselectWidget( {
+			selected: printoutsInputValue,
+
+			// https://www.semantic-mediawiki.org/wiki/Help:Namespaces
+			namespace: 102
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'askquery-printouts' ] = printoutsInput;
+
+		var fieldPrintouts = new OO.ui.FieldLayout( printoutsInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-printouts' ),
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-printouts-help' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var querysubjectInput = new OO.ui.ToggleSwitchWidget( {
+			value: !!getPropertyValue( null, 'askquery-subject' )
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'askquery-subject' ] =
+			querysubjectInput;
+
+		var fieldQuerysubject = new OO.ui.FieldLayout( querysubjectInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-querysubject' ),
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-querysubject-help' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var optionFormulaInput = new OO.ui.TextInputWidget( {
+			value: getPropertyValue( null, 'options-formula' )
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'options-formula' ] = optionFormulaInput;
+
+		var fieldOptionFormula = new OO.ui.FieldLayout( optionFormulaInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-optionformula' ),
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-optionformula-help' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var optionslimitInputValue = getPropertyValue( null, 'options-limit' );
+		var optionslimitInput = new OO.ui.NumberInputWidget( {
+			value: optionslimitInputValue || 100
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'options-limit' ] = optionslimitInput;
+
+		var fieldOptionslimit = new OO.ui.FieldLayout( optionslimitInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-optionslimit' ),
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-optionslimit-help' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		var alternateInput = new OO.ui.DropdownInputWidget( {
+			options: ManageProperties.createInputOptions( {
+				autocomplete: mw.msg(
+					'pageproperties-jsmodule-forms-alternateinput-autocomplete'
+				),
+				'infinite-scroll': mw.msg(
+					'pageproperties-jsmodule-forms-alternateinput-infinite-scroll'
+				)
+			} ),
+			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
+			$overlay: true,
+			value: getPropertyValue( 'alternate-input' )
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'alternate-input' ] = alternateInput;
+
+		var fieldAlternateInput = new OO.ui.FieldLayout( alternateInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-alternateinput' ),
+			align: 'top',
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-alternateinput-help' ),
+			helpInline: true
 		} );
 
 		var selectMultipleValueValue = getPropertyValue( null, 'multiple' );
@@ -999,7 +1273,7 @@ const PagePropertiesForms = ( function () {
 		Model.fields[ SelectedProperty.label ].multiple = multipleValueInput;
 
 		var fieldMultipleValue = new OO.ui.FieldLayout( multipleValueInput, {
-			label: mw.msg( 'pageproperties-jsmodule-manageproperties-multiple-fields' ),
+			label: '',
 			help: mw.msg(
 				'pageproperties-jsmodule-manageproperties-multiple-fields-help'
 			),
@@ -1029,8 +1303,39 @@ const PagePropertiesForms = ( function () {
 		Model.fields[ SelectedProperty.label ].selectMultipleValueInput =
 			selectMultipleValue;
 
+		var fieldSelectMultipleValue = new OO.ui.FieldLayout( selectMultipleValue, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-multiplevalue' ),
+			helpInline: true,
+			align: 'top'
+		} );
+
+		fieldSelectMultipleValue.toggle(
+			!ManageProperties.isMultiselect( preferredInputValue )
+		);
+
 		selectMultipleValue.on( 'change', function ( value ) {
 			fieldMultipleValue.toggle( value === 'override' );
+		} );
+
+		function onToggleHiddenInput( selected ) {
+			toggleInputRequired.setDisabled( selected );
+			toggleInputOnCreate.setDisabled( selected );
+			selectHelpInput.setDisabled( selected );
+			fieldOptionsList.toggle( !selected );
+			addOption.toggle( !selected );
+			selectMultipleValue.setDisabled( selected );
+			fieldMultipleValue.toggle(
+				!ManageProperties.isMultiselect( availableInputs.getValue() ) && !selected
+			);
+		}
+
+		selectAvailableInputs.on( 'change', function ( value ) {
+			fieldAvailableInputs.toggle( value === 'override' );
+			onToggleHiddenInput(
+				value === 'fromproperty' ?
+					false :
+					availableInputs.getValue() === 'OO.ui.HiddenInputWidget'
+			);
 		} );
 
 		fieldset.addItems( [
@@ -1059,12 +1364,17 @@ const PagePropertiesForms = ( function () {
 
 			fieldAvailableInputs,
 
-			new OO.ui.FieldLayout( selectMultipleValue, {
-				label: mw.msg( 'pageproperties-jsmodule-forms-field-multiplevalue' ),
-				helpInline: true,
-				align: 'top'
-			} ),
+			fieldSelectOptionsFrom,
+			fieldOptionsAsdefined,
+			fieldWikilist,
+			fieldAskquery,
+			fieldPrintouts,
+			fieldQuerysubject,
+			fieldOptionFormula,
+			fieldOptionslimit,
+			fieldAlternateInput,
 
+			fieldSelectMultipleValue,
 			fieldMultipleValue,
 
 			new OO.ui.FieldLayout( toggleInputOnCreate, {
@@ -1072,15 +1382,15 @@ const PagePropertiesForms = ( function () {
 				help: mw.msg( 'pageproperties-jsmodule-forms-field-oncreateonly-help' ),
 				helpInline: true,
 				align: 'top'
-			// eslint-disable-next-line comma-dangle
+
 			} ),
 
-			// new OO.ui.FieldLayout( valueFormulaInput, {
-			// 	label: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue' ),
-			// 	help: mw.msg( 'pageproperties-jsmodule-forms-field-altervalue-help' ),
-			// 	helpInline: true,
-			// 	align: 'top'
-			// } )
+			new OO.ui.FieldLayout( valueFormulaInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-field-valueformula' ),
+				help: mw.msg( 'pageproperties-jsmodule-forms-field-valueformula-help' ),
+				helpInline: true,
+				align: 'top'
+			} )
 		] );
 
 		var frame = new OO.ui.PanelLayout( {
@@ -1096,7 +1406,71 @@ const PagePropertiesForms = ( function () {
 		fieldOptionsList.toggle( helpMessages.length );
 		addOption.toggle( selectHelpInput.getValue() === 'override' );
 		fieldAvailableInputs.toggle( preferredInputValue );
-		fieldMultipleValue.toggle( selectMultipleValueValue !== '' );
+		fieldMultipleValue.toggle(
+			!ManageProperties.isMultiselect( preferredInputValue ) &&
+				selectMultipleValueValue !== ''
+		);
+
+		function onSelectAvailableInputs() {
+			var availableInputsValue = availableInputs.getValue();
+			var selectOptionsFromValue = selectOptionsFrom.getValue();
+
+			fieldSelectOptionsFrom.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs )
+			);
+			fieldOptionsAsdefined.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					( !selectOptionsFromValue ||
+						selectOptionsFromValue === 'options-values' )
+			);
+			fieldWikilist.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					selectOptionsFromValue === 'options-wikilist'
+			);
+			fieldAskquery.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					selectOptionsFromValue === 'options-askquery'
+			);
+			fieldPrintouts.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					selectOptionsFromValue === 'options-askquery'
+			);
+			fieldQuerysubject.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					selectOptionsFromValue === 'options-askquery'
+			);
+			fieldOptionFormula.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs )
+			);
+			fieldOptionslimit.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs )
+			);
+			fieldAlternateInput.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs )
+			);
+		}
+
+		selectOptionsFrom.on( 'change', function ( value ) {
+			fieldOptionsAsdefined.toggle( value === 'options-values' );
+			fieldWikilist.toggle( value === 'options-wikilist' );
+			fieldAskquery.toggle( value === 'options-askquery' );
+			fieldPrintouts.toggle( value === 'options-askquery' );
+			fieldQuerysubject.toggle( value === 'options-askquery' );
+		} );
+
+		availableInputs.on( 'change', function ( value ) {
+			onToggleHiddenInput( value === 'OO.ui.HiddenInputWidget' );
+
+			fieldSelectMultipleValue.toggle( !ManageProperties.isMultiselect( value ) );
+
+			onSelectAvailableInputs();
+		} );
+
+		if ( preferredInputValue === 'OO.ui.HiddenInputWidget' ) {
+			onToggleHiddenInput( true );
+		}
+
+		onSelectAvailableInputs();
 
 		setTimeout( function () {
 			PagePropertiesFunctions.removeNbspFromLayoutHeader(
@@ -1116,6 +1490,8 @@ const PagePropertiesForms = ( function () {
 		}
 
 		SelectedProperty = {};
+
+		SelectedForm.fields = orderSelectedFormFields( SelectedForm.fields );
 
 		initializeDataTableB();
 
@@ -1153,7 +1529,17 @@ const PagePropertiesForms = ( function () {
 
 		WindowManagerSearch.addWindows( [ processDialogEditField ] );
 
-		WindowManagerSearch.openWindow( processDialogEditField );
+		WindowManagerSearch.openWindow( processDialogEditField, {
+			title:
+				mw.msg(
+					// The following messages are used here:
+					// * pageproperties-jsmodule-manageproperties-define-property
+					// * pageproperties-jsmodule-manageproperties-define-property - [name]
+					'pageproperties-jsmodule-forms-definefield'
+				) +
+				' - ' +
+				SelectedProperty.label
+		} );
 	}
 
 	function ProcessDialog( config ) {
@@ -1162,9 +1548,9 @@ const PagePropertiesForms = ( function () {
 	OO.inheritClass( ProcessDialog, OO.ui.ProcessDialog );
 
 	ProcessDialog.static.name = DialogName;
-	ProcessDialog.static.title = mw.msg(
-		'pageproperties-jsmodule-forms-defineform'
-	);
+	// ProcessDialog.static.title = mw.msg(
+	// 	"pageproperties-jsmodule-forms-defineform"
+	// );
 	ProcessDialog.static.actions = [
 		{
 			action: 'delete',
@@ -1258,7 +1644,8 @@ const PagePropertiesForms = ( function () {
 						}
 
 						if ( formFields.formName.trim() === '' ) {
-							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
+							PagePropertiesFunctions.OOUIAlert(
+								WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-forms-alert-formname' ),
 								{
 									size: 'medium'
@@ -1271,7 +1658,8 @@ const PagePropertiesForms = ( function () {
 						}
 
 						if ( !Object.keys( SelectedForm.fields ).length ) {
-							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
+							PagePropertiesFunctions.OOUIAlert(
+								WindowManagerAlert,
 								mw.msg( 'pageproperties-jsmodule-forms-alert-fields' ),
 								{
 									size: 'medium'
@@ -1283,62 +1671,91 @@ const PagePropertiesForms = ( function () {
 							);
 						}
 
-						// get ordered fields
-						if ( $.fn.DataTable.isDataTable( '#pageproperties-forms-datatable-dialog' ) ) {
-							// eslint-disable-next-line no-unused-vars, array-callback-return
-							DataTableB.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-								var data = this.data();
-								var label = data[ 0 ];
-								payload.fields[ label ] = SelectedForm.fields[ label ];
-							} );
-						} else {
-							payload.fields = SelectedForm.fields;
-						}
-
+						payload.fields = orderSelectedFormFields( SelectedForm.fields );
 						payload.formFields = formFields;
 
 					// eslint-disable no-fallthrough
 					case 'delete':
 						payload.formFields = JSON.stringify( payload.formFields );
 						payload.fields = JSON.stringify( payload.fields );
-						// console.log( 'payload', payload );
 
-						// eslint-disable-next-line compat/compat, no-unused-vars
-						return new Promise( ( resolve, reject ) => {
-							mw.loader.using( 'mediawiki.api', function () {
-								new mw.Api()
-									.postWithToken( 'csrf', payload )
-									.done( function ( res ) {
-										// console.log( 'res', res );
-										resolve();
-										if ( 'pageproperties-manageproperties-saveform' in res ) {
-											var data =
-												res[ 'pageproperties-manageproperties-saveform' ];
-											if ( data[ 'result-action' ] === 'error' ) {
+						var callApi = function ( postData, resolve, reject ) {
+							// console.log( 'postData', postData );
+							new mw.Api()
+								.postWithToken( 'csrf', postData )
+								.done( function ( res ) {
+									// console.log( 'res', res );
+									resolve();
+									if ( 'pageproperties-manageproperties-saveform' in res ) {
+										var data = res[ 'pageproperties-manageproperties-saveform' ];
+										if ( data[ 'result-action' ] === 'error' ) {
+											PagePropertiesFunctions.OOUIAlert(
+												WindowManagerAlert,
+												new OO.ui.HtmlSnippet( data.error ),
+												{
+													size: 'medium'
+												}
+											);
+										} else {
+											if ( 'jobs-count-warning' in data ) {
 												PagePropertiesFunctions.OOUIAlert(
 													WindowManagerAlert,
-													new OO.ui.HtmlSnippet( data.error ), {
-														size: 'medium'
-													} );
+													mw.msg(
+														'pageproperties-jsmodule-create-jobs-alert',
+														parseInt( data[ 'jobs-count-warning' ] )
+													),
+													{ size: 'medium' },
+													callApi,
+													[
+														// eslint-disable-next-line max-len
+														$.extend( payload, { confirmJobExecution: true } ),
+														resolve,
+														reject
+													]
+												);
 											} else {
+												if ( parseInt( data[ 'jobs-count' ] ) ) {
+													PagePropertiesFunctions.OOUIAlert(
+														WindowManagerAlert,
+														mw.msg(
+															'pageproperties-jsmodule-created-jobs',
+															parseInt( data[ 'jobs-count' ] )
+														),
+														{ size: 'medium' }
+													);
+												}
 												if ( updateData( data ) === true ) {
 													WindowManager.removeWindows( [ DialogName ] );
 												}
 											}
-										} else {
-											PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 										}
-									} )
-									.fail( function ( res ) {
-										// this will show a nice modal but is not necessary
-										// reject();
-										resolve();
-										var msg = res;
-										// The following messages are used here:
-										// * pageproperties-permissions-error
-										// * pageproperties-permissions-error-b
-										PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
-									} );
+									} else {
+										PagePropertiesFunctions.OOUIAlert(
+											WindowManagerAlert,
+											'unknown error',
+											{ size: 'medium' }
+										);
+									}
+								} )
+								.fail( function ( res ) {
+									// this will show a nice modal but is not necessary
+									// reject();
+									resolve();
+									var msg = res;
+									// The following messages are used here:
+									// * pageproperties-permissions-error
+									// * pageproperties-permissions-error-b
+									PagePropertiesFunctions.OOUIAlert(
+										WindowManagerAlert,
+										mw.msg( msg ),
+										{ size: 'medium' }
+									);
+								} );
+						};
+						// eslint-disable-next-line compat/compat
+						return new Promise( ( resolve, reject ) => {
+							mw.loader.using( 'mediawiki.api', function () {
+								callApi( payload, resolve, reject );
 							} );
 						} ); // promise
 				}
@@ -1389,7 +1806,15 @@ const PagePropertiesForms = ( function () {
 
 		WindowManager.addWindows( [ processDialog ] );
 
-		var instance = WindowManager.openWindow( processDialog );
+		var instance = WindowManager.openWindow( processDialog, {
+			title:
+				mw.msg(
+					// The following messages are used here:
+					// * pageproperties-jsmodule-forms-defineform
+					// * pageproperties-jsmodule-forms-defineform - [name]
+					'pageproperties-jsmodule-forms-defineform'
+				) + ( label ? ' - ' + label : '' )
+		} );
 
 		instance.opening.then( function () {
 			// initializeDataTableB();
@@ -1452,9 +1877,10 @@ const PagePropertiesForms = ( function () {
 
 		DataTable.on( 'click', 'tr', function () {
 			var index = DataTable.row( this ).index();
-			var label = data[ index ][ 0 ];
-
-			openDialog( label );
+			if ( index !== undefined ) {
+				var label = data[ index ][ 0 ];
+				openDialog( label );
+			}
 		} );
 	}
 
@@ -1546,26 +1972,26 @@ const PagePropertiesForms = ( function () {
 		SemanticProperties = semanticProperties;
 	}
 
-	function initialize(
-		managePropertiesSpecialPage,
+	function preInitialize(
+		config,
 		windowManager,
 		windowManagerSearch,
-		windowManagerAlert,
-		forms,
-		semanticProperties,
-		contentModels
+		windowManagerAlert
 	) {
+		Config = config;
+		WindowManager = windowManager;
+		WindowManagerSearch = windowManagerSearch;
+		WindowManagerAlert = windowManagerAlert;
+	}
+
+	function initialize( pageProperties, semanticProperties, forms ) {
 		if ( arguments.length ) {
-			ManagePropertiesSpecialPage = managePropertiesSpecialPage;
+			PageProperties = pageProperties;
 			SemanticProperties = semanticProperties;
-			WindowManager = windowManager;
-			WindowManagerAlert = windowManagerAlert;
 			Forms = forms;
-			WindowManagerSearch = windowManagerSearch;
-			ContentModels = contentModels;
 		}
 
-		if ( ManagePropertiesSpecialPage ) {
+		if ( Config.context === 'ManageProperties' ) {
 			$( '#forms-wrapper' ).empty();
 
 			var contentFrame = new OO.ui.PanelLayout( {
@@ -1598,6 +2024,7 @@ const PagePropertiesForms = ( function () {
 		initialize,
 		updateVariables,
 		createToolbarA,
-		initializeDataTable
+		initializeDataTable,
+		preInitialize
 	};
 }() );

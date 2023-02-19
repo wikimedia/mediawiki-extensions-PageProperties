@@ -50,16 +50,27 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		$dialogAction = $params['dialogAction'];
 		$previousLabel = $params['previousLabel'];
 		$errors = [];
-		$update_properties = [];
+		$update_items = [];
 		if ( $dialogAction === 'delete' ) {
+			$update_items[$previousLabel] = null;
+
+			if ( empty( $params['confirmJobExecution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
 			$title_ = Title::makeTitleSafe( SMW_NS_PROPERTY, $previousLabel );
 			$wikiPage_ = \PageProperties::getWikiPage( $title_ );
 			$reason = '';
 			\PageProperties::deletePage( $wikiPage_, $user, $reason );
-			$update_properties[$previousLabel] = null;
-			\PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
+
 			$result->addValue( [ $this->getModuleName() ], 'result-action', 'delete' );
-			$result->addValue( [ $this->getModuleName() ], 'deleted-properties', array_keys( $update_properties ) );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
+			$result->addValue( [ $this->getModuleName() ], 'deleted-properties', array_keys( $update_items ) );
 			return true;
 		}
 		$propertyTitle = Title::makeTitleSafe( SMW_NS_PROPERTY, $data['label'] );
@@ -68,6 +79,17 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		$resultAction = ( !empty( $previousLabel ) ? 'update' : 'create' );
 		// rename
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
+			$update_items[$previousLabel] = $label;
+
+			if ( empty( $params['confirmJobExecution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
+
 			$title_from = Title::makeTitleSafe( SMW_NS_PROPERTY, $previousLabel );
 			$title_to = $propertyTitle;
 			$move_result = \PageProperties::movePage( $user, $title_from, $title_to );
@@ -80,9 +102,10 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 				$result->addValue( [ $this->getModuleName() ], 'error', $error );
 				return true;
 			}
-			$update_properties[$previousLabel] = $label;
-			\PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
+
 			$result->addValue( [ $this->getModuleName() ], 'label', $label );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
 			$result->addValue( [ $this->getModuleName() ], 'previous-label', $previousLabel );
 			$resultAction = 'rename';
 		}
@@ -104,7 +127,12 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		\PageProperties::setPageProperties( $user, $propertyTitle, $pageproperties, $errors );
 		// get updated property
 		$property = SMW\DIProperty::newFromUserLabel( $label );
-		$ret = \PageProperties::getSemanticProperties( $property, $pageproperties['semantic-properties'] );
+
+		$properties = [
+			[ $property, $property->getKey(), $label, true ]
+		];
+		$ret = \PageProperties::formatSemanticProperties( $properties, array_filter( $data ) );
+
 		// @todo modify and use the ApiResult -> getResultData function
 		// or use the following ApiResult::META_BC_BOOLS = $bools;
 		array_walk_recursive( $ret, static function ( &$value ) {
@@ -112,7 +140,9 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 				$value = (int)$value;
 			}
 		} );
-		// see https://www.mediawiki.org/wiki/API:JSON_version_2
+
+		// allow properties that begin with an underscore
+		// @see https://www.mediawiki.org/wiki/API:JSON_version_2
 		if ( method_exists( $this->getResult(), 'setPreserveKeysList' ) ) {
 			foreach ( $ret as $key => $value ) {
 				$result->setPreserveKeysList( $ret[$key]['properties'], array_keys( $ret[$key]['properties'] ) );
@@ -120,6 +150,24 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		}
 		$result->addValue( [ $this->getModuleName() ], 'result-action', $resultAction );
 		$result->addValue( [ $this->getModuleName() ], 'semantic-properties', $ret );
+	}
+
+	/**
+	 * @param array $arr
+	 * @param bool|null $evaluate
+	 * @return int
+	 */
+	private function createJobs( $arr, $evaluate = false ) {
+		$user = $this->getUser();
+
+		$jobs_a = \PageProperties::updatePropertiesJobs( $user, $arr, $evaluate );
+		$jobs_b = \PageProperties::updateFormsJobs( $user, $arr, 'property', $evaluate );
+
+		if ( $evaluate ) {
+			return $jobs_a + $jobs_b;
+		}
+
+		return \PageProperties::pushJobs( array_merge( $jobs_a, $jobs_b ) );
 	}
 
 	/**
@@ -145,6 +193,10 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 				ApiBase::PARAM_REQUIRED => true
 			],
 			'previousLabel' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false
+			],
+			'confirmJobExecution' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			]

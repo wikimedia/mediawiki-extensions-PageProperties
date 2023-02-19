@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -156,10 +156,6 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$request = $this->getRequest();
 
-		// if ( defined( 'SMW_VERSION' ) ) {
-		// 	$hidden_inputs['semantic_forms'] = ( $request->wasPosted() ? $_POST['semantic_forms'] : implode( '|', $this->pageProperties['semantic-forms'] ) );
-		// }
-
 		foreach ( $hidden_inputs as $key => $value ) {
 			$htmlForm->addHiddenField( $key, $value );
 		}
@@ -229,50 +225,51 @@ class SpecialPageProperties extends FormSpecialPage {
 		// page properties
 		$mainPage = Title::newMainPage();
 
-		// *** we retrieve it also when posted,
-		// since semantic-properties and semantic-forms
-		// are not handled anymore (since 1.2.4) from this page
-		// (this is a preferred way than posting them as
-		// hidden inputs)
-		// if ( !$request->wasPosted() ) {
-			$default_values = [
-				'page-properties' => [
-					// 'display_title' => null,
-					// 'language' => $page_language,
-					'model' => $this->title->getContentModel(),
-					// 'categories' => $this->getCategories(),
-				],
-				'semantic-properties' => [],
-				'semantic-forms' => [],
-				'SEO' => [
-					'meta' => [],
-					'subpages' => true,
-					// 'entire-site' => null,
-				]
-			];
+		$default_values = [
+			'page-properties' => [
+				// 'display_title' => null,
+				// 'language' => $page_language,
+				'model' => $this->title->getContentModel(),
+				// 'categories' => $this->getCategories(),
+			],
+			'semantic-properties' => [],
+			'semantic-forms' => [],
+			'SEO' => [
+				'meta' => [],
+				'subpages' => true,
+				// 'entire-site' => null,
+			]
+		];
 
-			if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
-				$default_values['SEO']['entire-site'] = true;
-			}
+		if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
+			$default_values['SEO']['entire-site'] = true;
+		}
 
-			$page_properties = \PageProperties::getPageProperties( $this->title );
-			if ( $page_properties === false ) {
-				$page_properties = [];
-			}
+		// *** retrieve recorded properties also when posted,
+		// since the current page does not handle semantic properties
+		// and categories
+		$page_properties = \PageProperties::getPageProperties( $this->title );
+		if ( $page_properties === false ) {
+			$page_properties = [];
+		}
 
-			$page_properties = array_replace_recursive( $default_values, $page_properties );
-		// }
+		$page_properties = array_replace_recursive( $default_values, $page_properties );
 
 		if ( $request->wasPosted() ) {
 			$dynamic_values = $this->getDynamictableValues( $_POST );
-			// $page_properties = [];
 
 			if ( $request->getVal( 'page_properties_display_title_select' ) === 'override' ) {
 				$page_properties['page-properties']['display-title'] = $request->getVal( 'page_properties_display_title_input' );
+
+			} else {
+				unset( $page_properties['page-properties']['display-title'] );
 			}
 
 			if ( $request->getVal( 'page_properties_language_select' ) === 'override' ) {
 				$page_properties['page-properties']['language'] = $request->getVal( 'page_properties_language_input' );
+
+			} else {
+				unset( $page_properties['page-properties']['language'] );
 			}
 
 			$page_properties['page-properties']['model'] = $request->getVal( 'page_properties_model' );

@@ -45,22 +45,30 @@ const PagePropertiesFunctions = ( function () {
 			// Tool.super.apply( this, arguments );
 			Tool.super.call( this, arguments[ 0 ], config );
 
-			// OO.ui.mixin.PendingElement.call( this, {} );
+			OO.ui.mixin.PendingElement.call( this, {} );
 
-			/*
-			this.toggled = false;
-			if ( init ) {
-				init.call( this );
+			if ( getNestedProp( [ 'data', 'disabled' ], config ) ) {
+				// this.setPendingElement(this.$element)
+				// this.pushPending();
+				this.setDisabled( true );
 			}
-*/
+
+			if ( getNestedProp( [ 'data', 'pending' ], config ) ) {
+				// this.setPendingElement(this.$element)
+				this.pushPending();
+			}
+
+			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
+			this.toggled = false;
+			if ( config.init ) {
+				config.init.call( this );
+			}
 		};
 
 		OO.inheritClass( Tool, OO.ui.Tool );
-		// OO.mixinClass( Tool, OO.ui.mixin.PendingElement );
-		Tool.prototype.onSelect = function () {
-			// this.setPendingElement(this.$element)
-			// this.pushPending();
+		OO.mixinClass( Tool, OO.ui.mixin.PendingElement );
 
+		Tool.prototype.onSelect = function () {
 			if ( obj.onSelect ) {
 				obj.onSelect.call( this );
 			} else {
@@ -70,7 +78,10 @@ const PagePropertiesFunctions = ( function () {
 			// Tool.emit( 'updateState' );
 		};
 
-		Tool.prototype.onUpdateState = function () {};
+		Tool.prototype.onUpdateState = function () {
+			this.popPending();
+			this.setDisabled( false );
+		};
 
 		/*
 		Tool.static.group = group;
@@ -100,6 +111,19 @@ const PagePropertiesFunctions = ( function () {
 			delete obj.config;
 			toolFactory.register( createTool( obj, config ) );
 		} );
+	}
+
+	function createDisabledToolGroup( toolGroupFactory, parent, name ) {
+		var DisabledToolGroup = function () {
+			DisabledToolGroup.super.call( this, parent, name );
+			this.setDisabled( true );
+		};
+		OO.inheritClass( DisabledToolGroup, parent );
+		DisabledToolGroup.static.name = name;
+		DisabledToolGroup.prototype.onUpdateState = function () {
+			this.setLabel( 'Disabled' );
+		};
+		toolGroupFactory.register( DisabledToolGroup );
 	}
 
 	function createWindowManager() {
@@ -141,19 +165,26 @@ const PagePropertiesFunctions = ( function () {
 		return path.reduce( ( xs, x ) => ( xs && xs[ x ] ) ? xs[ x ] : null, obj );
 	}
 
-	function OOUIAlert( windowManager, text, options ) {
+	function OOUIAlert( windowManager, text, options, callback, args ) {
 		windowManager.addWindows( [ new OO.ui.MessageDialog() ] );
 
-		return windowManager.openWindow( 'message', $.extend( {
-			message: text,
-			actions: [ OO.ui.MessageDialog.static.actions[ 0 ] ]
-		}, options ) ).closed.then( function () {
-			return undefined;
-		} );
+		var obj = { message: text };
+
+		if ( !callback ) {
+			obj.actions = [ OO.ui.MessageDialog.static.actions[ 0 ] ];
+		}
+
+		// @TODO or return promise
+		return windowManager.openWindow( 'message', $.extend( obj, options ) )
+			.closed
+			.then( function ( action ) {
+				return action.action === 'accept' && callback ? callback.apply( this, args ) : undefined;
+			} );
 	}
 
 	return {
 		createToolGroup,
+		createDisabledToolGroup,
 		sortObjectByKeys,
 		renameObjectKey,
 		getKeyByValue,

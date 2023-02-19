@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -47,10 +47,6 @@ class SpecialManageProperties extends FormSpecialPage {
 
 	/** @inheritDoc */
 	public function execute( $par ) {
-		// $this->requireLogin();
-		// $this->setParameter( $par );
-		// $this->setHeaders();
-
 		$out = $this->getOutput();
 		$out->setArticleRelated( false );
 		$out->setRobotPolicy( $this->getRobotPolicy() );
@@ -93,18 +89,26 @@ class SpecialManageProperties extends FormSpecialPage {
 
 		$out->addModules( 'ext.PageProperties.ManageProperties' );
 
-		$out->addModuleStyles(
-			[
-				// 'mediawiki.special',
-				'mediawiki.special.preferences.styles.ooui',
+		$out->addModuleStyles( [ 'mediawiki.special.preferences.styles.ooui' ] );
+
+		$allSemanticProperties = \PageProperties::getAllProperties();
+		$this->semanticProperties = \PageProperties::formatSemanticProperties( $allSemanticProperties );
+
+		\PageProperties::addJsConfigVars( $out, [
+			'semanticProperties' => $this->semanticProperties,
+			'categories' => \PageProperties::getCategoriesSemantic(),
+			'forms' => \PageProperties::getAllForms( $this->semanticProperties ),
+			'config' => [
+				'context' => 'ManageProperties',
+				'loadedData' => [ 'semantic-properties', 'forms', 'categories' ],
+				// @see UploadWizard -> UploadWizard.config.php
+				'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
+				'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
+				// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
 			]
-		);
+		] );
 
-		// $out->addModuleStyles( 'oojs-ui-widgets.styles' );
-
-		$this->addJsConfigVars( $par, $out );
-
-		// @todo implement a Javascript-only output
+		// @TODO use a Javascript-only solution
 		$form_descriptor = $this->formDescriptor();
 
 		$htmlForm = new \OOUIHTMLFormTabs( $form_descriptor, $context, 'pageproperties' );
@@ -128,56 +132,6 @@ class SpecialManageProperties extends FormSpecialPage {
 	 */
 	protected function getMessage( $value ) {
 		return Message::newFromSpecifier( $value )->setContext( $this->getContext() );
-	}
-
-	/**
-	 * @param string $par
-	 * @param OutputPage $out
-	 * @return void
-	 */
-	private function addJsConfigVars( $par, $out ) {
-		$this->semanticProperties = \PageProperties::getSemanticProperties();
-		$pageProperties = [];
-		$categories = \PageProperties::getCategoriesSemantic();
-		$forms = $this->getForms();
-		$setForms = [];
-		$contentModels = \PageProperties::getContentModels();
-
-		$out->addJsConfigVars( [
-			'pageproperties-managePropertiesSpecialPage' => true,
-			'pageproperties-set-forms' => json_encode( $setForms, true ),
-			'pageproperties-canManageSemanticProperties' => true,
-			'pageproperties-categories' => json_encode( $categories, true ),
-			'pageproperties-forms' => json_encode( $forms, true ),
-			'pageproperties-semanticProperties' => json_encode( $this->semanticProperties, true ),
-			'pageproperties-properties' => json_encode( $pageProperties, true ),
-			'pageproperties-contentModels' => json_encode( $contentModels, true ),
-
-			// @see UploadWizard -> UploadWizard.config.php
-			'maxPhpUploadSize' => UploadBase::getMaxPhpUploadSize(),
-			'maxMwUploadSize' => UploadBase::getMaxUploadSize( 'file' ),
-			// 'wgMaxArticleSize' => $GLOBALS['wgMaxArticleSize'],
-		] );
-	}
-
-	/**
-	 * @return array
-	 */
-	private function getForms() {
-		$arr = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
-		$ret = [];
-
-		foreach ( $arr as $title ) {
-			$wikiPage = \PageProperties::getWikiPage( $title );
-			$text = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
-			if ( !empty( $text ) ) {
-				$obj = json_decode( $text, true );
-				$obj['fields'] = array_intersect_key( $obj['fields'], $this->semanticProperties );
-
-				$ret[$title->getText()] = $obj;
-			}
-		}
-		return $ret;
 	}
 
 	/**

@@ -66,19 +66,29 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		unset( $form['formName'] );
 
 		$errors = [];
-		$update_properties = [];
+		$update_items = [];
 
 		if ( $dialogAction === 'delete' ) {
+			$update_items[$previousLabel] = null;
+
+			if ( empty( $params['confirm-job-execution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
+
 			$title_ = Title::makeTitleSafe( NS_PAGEPROPERTIESFORM, $previousLabel );
 			$wikiPage_ = \PageProperties::getWikiPage( $title_ );
 			$reason = '';
 			\PageProperties::deletePage( $wikiPage_, $user, $reason );
 
-			$update_items[$previousLabel] = null;
-
-			// \PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
 
 			$result->addValue( [ $this->getModuleName() ], 'result-action', 'delete' );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
 			$result->addValue( [ $this->getModuleName() ], 'deleted-items', array_keys( $update_items ) );
 			return true;
 		}
@@ -91,6 +101,17 @@ class PagePropertiesApiSaveForm extends ApiBase {
 
 		// rename
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
+			$update_items[$previousLabel] = $label;
+
+			if ( empty( $params['confirmJobExecution'] ) ) {
+				$jobsCount = $this->createJobs( $update_items, true );
+
+				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
+					$result->addValue( [ $this->getModuleName() ], 'jobs-count-warning', $jobsCount );
+					return true;
+				}
+			}
+
 			$title_from = Title::makeTitleSafe( NS_PAGEPROPERTIESFORM, $previousLabel );
 			$title_to = $pageTitle;
 			$move_result = \PageProperties::movePage( $user, $title_from, $title_to );
@@ -106,11 +127,10 @@ class PagePropertiesApiSaveForm extends ApiBase {
 				return true;
 			}
 
-			$update_properties[$previousLabel] = $label;
-
-			// \PageProperties::bulkUpdateProperties( $user, $update_properties );
+			$jobsCount = $this->createJobs( $update_items );
 
 			$result->addValue( [ $this->getModuleName() ], 'label', $label );
+			$result->addValue( [ $this->getModuleName() ], 'jobs-count', $jobsCount );
 			$result->addValue( [ $this->getModuleName() ], 'previous-label', $previousLabel );
 			$resultAction = 'rename';
 		}
@@ -127,12 +147,43 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		}
 
 		$inheritableBooleanKeys = [ 'multiple' ];
-		$types = [ 'required' => 'bool', 'help-message' => 'array', 'preferred-input' => 'string',
-			 'multiple' => 'bool', 'on-create-only' => 'bool', 'value-formula' => 'string' ];
+		$types = [
+			'required' => 'bool',
+			'help-message' => 'array',
+			'preferred-input' => 'string',
+			'multiple' => 'bool',
+			'on-create-only' => 'bool',
+			'value-formula' => 'string',
+			'options-values' => 'array',
+			'options-wikilist' => 'string',
+			'options-askquery' => 'string',
+			'options-printouts' => 'array',
+			'askquery-subject' => 'bool',
+			'options-formula' => 'string',
+			'options-limit' => 'int',
+			'alternate-input' => 'string'
+		];
 		$obj['fields'] = [];
+
+		// @TODO do some cleaning based on the preferred input
+
+		// @see resources/ManageProperties.js
+		$optionsInputs = [
+			'OO.ui.DropdownInputWidget',
+			'OO.ui.ComboBoxInputWidget',
+			'OO.ui.MenuTagMultiselectWidget',
+			'OO.ui.RadioSelectInputWidget',
+			'OO.ui.CheckboxMultiselectInputWidget'
+		];
+
+		// @see resources/ManageProperties.js
+		$isMultiselect = static function ( $inputName ) {
+			return strpos( $inputName, 'Multiselect' ) !== false;
+		};
 
 		foreach ( $fields as $property => $values ) {
 			$obj['fields'][$property] = [];
+
 			foreach ( $values as $key => $value ) {
 				if ( $value === "" ) {
 					continue;
@@ -146,7 +197,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			}
 		}
 
-		$modelId = 'json';
+		$modelId = CONTENT_MODEL_PAGEPROPERTIES_SEMANTIC;
 		$slotContent = ContentHandler::makeContent( json_encode( $obj ), $pageTitle, $modelId );
 		$pageUpdater->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
 
@@ -169,26 +220,27 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			}
 		} );
 
-		$langCode = RequestContext::getMain()->getLanguage()->getCode();
-		$prop = new SMW\DIProperty( '_PDESC' );
+		$context = new RequestContext();
+		$output = $context->getOutput();
+
 		$dataValueFactory = SMW\DataValueFactory::getInstance();
-		foreach ( $obj['fields'] as $label_ => $field ) {
-			$helpMessages = [];
-			if ( !empty( $field['help-message'] ) ) {
-				$helpMessages = $field['help-message'];
-				if ( !is_array( $helpMessages ) ) {
-					$helpMessages = [ $helpMessages ];
-				}
-				$dataValues = [];
-				foreach ( $helpMessages as $value_ ) {
-					$dataValues[] = $dataValueFactory->newDataValueByProperty( $prop, $value_ );
-				}
-				$obj['fields'][ $label_ ][ 'help-message-result' ] = \PageProperties::getMonolingualText( $langCode, $dataValues );
-			}
-		}
+		$pDescProp = new SMW\DIProperty( '_PDESC' );
+		$langCode = RequestContext::getMain()->getLanguage()->getCode();
+		$obj['fields'] = \PageProperties::processFieldsContent( $output, $dataValueFactory, $pDescProp, $langCode, $obj['fields'] );
 
 		// ApiResult::META_BC_BOOLS => $bools,
 		$result->addValue( [ $this->getModuleName() ], 'forms', [ $label => $obj ] );
+	}
+
+	/**
+	 * @param array $arr
+	 * @param bool|null $evaluate
+	 * @return int
+	 */
+	private function createJobs( $arr, $evaluate = false ) {
+		$user = $this->getUser();
+		$jobs = \PageProperties::updatePagesFormsJobs( $user, $arr );
+		return ( $evaluate ? $jobs : \PageProperties::pushJobs( $jobs ) );
 	}
 
 	/**
@@ -218,6 +270,10 @@ class PagePropertiesApiSaveForm extends ApiBase {
 				ApiBase::PARAM_REQUIRED => false
 			],
 			'dialogAction' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false
+			],
+			'confirmJobExecution' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			]

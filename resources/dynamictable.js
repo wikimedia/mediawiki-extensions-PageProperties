@@ -19,11 +19,13 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
+/* eslint-disable no-tabs */
+
 $( document ).ready( function () {
 	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
 
 	var msg1 = mw.config.get( 'pageproperties-js-alert-1' );
-	var msg2 = mw.config.get( 'pageproperties-js-alert-2' );
+	// var msg2 = mw.config.get( 'pageproperties-js-alert-2' );
 	var propertiesTypes = JSON.parse( mw.config.get( 'pageproperties-propertiesTypes' ) );
 
 	function increment_name( value, increment ) {
@@ -395,16 +397,15 @@ $( document ).ready( function () {
 		}
 	} );
 
-	$( '#pageproperties-form' ).submit( function () {
-		var $input = $( 'input[name=confirm_delete_semantic_properties]' );
-
-		if ( $input.get( 0 ) && $input.val() === '1' ) {
-			// eslint-disable-next-line no-alert
-			if ( !confirm( msg2 ) ) {
-				return false;
-			}
-		}
-
-	} );
+	// $( '#pageproperties-form' ).submit( function () {
+	// 	var $input = $( 'input[name=confirm_delete_semantic_properties]' );
+	//
+	// 	if ( $input.get( 0 ) && $input.val() === '1' ) {
+	// 		// eslint-disable-next-line no-alert
+	// 		if ( !confirm( msg2 ) ) {
+	// 			return false;
+	// 		}
+	// 	}
+	// } );
 
 } );

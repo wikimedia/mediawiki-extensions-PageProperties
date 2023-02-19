@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.4c",
+	"version": "1.2.5",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -15,8 +15,17 @@
 		]
 	},
 	"callback": "PagePropertiesHooks::initExtension",
+	"HookHandlers": {
+		"pageproperties_searchdata": {
+			"class": "PagePropertiesDataForSearchIndex",
+			"services": [
+				"ContentHandlerFactory"
+			]
+		}
+	},
 	"ContentHandlers": {
-		"html": "PagePropertiesHtmlContentHandler"
+		"html": "PagePropertiesHtmlContentHandler",
+		"pageproperties-semantic": "PagePropertiesSemanticContentHandler"
 	},
 	"Actions": {
 		"editsemantic": "PagePropertiesEditAction"
@@ -25,18 +34,25 @@
 		"PageProperties": "includes/PageProperties.php",
 		"PagePropertiesHooks": "includes/PagePropertiesHooks.php",
 		"PagePropertiesEditAction": "includes/PagePropertiesEditAction.php",
+		"SpecialPagePropertiesSubmit": "includes/specials/SpecialPagePropertiesSubmit.php",
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
-		"SpecialEditProperties": "includes/specials/SpecialEditProperties.php",
+		"SpecialEditSemantic": "includes/specials/SpecialEditSemantic.php",
 		"SpecialManageProperties": "includes/specials/SpecialManageProperties.php",
 		"PagePropertiesJob": "includes/PagePropertiesJob.php",
+		"PagePropertiesJobReplaceText": "includes/PagePropertiesJobReplaceText.php",
 		"PagePropertiesHtmlContentHandler": "includes/content/PagePropertiesHtmlContentHandler.php",
 		"PagePropertiesHtmlContent": "includes/content/PagePropertiesHtmlContent.php",
+		"PagePropertiesSemanticContentHandler": "includes/content/PagePropertiesSemanticContentHandler.php",
+		"PagePropertiesSemanticContent": "includes/content/PagePropertiesSemanticContent.php",
 		"PagePropertiesApiSaveProperty": "includes/api/PagePropertiesApiSaveProperty.php",
 		"PagePropertiesApiLoadData": "includes/api/PagePropertiesApiLoadData.php",
 		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php",
 		"PagePropertiesApiSaveCategory": "includes/api/PagePropertiesApiSaveCategory.php",
 		"PagePropertiesApiImport": "includes/api/PagePropertiesApiImport.php",
 		"PagePropertiesApiSaveForm": "includes/api/PagePropertiesApiSaveForm.php"
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\PageProperties\\ReplaceText\\": "includes/ReplaceText/"
 	},
 	"ExtensionMessagesFiles": {
 		"PagePropertiesAlias": "PageProperties.alias.php",
@@ -64,7 +80,8 @@
 	},
 	"SpecialPages": {
 		"PageProperties": "SpecialPageProperties",
-		"EditProperties": "SpecialEditProperties",
+		"PagePropertiesSubmit": "SpecialPagePropertiesSubmit",
+		"EditSemantic": "SpecialEditSemantic",
 		"ManageProperties": "SpecialManageProperties"
 	},
 	"APIModules": {
@@ -76,7 +93,8 @@
 		"pageproperties-manageproperties-saveform": "PagePropertiesApiSaveForm"
 	},
 	"JobClasses": {
-		"PageProperties": "PagePropertiesJob"
+		"PageProperties": "PagePropertiesJob",
+		"PagePropertiesReplaceText": "PagePropertiesJobReplaceText"
 	},
 	"namespaces": [
 		{
@@ -354,8 +372,8 @@
 				"pageproperties-jsmodule-forms-field-required",
 				"pageproperties-jsmodule-forms-field-oncreateonly",
 				"pageproperties-jsmodule-forms-field-oncreateonly-help",
-				"pageproperties-jsmodule-forms-field-altervalue",
-				"pageproperties-jsmodule-forms-field-altervalue-help",
+				"pageproperties-jsmodule-forms-field-valueformula",
+				"pageproperties-jsmodule-forms-field-valueformula-help",
 				"pageproperties-jsmodule-forms-field-help-label",
 				"pageproperties-jsmodule-forms-field-help-message",
 				"pageproperties-jsmodule-forms-frompropertydescription",
@@ -370,6 +388,7 @@
 				"pageproperties-jsmodule-forms-formname",
 				"pageproperties-jsmodule-forms-pagename",
 				"pageproperties-jsmodule-forms-displayfreetext",
+				"pageproperties-jsmodule-forms-displaycategories",
 				"pageproperties-jsmodule-forms-categories",
 				"pageproperties-jsmodule-forms-categories-help",
 				"pageproperties-jsmodule-forms-preferredinput-fromproperty",
@@ -398,7 +417,30 @@
 				"pageproperties-jsmodule-forms-alert-categoryname",
 				"pageproperties-jsmodule-manageproperties-upload",
 				"pageproperties-jsmodule-forms-dialogsearch-selectforms",
-				"pageproperties-jsmodule-forms-dialogsearch-selectproperties"
+				"pageproperties-jsmodule-forms-dialogsearch-selectproperties",
+				"pageproperties-jsmodule-forms-field-options-from",
+				"pageproperties-jsmodule-forms-optionsfrom-property",
+				"pageproperties-jsmodule-forms-optionsfrom-optionsvalues",
+				"pageproperties-jsmodule-forms-optionsfrom-optionswikilist",
+				"pageproperties-jsmodule-forms-optionsfrom-optionsaskquery",
+				"pageproperties-jsmodule-forms-field-optionsasdefined",
+				"pageproperties-jsmodule-forms-field-wikilist",
+				"pageproperties-jsmodule-forms-field-askquery",
+				"pageproperties-jsmodule-forms-field-printouts",
+				"pageproperties-jsmodule-forms-field-printouts-help",
+				"pageproperties-jsmodule-forms-field-querysubject",
+				"pageproperties-jsmodule-forms-field-querysubject-help",
+				"pageproperties-jsmodule-forms-field-optionslimit",
+				"pageproperties-jsmodule-forms-field-optionslimit-help",
+				"pageproperties-jsmodule-forms-field-alternateinput",
+				"pageproperties-jsmodule-forms-field-alternateinput-help",
+				"pageproperties-jsmodule-forms-field-optionformula",
+				"pageproperties-jsmodule-forms-field-optionformula-help",
+				"pageproperties-jsmodule-forms-alternateinput-autocomplete",
+				"pageproperties-jsmodule-forms-alternateinput-infinite-scroll",
+				"pageproperties-jsmodule-unknown-error",
+				"pageproperties-jsmodule-created-jobs",
+				"pageproperties-jsmodule-create-jobs-alert"
 			]
 		}
 	},

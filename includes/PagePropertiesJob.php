@@ -17,32 +17,32 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright ©2022, https://wikisphere.org
  */
 
 use Wikimedia\ScopedCallback;
 
 class PagePropertiesJob extends Job {
+
 	/**
-	 * Constructor.
 	 * @param Title $title
-	 * @param array|bool $params Cannot be === true
+	 * @param array|bool $params
 	 */
 	function __construct( $title, $params = [] ) {
 		parent::__construct( 'PageProperties', $title, $params );
 	}
 
 	/**
-	 * Run a replaceText job
-	 * @return bool success
+	 * @return bool
 	 */
 	function run() {
 		// T279090
 		$user = User::newFromId( $this->params['user_id'] );
 
-		if ( !$user->isAllowed( 'pageproperties-caneditproperties' ) && !$user->isAllowed( 'pageproperties-canmanageproperties' ) ) {
-			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
+		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
+			$this->error = 'PageProperties: Permission error';
+			return false;
 		}
 
 		if ( isset( $this->params['session'] ) ) {
@@ -90,4 +90,5 @@ class PagePropertiesJob extends Job {
 
 		return true;
 	}
+
 }

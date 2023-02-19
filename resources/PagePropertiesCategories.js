@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -132,9 +132,9 @@ const PagePropertiesCategories = ( function () {
 	OO.inheritClass( ProcessDialog, OO.ui.ProcessDialog );
 
 	ProcessDialog.static.name = 'myDialog';
-	ProcessDialog.static.title = mw.msg(
-		'pageproperties-jsmodule-manageproperties-define-category'
-	);
+	// ProcessDialog.static.title = mw.msg(
+	// 'pageproperties-jsmodule-manageproperties-define-category'
+	// );
 	ProcessDialog.static.actions = [
 		{
 			action: 'delete',
@@ -194,11 +194,14 @@ const PagePropertiesCategories = ( function () {
 
 						var alert = null;
 						if ( obj.label.trim() === '' ) {
-							alert = mw.msg( 'pageproperties-jsmodule-forms-alert-categoryname' );
+							alert = mw.msg(
+								'pageproperties-jsmodule-forms-alert-categoryname'
+							);
 						}
 
 						if ( alert ) {
-							PagePropertiesFunctions.OOUIAlert( WindowManagerAlert,
+							PagePropertiesFunctions.OOUIAlert(
+								WindowManagerAlert,
 								new OO.ui.HtmlSnippet( alert ),
 								{ size: 'medium' }
 							);
@@ -218,43 +221,83 @@ const PagePropertiesCategories = ( function () {
 							format: 'json',
 							data: JSON.stringify( obj )
 						};
-						// eslint-disable-next-line compat/compat, no-unused-vars
-						return new Promise( ( resolve, reject ) => {
-							mw.loader.using( 'mediawiki.api', function () {
-								new mw.Api()
-									.postWithToken( 'csrf', payload )
-									.done( function ( res ) {
-										if ( 'pageproperties-manageproperties-savecategory' in res ) {
-											var data =
-												res[ 'pageproperties-manageproperties-savecategory' ];
-											if ( data[ 'result-action' ] === 'error' ) {
+						var callApi = function ( postData, resolve, reject ) {
+							new mw.Api()
+								.postWithToken( 'csrf', postData )
+								.done( function ( res ) {
+									if ( 'pageproperties-manageproperties-savecategory' in res ) {
+										var data =
+											res[ 'pageproperties-manageproperties-savecategory' ];
+										if ( data[ 'result-action' ] === 'error' ) {
+											PagePropertiesFunctions.OOUIAlert(
+												WindowManagerAlert,
+												new OO.ui.HtmlSnippet( data.error ),
+												{
+													size: 'medium'
+												}
+											);
+										} else {
+											if ( 'jobs-count-warning' in data ) {
 												PagePropertiesFunctions.OOUIAlert(
 													WindowManagerAlert,
-													new OO.ui.HtmlSnippet( data.error ), {
-														size: 'medium'
-													} );
+													mw.msg(
+														'pageproperties-jsmodule-create-jobs-alert',
+														parseInt( data[ 'jobs-count-warning' ] )
+													),
+													{ size: 'medium' },
+													callApi,
+													[
+														// eslint-disable-next-line max-len
+														$.extend( payload, { confirmJobExecution: true } ),
+														resolve,
+														reject
+													]
+												);
 											} else {
+												if ( parseInt( data[ 'jobs-count' ] ) ) {
+													PagePropertiesFunctions.OOUIAlert(
+														WindowManagerAlert,
+														mw.msg(
+															'pageproperties-jsmodule-created-jobs',
+															parseInt( data[ 'jobs-count' ] )
+														),
+														{ size: 'medium' }
+													);
+												}
 												if ( updateData( data ) === true ) {
 													WindowManager.removeWindows( [ 'myDialog' ] );
 												}
 											}
-										} else {
-											PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
 										}
-									} )
-									.fail( function ( res ) {
-										// this will show a nice modal but is not necessary
-										// reject();
-										resolve();
-										var msg = res;
-										// The following messages are used here:
-										// * pageproperties-permissions-error
-										// * pageproperties-permissions-error-b
-										PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
-									} );
+									} else {
+										PagePropertiesFunctions.OOUIAlert(
+											WindowManagerAlert,
+											'unknown error',
+											{ size: 'medium' }
+										);
+									}
+								} )
+								.fail( function ( res ) {
+									// this will show a nice modal but is not necessary
+									// reject();
+									resolve();
+									var msg = res;
+									// The following messages are used here:
+									// * pageproperties-permissions-error
+									// * pageproperties-permissions-error-b
+									PagePropertiesFunctions.OOUIAlert(
+										WindowManagerAlert,
+										mw.msg( msg ),
+										{ size: 'medium' }
+									);
+								} );
+						};
+						// eslint-disable-next-line compat/compat
+						return new Promise( ( resolve, reject ) => {
+							mw.loader.using( 'mediawiki.api', function () {
+								callApi( payload, resolve, reject );
 							} );
 						} ); // promise
-
 				}
 			} ); // .next
 
@@ -296,7 +339,15 @@ const PagePropertiesCategories = ( function () {
 
 		WindowManager.addWindows( [ processDialog ] );
 
-		WindowManager.openWindow( processDialog );
+		WindowManager.openWindow( processDialog, {
+			title:
+				mw.msg(
+					// The following messages are used here:
+					// * pageproperties-jsmodule-manageproperties-define-category
+					// * pageproperties-jsmodule-manageproperties-define-category - [name]
+					'pageproperties-jsmodule-manageproperties-define-category'
+				) + ( label ? ' - ' + label : '' )
+		} );
 	}
 
 	function initializeDataTable() {
@@ -336,9 +387,10 @@ const PagePropertiesCategories = ( function () {
 
 		DataTable.on( 'click', 'tr', function () {
 			var index = DataTable.row( this ).index();
-			var label = data[ index ][ 0 ];
-
-			openDialog( label );
+			if ( index !== undefined ) {
+				var label = data[ index ][ 0 ];
+				openDialog( label );
+			}
 		} );
 	}
 
@@ -384,12 +436,14 @@ const PagePropertiesCategories = ( function () {
 		return toolbar;
 	}
 
-	function initialize( categories, windowManager, windowManagerAlert ) {
+	function preInitialize( windowManager, windowManagerAlert ) {
+		WindowManager = windowManager;
+		WindowManagerAlert = windowManagerAlert;
+	}
 
+	function initialize( categories ) {
 		if ( arguments.length ) {
 			Categories = categories;
-			WindowManager = windowManager;
-			WindowManagerAlert = windowManagerAlert;
 		}
 
 		$( '#categories-wrapper' ).empty();
@@ -421,6 +475,7 @@ const PagePropertiesCategories = ( function () {
 
 	return {
 		initialize,
-		createToolbar
+		createToolbar,
+		preInitialize
 	};
 }() );
