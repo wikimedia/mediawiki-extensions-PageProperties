@@ -2032,15 +2032,15 @@ const PageProperties = function (
 		} );
 
 		frameAContent.push( submitButton.$element );
-
+		var queryObj = {
+			formID: FormID,
+			context: Config.context,
+			returnUrl: Config.returnUrl
+		};
 		var form = new OO.ui.FormLayout( {
 			$content: frameAContent,
-			action: Config.actionUrl + '&' + Object.keys( {
-				formID: FormID,
-				context: Config.context,
-				returnUrl: Config.returnUrl }
-			).map( ( key ) => {
-				return `${key}=${encodeURIComponent( object[ key ] )}`;
+			action: Config.actionUrl + '&' + Object.keys( queryObj ).map( ( key ) => {
+				return `${key}=${encodeURIComponent( queryObj[ key ] )}`;
 			} ).join( '&' ),
 			method: 'post',
 			enctype: 'multipart/form-data',
