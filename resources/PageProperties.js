@@ -43,6 +43,7 @@ const PageProperties = function (
 	var ToolbarA;
 	var ActionToolbarA;
 	var ActionWidget;
+	var Self;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -1372,7 +1373,7 @@ const PageProperties = function (
 				}
 
 				ManageProperties.initialize(
-					PageProperties,
+					Self,
 					SemanticProperties,
 					res.importedVocabularies,
 					res.typeLabels,
@@ -1381,7 +1382,7 @@ const PageProperties = function (
 
 				PagePropertiesCategories.initialize( res.categories );
 
-				PagePropertiesForms.initialize( PageProperties, SemanticProperties, Forms );
+				PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
 
 				onSelect( this );
 			} );
@@ -1986,7 +1987,11 @@ const PageProperties = function (
 		// return false;
 	}
 
-	function initialize() {
+	function initialize( pageProperties ) {
+		if ( arguments.length ) {
+			Self = pageProperties;
+		}
+
 		Model = {};
 		$( '#semantic-properties-wrapper' ).empty();
 
@@ -2261,7 +2266,7 @@ $( document ).ready( function () {
 				errors
 			);
 
-			pageProperties.initialize();
+			pageProperties.initialize( pageProperties );
 
 			if ( config.context === 'parserfunction' && errors.length ) {
 				$( '#pagepropertiesform-wrapper-' + formID )
