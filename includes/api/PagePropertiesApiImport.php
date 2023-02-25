@@ -229,10 +229,10 @@ class PagePropertiesApiImport extends ApiBase {
 					}
 				} else {
 					if ( in_array( $heading[$n], $pagenameMatches[1] ) ) {
-						$pagename = preg_replace( '/\<\s*' . $heading[$n] . '\s*\>/', $value, $pagename );
+						$pagename = preg_replace( '/\<\s*' . preg_quote( $heading[$n], '/' ) . '\s*\>/', $value, $pagename );
 
 					} elseif ( $mappedFieldName && in_array( $mappedFieldName, $pagenameMatches[1] ) ) {
-						$pagename = preg_replace( '/\<\s*' . $mappedFieldName . '\s*\>/', $value, $pagename );
+						$pagename = preg_replace( '/\<\s*' . preg_quote( $mappedFieldName, '/' ) . '\s*\>/', $value, $pagename );
 					}
 				}
 
@@ -243,10 +243,10 @@ class PagePropertiesApiImport extends ApiBase {
 
 				} else {
 					if ( in_array( $heading[$n], $categoriesMatches[1] ) ) {
-						$categories = preg_replace( '/\<\s*' . $heading[$n] . '\s*\>/', $value, $categories );
+						$categories = preg_replace( '/\<\s*' . preg_quote( $heading[$n], '/' ) . '\s*\>/', $value, $categories );
 
 					} elseif ( $mappedFieldName && in_array( $mappedFieldName, $categoriesMatches[1] ) ) {
-						$categories = preg_replace( '/\<\s*' . $mappedFieldName . ')\s*\>/', $value, $categories );
+						$categories = preg_replace( '/\<\s*' . preg_quote( $mappedFieldName, '/' ) . ')\s*\>/', $value, $categories );
 					}
 				}
 

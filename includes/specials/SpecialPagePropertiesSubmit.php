@@ -93,14 +93,12 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 		$semanticProperties = $update_obj['semantic-properties'];
 
 		// @TODO use standard Mediawiki's sessions interface
-		if ( isset( $_SESSION ) ) {
-			$_SESSION['pagepropertiesform-submissiondata-' . $this->formID] = [
-				'freetext' => $freetext,
-				'properties' => $semanticProperties,
-				'errors' => $errors,
-				'pageCategories' => $pageCategories,
-			];
-		}
+		$_SESSION['pagepropertiesform-submissiondata-' . $this->formID] = [
+			'freetext' => $freetext,
+			'properties' => $semanticProperties,
+			'errors' => $errors,
+			'pageCategories' => $pageCategories,
+		];
 	}
 
 	/**
@@ -131,7 +129,7 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 
 		foreach ( $data as $property => $values ) {
 			if ( in_array( $property, $matches[1] ) ) {
-				$formula = preg_replace( '/\<\s*' . $property . '\s*\>/', \PageProperties::array_last( $values ), $formula );
+				$formula = preg_replace( '/\<\s*' . preg_quote( $property, '/' ) . '\s*\>/', \PageProperties::array_last( $values ), $formula );
 			}
 		}
 

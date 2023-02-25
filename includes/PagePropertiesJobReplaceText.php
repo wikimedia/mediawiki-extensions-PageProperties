@@ -82,7 +82,7 @@ class PagePropertiesJobReplaceText extends Job {
 		switch ( $this->params['scope'] ) {
 			case 'property':
 				if ( !empty( $contents['pagename-formula'] ) ) {
-					$contents['pagename-formula'] = preg_replace( '/\<' . $target_str . '\>/', '<' . $replacement_str . '>', $contents['pagename-formula'], -1, $num_matches );
+					$contents['pagename-formula'] = preg_replace( '/\<' . preg_quote( $target_str, '/' ) . '\>/', '<' . $replacement_str . '>', $contents['pagename-formula'], -1, $num_matches );
 				}
 
 				if ( array_key_exists( $target_str, $contents['fields'] ) ) {
@@ -91,7 +91,7 @@ class PagePropertiesJobReplaceText extends Job {
 
 				foreach ( $contents['fields'] as $key => $value ) {
 					if ( !empty( $value['value-formula'] ) ) {
-						$contents['fields'][$key]['value-formula'] = preg_replace( '/\<' . $target_str . '\>/', '<' . $replacement_str . '>', $contents['fields'][$key]['value-formula'], -1, $num_matches );
+						$contents['fields'][$key]['value-formula'] = preg_replace( '/\<' . preg_quote( $target_str, '/' ) . '\>/', '<' . $replacement_str . '>', $contents['fields'][$key]['value-formula'], -1, $num_matches );
 					}
 				}
 				break;
