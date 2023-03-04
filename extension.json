@@ -440,7 +440,10 @@
 				"pageproperties-jsmodule-forms-alternateinput-infinite-scroll",
 				"pageproperties-jsmodule-unknown-error",
 				"pageproperties-jsmodule-created-jobs",
-				"pageproperties-jsmodule-create-jobs-alert"
+				"pageproperties-jsmodule-create-jobs-alert",
+				"pageproperties-jsmodule-manageproperties-existing-property",
+				"pageproperties-jsmodule-manageproperties-existing-category",
+				"pageproperties-jsmodule-manageproperties-existing-form"
 			]
 		}
 	},

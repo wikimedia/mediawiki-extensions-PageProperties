@@ -1053,11 +1053,22 @@ const ManageProperties = ( function () {
 						for ( var property in Model ) {
 							obj[ property ] = getPropertyValue( property );
 						}
+						// @TODO use it within getPropertyValue
+						obj.label = obj.label.trim();
+
+						// @TODO sanitize label
+
 						var alert = null;
-						if ( obj.label.trim() === '' ) {
+						if ( obj.label === '' ) {
 							alert = mw.msg(
 								'pageproperties-jsmodule-forms-alert-propertyname'
 							);
+
+						} else if ( SelectedProperty.label === '' && ( obj.label in SemanticProperties ) ) {
+							alert = mw.msg(
+								'pageproperties-jsmodule-manageproperties-existing-property'
+							);
+
 						} else if (
 							// eslint-disable-next-line no-underscore-dangle
 							( obj._PVAL.length || obj._PVALI !== '' ) &&
@@ -1067,6 +1078,7 @@ const ManageProperties = ( function () {
 							alert =
 								mw.msg( 'pageproperties-jsmodule-manageproperties-suggestion1' ) +
 								optionsInputs.join( '</br>' );
+
 						} else if (
 							// eslint-disable-next-line no-underscore-dangle
 							inArray( obj.__pageproperties_preferred_input, optionsInputs ) &&

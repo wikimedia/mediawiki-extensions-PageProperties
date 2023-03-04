@@ -196,6 +196,9 @@
 	"group-pageproperties-admin-member": "A label message",
 	"group-pageproperties-editor-member": "A label message",
 
+	"pageproperties-jsmodule-manageproperties-existing-property": "A label message",
+	"pageproperties-jsmodule-manageproperties-existing-category": "A label message",
+	"pageproperties-jsmodule-manageproperties-existing-form": "A label message",
 	"pageproperties-jsmodule-manageproperties-suggestion1": "A label message",
 	"pageproperties-jsmodule-manageproperties-suggestion2": "A label message",
 	"pageproperties-jsmodule-manageproperties-_pval": "A label message",

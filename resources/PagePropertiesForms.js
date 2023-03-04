@@ -1637,34 +1637,35 @@ const PagePropertiesForms = ( function () {
 							}
 						}
 
+						// @TODO use it within getPropertyValue
+						formFields.formName = formFields.formName.trim();
+
+						// @TODO sanitize label
+
 						if ( Model.selectPagenameInput.getValue() === 'formula' ) {
 							delete formFields[ 'pagename-root' ];
 						} else {
 							delete formFields[ 'pagename-formula' ];
 						}
 
-						if ( formFields.formName.trim() === '' ) {
-							PagePropertiesFunctions.OOUIAlert(
-								WindowManagerAlert,
-								mw.msg( 'pageproperties-jsmodule-forms-alert-formname' ),
-								{
-									size: 'medium'
-								}
-							);
-							return ProcessDialog.super.prototype.getActionProcess.call(
-								this,
-								action
-							);
+						var alert = null;
+						if ( formFields.formName === '' ) {
+							alert = mw.msg( 'pageproperties-jsmodule-forms-alert-formname' );
+
+						} else if ( SelectedForm.label === '' && ( formFields.formName in Forms ) ) {
+							alert = mw.msg( 'pageproperties-jsmodule-manageproperties-existing-form' );
+
+						} else if ( !Object.keys( SelectedForm.fields ).length ) {
+							alert = mw.msg( 'pageproperties-jsmodule-forms-alert-fields' );
 						}
 
-						if ( !Object.keys( SelectedForm.fields ).length ) {
+						if ( alert ) {
 							PagePropertiesFunctions.OOUIAlert(
 								WindowManagerAlert,
-								mw.msg( 'pageproperties-jsmodule-forms-alert-fields' ),
-								{
-									size: 'medium'
-								}
+								new OO.ui.HtmlSnippet( alert ),
+								{ size: 'medium' }
 							);
+
 							return ProcessDialog.super.prototype.getActionProcess.call(
 								this,
 								action
@@ -1708,7 +1709,7 @@ const PagePropertiesForms = ( function () {
 													callApi,
 													[
 														// eslint-disable-next-line max-len
-														$.extend( payload, { confirmJobExecution: true } ),
+														$.extend( postData, { confirmJobExecution: true } ),
 														resolve,
 														reject
 													]

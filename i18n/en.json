@@ -183,6 +183,9 @@
 	"group-pageproperties-pagepropertieseditor-member": "editor of page properties (Page Properties)",
 	"group-pageproperties-semanticpropertieseditor-member": "editor of semantic properties (Page Properties)",
 
+	"pageproperties-jsmodule-manageproperties-existing-property": "Existing property",
+	"pageproperties-jsmodule-manageproperties-existing-category": "Existing category",
+	"pageproperties-jsmodule-manageproperties-existing-form": "Existing form",
 	"pageproperties-jsmodule-manageproperties-suggestion1": "<b>Tip</b>: with allowed values constraint set one of the following as preferred input:</br>",
 	"pageproperties-jsmodule-manageproperties-suggestion2": "Inputs with predefined set of options are only available setting \"Allows value\", or \"Allows value list\" in the Options tab. Alternatively you can use a OO.ui.TextInputWidget at property level, and then to define dynamic set of options through a form field",
 	"pageproperties-jsmodule-manageproperties-_pval": "Lists one or more permissible value for a property",

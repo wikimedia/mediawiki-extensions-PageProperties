@@ -192,10 +192,19 @@ const PagePropertiesCategories = ( function () {
 							obj[ property ] = getPropertyValue( property );
 						}
 
+						// @TODO use it within getPropertyValue
+						obj.label = obj.label.trim();
+
+						// @TODO sanitize label
+
 						var alert = null;
-						if ( obj.label.trim() === '' ) {
+						if ( obj.label === '' ) {
 							alert = mw.msg(
 								'pageproperties-jsmodule-forms-alert-categoryname'
+							);
+						} else if ( SelectedItem.label === '' && ( obj.label in Categories ) ) {
+							alert = mw.msg(
+								'pageproperties-jsmodule-manageproperties-existing-category'
 							);
 						}
 
@@ -214,16 +223,9 @@ const PagePropertiesCategories = ( function () {
 
 					// eslint-disable no-fallthrough
 					case 'delete':
-						var payload = {
-							action: 'pageproperties-manageproperties-savecategory',
-							dialogAction: action,
-							previousLabel: SelectedItem.label,
-							format: 'json',
-							data: JSON.stringify( obj )
-						};
-						var callApi = function ( postData, resolve, reject ) {
+						var callApi = function ( payload, resolve, reject ) {
 							new mw.Api()
-								.postWithToken( 'csrf', postData )
+								.postWithToken( 'csrf', payload )
 								.done( function ( res ) {
 									if ( 'pageproperties-manageproperties-savecategory' in res ) {
 										var data =
@@ -295,7 +297,13 @@ const PagePropertiesCategories = ( function () {
 						// eslint-disable-next-line compat/compat
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
-								callApi( payload, resolve, reject );
+								callApi( {
+									action: 'pageproperties-manageproperties-savecategory',
+									dialogAction: action,
+									previousLabel: SelectedItem.label,
+									format: 'json',
+									data: JSON.stringify( obj )
+								}, resolve, reject );
 							} );
 						} ); // promise
 				}
