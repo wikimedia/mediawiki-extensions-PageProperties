@@ -43,12 +43,15 @@ class PagePropertiesApiLoadData extends ApiBase {
 	 */
 	public function execute() {
 		$user = $this->getUser();
-		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
+		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+			&& !$user->isAllowed( 'pageproperties-caneditsemanticproperties' ) ) {
+
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 		\PageProperties::initialize();
 		$result = $this->getResult();
 		$params = $this->extractRequestParams();
+		$output = $this->getContext()->getOutput();
 
 		$dataSet = explode( '|', $params['dataset'] );
 		$self = $this;
@@ -81,7 +84,7 @@ class PagePropertiesApiLoadData extends ApiBase {
 				// @TODO do not retrieve forms already loaed
 				$allForms = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
 
-				\PageProperties::setForms( array_map( static function ( $title ) {
+				\PageProperties::setForms( $output, array_map( static function ( $title ) {
 					return $title->getText();
 				}, $allForms ) );
 

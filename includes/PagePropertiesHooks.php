@@ -474,20 +474,28 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		$canEditsemanticProperties = $user->isAllowed( 'pageproperties-caneditsemanticproperties' );
+		$errors = [];
 
-		if ( defined( 'SMW_VERSION' ) && $canEditsemanticProperties ) {
-			$link = [
-				'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
-				'text' => 'Edit semantic',
-				'href' => $title->getLocalURL( 'action=editsemantic' )
-			];
+		// check if user can edit the page
+		if ( defined( 'SMW_VERSION' ) && \PageProperties::checkWritePermissions( $user, $title, $errors ) ) {
 
-			$keys = array_keys( $links['views'] );
-			$pos = array_search( 'edit', $keys );
+			if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+				|| $user->isAllowed( 'pageproperties-caneditsemanticproperties' )
+				|| $user->isAllowed( 'pageproperties-canaddsingleproperties' )
+				|| $user->isAllowed( 'pageproperties-cancomposeforms' ) ) {
 
-			$links['views'] = array_intersect_key( $links['views'], array_flip( array_slice( $keys, 0, $pos + 1 ) ) )
-				+ [ 'semantic_edit' => $link ] + array_intersect_key( $links['views'], array_flip( array_slice( $keys, $pos + 1 ) ) );
+				$link = [
+					'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
+					'text' => 'Edit semantic',
+					'href' => $title->getLocalURL( 'action=editsemantic' )
+				];
+
+				$keys = array_keys( $links['views'] );
+				$pos = array_search( 'edit', $keys );
+
+				$links['views'] = array_intersect_key( $links['views'], array_flip( array_slice( $keys, 0, $pos + 1 ) ) )
+					+ [ 'semantic_edit' => $link ] + array_intersect_key( $links['views'], array_flip( array_slice( $keys, $pos + 1 ) ) );
+			}
 		}
 
 		if ( !empty( $GLOBALS['wgPagePropertiesDisableNavigationLink'] ) ) {

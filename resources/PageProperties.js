@@ -33,6 +33,7 @@ const PageProperties = function (
 	PageContent,
 	PageCategories,
 	WindowManagerSearch,
+	WindowManagerAlert,
 	Errors
 ) {
 	var Model;
@@ -44,6 +45,7 @@ const PageProperties = function (
 	var ActionToolbarA;
 	var ActionWidget;
 	var Self;
+	var SubmitButton;
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -333,6 +335,19 @@ const PageProperties = function (
 
 				ret.push( i );
 			}
+		}
+		return ret;
+	}
+
+	// eslint-disable-next-line no-unused-vars
+	function getSingleProperties() {
+		var ret = [];
+		var propertiesInForms = getPropertiesInForms();
+		for ( var i in Properties ) {
+			if ( inArray( i, propertiesInForms ) ) {
+				continue;
+			}
+			ret.push( i );
 		}
 		return ret;
 	}
@@ -1247,12 +1262,26 @@ const PageProperties = function (
 				this.setDisabled( false );
 				this.popPending();
 				onSelect( this );
+
+			} ).catch( ( error ) => {
+				// eslint-disable-next-line no-console
+				console.log( 'loadData error', error );
+				this.popPending();
+				this.setDisabled( false );
+				this.setActive( false );
+
+				PagePropertiesFunctions.OOUIAlert(
+					WindowManagerAlert,
+					new OO.ui.HtmlSnippet( error ),
+					{ size: 'medium' }
+				);
 			} );
 		};
 
 		var toolGroup = [];
 
-		if ( Config.context !== 'parserfunction' && Config.canComposeForms ) {
+		if ( Config.context !== 'parserfunction' &&
+			( Config.canManageSemanticProperties || Config.canComposeForms ) ) {
 			toolGroup.push( {
 				name: 'addremoveforms',
 				icon: 'add',
@@ -1266,8 +1295,7 @@ const PageProperties = function (
 
 		if (
 			Config.context !== 'parserfunction' &&
-			Config.canAddSingleProperties
-		) {
+			( Config.canManageSemanticProperties || Config.canAddSingleProperties ) ) {
 			toolGroup.push( {
 				name: 'addremoveproperties',
 				icon: 'add',
@@ -1362,7 +1390,6 @@ const PageProperties = function (
 				// this.setDisabled(false);
 				// this.popPending();
 				ActionWidget.popPending();
-
 				$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
 
 				if ( 'semanticProperties' in res ) {
@@ -1385,6 +1412,18 @@ const PageProperties = function (
 				PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
 
 				onSelect( this );
+			} ).catch( ( error ) => {
+				// eslint-disable-next-line no-console
+				console.log( 'loadData error', error );
+				ActionWidget.popPending();
+				$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
+				this.setActive( false );
+
+				PagePropertiesFunctions.OOUIAlert(
+					WindowManagerAlert,
+					new OO.ui.HtmlSnippet( error ),
+					{ size: 'medium' }
+				);
 			} );
 		};
 
@@ -1644,13 +1683,14 @@ const PageProperties = function (
 			}
 			if ( data.categories ) {
 				var categories = data.categories;
-				var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__pagecategories' + '-' + '0'
-					// value: categories,
-				} );
 
 				if ( data.showCategoriesInput ) {
+					var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
+						// eslint-disable-next-line no-useless-concat
+						name: 'semantic-properties-input-' + '__pagecategories' + '-' + '0'
+						// value: categories,
+					} );
+
 					// eslint-disable-next-line no-underscore-dangle
 					Model.__pagecategories = { 0: categoriesInput };
 
@@ -1802,7 +1842,7 @@ const PageProperties = function (
 		var formProperties = [];
 		var formCategories = [];
 		var formContentModels = [];
-		var showCategoriesInput = false;
+		var showCategoriesInput = !SemanticForms.length;
 		for ( var form of SemanticForms ) {
 			if ( isTrue( Forms[ form ][ 'show-categories-input' ] ) ) {
 				showCategoriesInput = true;
@@ -1933,6 +1973,8 @@ const PageProperties = function (
 			'PanelProperties-empty'
 		);
 
+		SubmitButton.toggle( panels.length );
+
 		setTimeout( function () {
 			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
 		}, 30 );
@@ -2030,13 +2072,15 @@ const PageProperties = function (
 
 		frameAContent.push( PropertiesStack.$element );
 
-		var submitButton = new OO.ui.ButtonInputWidget( {
+		SubmitButton = new OO.ui.ButtonInputWidget( {
 			label: 'Submit', // mw.msg(
 			flags: [ 'primary', 'progressive' ],
 			type: 'submit'
 		} );
 
-		frameAContent.push( submitButton.$element );
+		SubmitButton.toggle( panels.length );
+
+		frameAContent.push( SubmitButton.$element );
 		var queryObj = {
 			formID: FormID,
 			context: Config.context,
@@ -2263,6 +2307,7 @@ $( document ).ready( function () {
 				pageContent,
 				pageCategories,
 				windowManagerSearch,
+				windowManagerAlert,
 				errors
 			);
 

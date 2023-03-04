@@ -193,7 +193,7 @@ class PageProperties {
 		$out = $parser->getOutput();
 
 /*
-{{#pagepropertiesfom: text
+{{#pagepropertiesformbutton: text
 |Form a
 |Form b
 |Form c
@@ -270,7 +270,7 @@ class PageProperties {
 		$title = $parser->getTitle();
 
 /*
-{{#pagepropertiesfom: Form a
+{{#pagepropertiesform: Form a
 |Form b
 |Form c
 |css-class =
@@ -1080,7 +1080,8 @@ class PageProperties {
 			if (
 				// *** uncomment to retrieve all forms and all semantic properties
 				// only if there aren't forms on the page (and the user has the related rights)
-				// !count( self::$forms ) &&
+
+				/* !count( self::$forms ) && */
 
 				$obj['config']['context'] === 'EditSemantic' ) {
 				$flags = self::setAllFormsAndSemanticProperties( $out );
@@ -1154,6 +1155,10 @@ class PageProperties {
 				'canManageSemanticProperties' => self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ),
 				'canComposeForms' => self::$User->isAllowed( 'pageproperties-cancomposeforms' ),
 				'canAddSingleProperties' => self::$User->isAllowed( 'pageproperties-canaddsingleproperties' ),
+
+				// this is always true
+				// 'canEditSemanticProperties' => self::$User->isAllowed( 'pageproperties-caneditsemanticproperties' ),
+
 				'contentModels' => self::getContentModels(),
 			],
 		];
@@ -1180,7 +1185,9 @@ class PageProperties {
 	public static function setAllFormsAndSemanticProperties( $output ) {
 		$ret = 0;
 
-		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ) || self::$User->isAllowed( 'pageproperties-cancomposeforms' ) ) {
+		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+			|| self::$User->isAllowed( 'pageproperties-cancomposeforms' ) ) {
+
 			$allForms = self::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
 
 			self::setForms( $output, array_map( static function ( $title ) {
@@ -1190,7 +1197,9 @@ class PageProperties {
 			$ret += ALL_FORMS;
 		}
 
-		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ) || self::$User->isAllowed( 'pageproperties-canaddsingleproperties' ) ) {
+		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+			|| self::$User->isAllowed( 'pageproperties-canaddsingleproperties' ) ) {
+
 			self::$semanticProperties = array_map( static function ( $value ) {
 				// label
 				return $value[2];
@@ -1840,7 +1849,12 @@ class PageProperties {
 	 * @return \SMWQueryResult
 	 */
 	public static function getQueryResults( $query_string, $properties_to_display, $parameters = [], $display_title = true ) {
+		if ( self::$SMWDataValueFactory === null ) {
+			self::initSMW();
+		}
+
 		$printouts = [];
+
 		foreach ( $properties_to_display as $property ) {
 			// @see SemanticMediaWiki/src/Mediawiki/ApiRequestParameterFormatter.php -> formatPrintouts
 			$printouts[] = new \SMWPrintRequest(
@@ -2104,6 +2118,34 @@ class PageProperties {
 		}
 
 		return $ret;
+	}
+
+	/**
+	 * @return Importer|Importer1_35
+	 */
+	public static function getImporter() {
+		$services = MediaWikiServices::getInstance();
+
+		if ( version_compare( MW_VERSION, '1.36', '>' ) ) {
+			include_once __DIR__ . '/Importer/PagePropertiesImporter.php';
+
+			// @see ServiceWiring.php -> WikiImporterFactory
+			return new PagePropertiesImporter(
+				$services->getMainConfig(),
+				$services->getHookContainer(),
+				$services->getContentLanguage(),
+				$services->getNamespaceInfo(),
+				$services->getTitleFactory(),
+				$services->getWikiPageFactory(),
+				$services->getWikiRevisionUploadImporter(),
+				$services->getPermissionManager(),
+				$services->getContentHandlerFactory(),
+				$services->getSlotRoleRegistry()
+			);
+		}
+
+		include_once __DIR__ . '/Importer/PagePropertiesImporter1_35.php';
+		return new PagePropertiesImporter1_35( $services->getMainConfig() );
 	}
 
 	/**

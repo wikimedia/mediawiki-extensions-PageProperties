@@ -508,7 +508,7 @@ const ManageProperties = ( function () {
 
 		if ( inputName === 'OO.ui.HiddenInputWidget' ) {
 			constructor.prototype.getValue = function () {
-				return '';
+				return config.value;
 			};
 		}
 
@@ -1285,7 +1285,6 @@ const ManageProperties = ( function () {
 				dataset: dataToLoad.join( '|' ),
 				format: 'json'
 			};
-
 			mw.loader.using( 'mediawiki.api', function () {
 				new mw.Api()
 					.postWithToken( 'csrf', payload )
@@ -1298,9 +1297,8 @@ const ManageProperties = ( function () {
 							reject();
 						}
 					} )
-					// eslint-disable-next-line no-unused-vars
 					.fail( function ( res ) {
-						reject( 'error' );
+						reject( res );
 					} );
 			} );
 		} );

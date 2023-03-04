@@ -21,12 +21,6 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-if ( version_compare( MW_VERSION, '1.36', '>' ) ) {
-	include_once __DIR__ . '/PagePropertiesImporter.php';
-} else {
-	include_once __DIR__ . '/PagePropertiesImporter1_35.php';
-}
-
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
 
@@ -67,24 +61,7 @@ class PagePropertiesApiImport extends ApiBase {
 
 		$services = MediaWikiServices::getInstance();
 
-		if ( version_compare( MW_VERSION, '1.36', '>' ) ) {
-			// @see ServiceWiring.php -> WikiImporterFactory
-			$importer = new PagePropertiesImporter(
-				$services->getMainConfig(),
-				$services->getHookContainer(),
-				$services->getContentLanguage(),
-				$services->getNamespaceInfo(),
-				$services->getTitleFactory(),
-				$services->getWikiPageFactory(),
-				$services->getWikiRevisionUploadImporter(),
-				$services->getPermissionManager(),
-				$services->getContentHandlerFactory(),
-				$services->getSlotRoleRegistry()
-			);
-
-		} else {
-			$importer = new PagePropertiesImporter1_35( $services->getMainConfig() );
-		}
+		$importer = \PageProperties::getImporter();
 
 /*
 		@todo, implement rootpage
