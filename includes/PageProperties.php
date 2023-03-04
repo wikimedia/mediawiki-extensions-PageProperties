@@ -18,7 +18,7 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <business@topway.it>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 use MediaWiki\Extension\PageProperties\ReplaceText as ReplaceText;
@@ -1488,6 +1488,9 @@ class PageProperties {
 	public static function getSemanticProperties( $properties ) {
 		$ret = [];
 		foreach ( $properties as $label ) {
+			if ( !$label ) {
+				continue;
+			}
 			$prop = SMW\DIProperty::newFromUserLabel( $label );
 			$ret[$label] = [ $prop, $prop->getKey(), $prop->getLabel(), $prop->isUserDefined() ];
 		}
@@ -1504,6 +1507,7 @@ class PageProperties {
 		$dataTypeRegistry = SMW\DataTypeRegistry::getInstance();
 		$dataValueFactory = SMW\DataValueFactory::getInstance();
 		$langCode = RequestContext::getMain()->getLanguage()->getCode();
+		$propertyRegistry = SMW\PropertyRegistry::getInstance();
 
 		if ( !$pageproperties ) {
 			$specialPropertyDefinitions = array_merge( self::$specialPropertyDefinitions, [ '_TYPE', '_IMPO' ] );
@@ -1522,16 +1526,12 @@ class PageProperties {
 		foreach ( $properties as $value ) {
 			list( $property, $property_key, $label, $userDefined ) = $value;
 
-			// see src/Factbox/Factbox.php => createRows()
-			$propertyDv = $dataValueFactory->newDataValueByItem( $property, null );
-
-			if ( !$propertyDv->isVisible() ) {
-				continue;
-			}
-
 			if ( $userDefined ) {
 				$title_ = Title::makeTitleSafe( SMW_NS_PROPERTY,  $label );
 				if ( !$title_ || !$title_->isKnown() ) {
+					// see src/Factbox/Factbox.php => createRows()
+					$propertyDv = $dataValueFactory->newDataValueByItem( $property, null );
+
 					if ( !self::propertyUsage( $propertyDv ) ) {
 						continue;
 					}
@@ -1546,6 +1546,12 @@ class PageProperties {
 				// $typeID = $propertyDv->getTypeID();
 			} else {
 				$typeID = array_search( $pageproperties[ '_TYPE' ][0], $typeLabels );
+			}
+
+			$description = $propertyRegistry->findPropertyDescriptionMsgKeyById( $property_key );
+
+			if ( $description ) {
+				$description = wfMessage( $description )->text();
 			}
 
 			$typeLabel = $dataTypeRegistry->findTypeLabel( $typeID );
@@ -1567,11 +1573,11 @@ class PageProperties {
 				'preferredLabel' => $preferredLabel,
 				'type' => $typeID,
 				'typeLabel' => $typeLabel,
-				'description' => null,
+				'description' => $description,
 				'properties' => [],
 			];
 
-			if ( $pageproperties ) {
+			if ( $pageproperties && !$description ) {
 				$ret[ $label ][ 'properties' ] = $pageproperties;
 
 				// @TODO do the same for _PPLB
@@ -1621,10 +1627,9 @@ class PageProperties {
 				// @see https://www.semantic-mediawiki.org/wiki/Help:Special_property_Allows_value_list
 
 				// @TODO do the same for _PPLB
-				if ( $key_ === '_PDESC' ) {
+				if ( $key_ === '_PDESC' && !$description ) {
 					$ret[ $label ][ 'description' ] = self::getMonolingualText( $langCode, $dataValues );
 				}
-
 			}
 		}
 
@@ -1652,17 +1657,20 @@ class PageProperties {
 	 * @return array
 	 */
 	public static function getAllProperties() {
+		$predefinedProperties = self::getPredefinedProperties();
 		$properties = self::$SMWStore->getPropertiesSpecial( self::$SMWOptions );
 
 		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
 			// SMW 1.9+
-			$properties = $properties->runCollector();
+			$properties = array_map( static function ( $value ) {
+				return $value[0];
+			}, $properties->runCollector() );
 		}
 
-		$ret = [];
-		foreach ( $properties as $value ) {
-			$property = $value[0];
+		$properties = array_merge( $properties, $predefinedProperties );
 
+		$ret = [];
+		foreach ( $properties as $property ) {
 			if ( !method_exists( $property, 'getKey' ) ) {
 				continue;
 			}
@@ -1673,15 +1681,21 @@ class PageProperties {
 				continue;
 			}
 
+			$label = $property->getLabel();
+
+			if ( empty( $label ) ) {
+				continue;
+			}
+
 			if ( in_array( $property_key, self::$exclude ) ) {
 				continue;
 			}
 
-			if ( !$property->isUserAnnotable() ) {
+			if ( !$property->isUserAnnotable() || !$property->isShown() ) {
 				continue;
 			}
 
-			$ret[] = [ $property, $property_key, $property->getLabel(), $property->isUserDefined() ];
+			$ret[] = [ $property, $property_key, $label, $property->isUserDefined() ];
 		}
 
 		return $ret;
@@ -1722,11 +1736,6 @@ class PageProperties {
 		$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
 
 		foreach ( $propertyList as $key => $value ) {
-
-			if ( in_array( $key, self::$exclude ) ) {
-				continue;
-			}
-
 			if ( array_key_exists( $key, $typeLabels ) ) {
 				continue;
 			}
@@ -1854,7 +1863,6 @@ class PageProperties {
 		}
 
 		$printouts = [];
-
 		foreach ( $properties_to_display as $property ) {
 			// @see SemanticMediaWiki/src/Mediawiki/ApiRequestParameterFormatter.php -> formatPrintouts
 			$printouts[] = new \SMWPrintRequest(
@@ -2322,7 +2330,8 @@ class PageProperties {
 	public static function replaceArrayKey( $arr, $oldkey, $newkey ) {
 		if ( array_key_exists( $oldkey, $arr ) ) {
 			$keys = array_keys( $arr );
-		$keys[ array_search( $oldkey, $keys ) ] = $newkey;
+			$keys[ array_search( $oldkey, $keys ) ] = $newkey;
+
 			return array_combine( $keys, $arr );
 		}
 		return $arr;
