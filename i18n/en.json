@@ -58,7 +58,7 @@
 	"pageproperties-jsmodule-forms-field-oncreateonly-help": "toggle on if this field is meant to be used only for pagename formula",
 	"pageproperties-jsmodule-forms-field-valueformula": "value formula",
 	"pageproperties-jsmodule-forms-field-valueformula-help": "enter a template/parser function if you want to alter the value of this field before saving. Use <property>, where \"property\" is the name of either the property related to this field, as well as of other properties in the same form, to use their actual value in the template/parser function",
-	"pageproperties-jsmodule-forms-field-help-label": "Help text",
+	"pageproperties-jsmodule-forms-field-help-label": "Help message",
 	"pageproperties-jsmodule-import-file-upload-max-size": "please increase PHP's post_max_size and upload_max_filesize to continue (current upload limit: $1)",
 	"pageproperties-jsmodule-forms-field-help-message": "Adds localizable context help to this field adding the at symbol plus the language code at the end of the message, eg. 'my help message @en'",
 	"pageproperties-jsmodule-forms-frompropertydescription": "inherit from property",

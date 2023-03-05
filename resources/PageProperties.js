@@ -375,10 +375,21 @@ const PageProperties = function (
 		this.connect( this, {
 			itemDelete: 'onItemDelete'
 		} );
+
+		this.connect( this, {
+			add: 'onAddItem'
+		} );
+
 	};
 
 	OO.inheritClass( ListWidget, OO.ui.Widget );
 	OO.mixinClass( ListWidget, OO.ui.mixin.GroupWidget );
+
+	ListWidget.prototype.onAddItem = function () {
+		setTimeout( function () {
+			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
+		}, 30 );
+	};
 
 	ListWidget.prototype.onItemDelete = function ( itemWidget, isFile ) {
 		if ( itemWidget.parentWidget ) {
@@ -1011,6 +1022,7 @@ const PageProperties = function (
 					} )
 				] );
 			} );
+
 			items.push( addOption );
 		}
 
