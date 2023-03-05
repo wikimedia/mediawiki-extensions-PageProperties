@@ -75,6 +75,8 @@
 	"pageproperties-jsmodule-pageproperties-columns-forms-dialog": "A label message",
 	"pageproperties-jsmodule-forms-searchdialog-save": "A label message",
 	"pageproperties-jsmodule-forms-field-required": "A label message",
+	"pageproperties-jsmodule-forms-field-default": "A label message",
+	"pageproperties-jsmodule-forms-field-default-help": "A label message",
 	"pageproperties-jsmodule-forms-field-oncreateonly": "A label message",
 	"pageproperties-jsmodule-forms-field-oncreateonly-help": "A label message",
 	"pageproperties-jsmodule-forms-field-help-label": "A label message",

@@ -370,6 +370,8 @@
 				"pageproperties-jsmodule-pageproperties-columns-forms-dialog",
 				"pageproperties-jsmodule-forms-searchdialog-save",
 				"pageproperties-jsmodule-forms-field-required",
+				"pageproperties-jsmodule-forms-field-default",
+				"pageproperties-jsmodule-forms-field-default-help",
 				"pageproperties-jsmodule-forms-field-oncreateonly",
 				"pageproperties-jsmodule-forms-field-oncreateonly-help",
 				"pageproperties-jsmodule-forms-field-valueformula",

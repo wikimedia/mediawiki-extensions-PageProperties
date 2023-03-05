@@ -1347,7 +1347,11 @@ class PageProperties {
 				self::$semanticProperties[] = $label;
 			}
 
-			$helpMessages = [];
+			if ( !empty( $field['default'] ) ) {
+				// @TODO or use recursiveTagParseFully
+				$fields[ $label ][ 'default-result'] = Parser::stripOuterParagraph( $output->parseAsContent( $fields[ $label ][ 'default'] ) );
+			}
+
 			if ( !empty( $field['help-message'] ) ) {
 				$helpMessages = $field['help-message'];
 				if ( !is_array( $helpMessages ) ) {

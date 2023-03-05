@@ -92,6 +92,7 @@ const PagePropertiesForms = ( function () {
 
 		for ( var field of [
 			'required',
+			'default',
 			'help-message',
 			'preferred-input',
 			'multiple',
@@ -935,6 +936,13 @@ const PagePropertiesForms = ( function () {
 
 		Model.fields[ SelectedProperty.label ].required = toggleInputRequired;
 
+		var defaultValueInput = new OO.ui.TextInputWidget( {
+			value: getPropertyValue( null, 'default' )
+		} );
+
+		// eslint-disable-next-line dot-notation
+		Model.fields[ SelectedProperty.label ][ 'default' ] = defaultValueInput;
+
 		var toggleInputOnCreate = new OO.ui.ToggleSwitchWidget( {
 			value: !!getPropertyValue( null, 'on-create-only' )
 		} );
@@ -1345,6 +1353,13 @@ const PagePropertiesForms = ( function () {
 				align: 'top'
 			} ),
 
+			new OO.ui.FieldLayout( defaultValueInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-field-default' ),
+				help: mw.msg( 'pageproperties-jsmodule-forms-field-default-help' ),
+				helpInline: true,
+				align: 'top'
+			} ),
+
 			new OO.ui.FieldLayout( selectHelpInput, {
 				label: mw.msg( 'pageproperties-jsmodule-forms-field-help-label' ),
 				helpInline: true,
@@ -1440,7 +1455,8 @@ const PagePropertiesForms = ( function () {
 					selectOptionsFromValue === 'options-askquery'
 			);
 			fieldOptionFormula.toggle(
-				inArray( availableInputsValue, ManageProperties.optionsInputs )
+				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
+					selectOptionsFromValue === 'options-askquery'
 			);
 			fieldOptionslimit.toggle(
 				inArray( availableInputsValue, ManageProperties.optionsInputs )
@@ -1456,6 +1472,7 @@ const PagePropertiesForms = ( function () {
 			fieldAskquery.toggle( value === 'options-askquery' );
 			fieldPrintouts.toggle( value === 'options-askquery' );
 			fieldQuerysubject.toggle( value === 'options-askquery' );
+			fieldOptionFormula.toggle( value === 'options-askquery' );
 		} );
 
 		availableInputs.on( 'change', function ( value ) {

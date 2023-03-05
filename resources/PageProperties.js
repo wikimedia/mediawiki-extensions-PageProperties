@@ -620,6 +620,10 @@ const PageProperties = function (
 		var required =
 			formField && 'required' in formField && isTrue( formField.required );
 
+		if ( formField && 'default' in formField && config.value === '' && ( Config.isNewPage || required ) ) {
+			config.value = formField[ 'default-result' ];
+		}
+
 		var inputOptions = { required: required };
 
 		if ( formField && 'options-values-result' in formField ) {
