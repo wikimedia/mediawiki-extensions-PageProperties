@@ -47,7 +47,7 @@
 		this.select = select;
 
 		select.on( 'change', function () {
-			self.emit( ' change', self.getValue() );
+			self.emit( 'change', self.getValue() );
 		} );
 
 		var div = $( '<div>' )
