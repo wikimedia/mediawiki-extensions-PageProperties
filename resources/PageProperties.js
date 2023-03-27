@@ -139,6 +139,7 @@ const PageProperties = function (
 					}
 				);
 			} else {
+				config.options = [];
 				config.allowArbitrary = true;
 			}
 		}
@@ -395,7 +396,7 @@ const PageProperties = function (
 		if ( itemWidget.parentWidget ) {
 			if (
 				!inputIsEmpty(
-					Model[ itemWidget.parentWidget.property ][ itemWidget.index ]
+					Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ]
 				) &&
 				// eslint-disable-next-line no-alert
 				!confirm(
@@ -409,9 +410,16 @@ const PageProperties = function (
 
 			if ( length > 1 || isFile ) {
 				this.removeItems( [ itemWidget ] );
-				delete Model[ itemWidget.parentWidget.property ][ itemWidget.index ];
+				delete Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ];
+
+				if ( isFile ) {
+					if ( itemWidget.parentWidget.required ) {
+						itemWidget.parentWidget.fileInputWidget.setRequired( true );
+					}
+				}
+
 			} else {
-				Model[ itemWidget.parentWidget.property ][ itemWidget.index ].setValue( '' );
+				Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ].setValue( '' );
 			}
 
 			if ( length === 0 ) {
@@ -469,6 +477,7 @@ const PageProperties = function (
 
 		this.parentWidget = config.parentWidget;
 		this.index = config.index;
+		var property = this.parentWidget.config.property;
 		var self = this;
 
 		OO.ui.mixin.GroupWidget.call(
@@ -490,16 +499,22 @@ const PageProperties = function (
 
 		// initialize this here to be used by getInputWidget
 		// @TODO replace File: server-side and simplify here
-		Model[ '__filekey-' + config.property ][ config.index ] = {
+		Model[ '__filekey-' + property ][ config.index ] = {
 			getValue: function () {
 				return '';
 			}
 		};
 
+		// *** or set fileInputWidget before creating
+		// InnerItemWidgetFile
+		if ( 'fileInputWidget' in this.parentWidget ) {
+			this.parentWidget.fileInputWidget.setRequired( false );
+		}
+
 		var inputWidget = getInputWidget(
 			// 'OO.ui.TextInputWidget'
 			config.inputName,
-			config.property,
+			property,
 			config.index,
 			config.value,
 			// @TODO, enable after adding the logic
@@ -508,7 +523,7 @@ const PageProperties = function (
 			{ required: required }
 		);
 
-		Model[ config.property ][ config.index ] = inputWidget;
+		Model[ property ][ config.index ] = inputWidget;
 
 		var filePreview = new OO.ui.Widget( {
 			classes: [ 'mw-upload-bookletLayout-filePreview' ]
@@ -553,8 +568,7 @@ const PageProperties = function (
 			self.progressBarWidget.setProgress( progress * 100 );
 		};
 
-		this.property = config.property;
-		this.index = config.index;
+		this.property = property;
 
 		this.uploadComplete = function ( file, res ) {
 			self.progressBarWidget.toggle( false );
@@ -609,6 +623,8 @@ const PageProperties = function (
 
 		this.parentWidget = config.parentWidget;
 		this.index = config.index;
+		var property = this.parentWidget.config.property;
+		var form = this.parentWidget.config.form;
 
 		OO.ui.mixin.GroupWidget.call(
 			this,
@@ -626,7 +642,7 @@ const PageProperties = function (
 		} );
 
 		var formField =
-			config.form in Forms ? Forms[ config.form ].fields[ config.property ] : null;
+			form in Forms ? Forms[ form ].fields[ property ] : null;
 
 		var required =
 			formField && 'required' in formField && isTrue( formField.required );
@@ -643,7 +659,7 @@ const PageProperties = function (
 
 		var inputWidget = getInputWidget(
 			config.inputName,
-			config.property,
+			property,
 			config.index,
 			config.value,
 			inputOptions
@@ -654,17 +670,18 @@ const PageProperties = function (
 		// https://stackoverflow.com/questions/6218494/using-the-html5-required-attribute-for-a-group-of-checkboxes
 
 		if ( config.index === 0 && inputWidget.requiresValidation ) {
+
 			// eslint-disable-next-line  no-underscore-dangle
 			var name_ =
 				'semantic-properties-input-' +
-				encodeURIComponent( config.property ) +
+				encodeURIComponent( property ) +
 				'-' +
 				config.index +
 				'-validation';
 
 			inputWidget.$element.append(
 				$(
-					'<input class="radio_for_required_checkboxes" type="text" name="' +
+					'<input class="radio_for_required_checkboxes" type="radio" name="' +
 
 						name_ +
 						'"' +
@@ -704,7 +721,7 @@ const PageProperties = function (
 			} );
 		}
 
-		Model[ config.property ][ config.index ] = inputWidget;
+		Model[ property ][ config.index ] = inputWidget;
 
 		var helpMessage = '';
 		if ( config.last ) {
@@ -718,8 +735,8 @@ const PageProperties = function (
 						helpMessage = helpMessage[ 0 ];
 					}
 				}
-			} else if ( SemanticProperties[ config.property ].description ) {
-				helpMessage = SemanticProperties[ config.property ].description;
+			} else if ( SemanticProperties[ property ].description ) {
+				helpMessage = SemanticProperties[ property ].description;
 			}
 		}
 
@@ -774,7 +791,8 @@ const PageProperties = function (
 		);
 
 		var self = this;
-		this.property = config.property;
+		this.config = config;
+		// this.property = config.property;
 
 		var deleteButton = new OO.ui.ButtonWidget( {
 			icon: 'trash',
@@ -853,13 +871,11 @@ const PageProperties = function (
 				optionsList.addItems( [
 					new InnerItemWidgetFile( {
 						classes: [ 'InnerItemWidgetFile' ],
-						property: config.property,
 						inputName: 'OO.ui.TextInputWidget',
 						value: values[ i ],
 						parentWidget: this,
 						index: optionsList.items.length,
 						multiple: multiple,
-						form: config.form,
 						loaded: true,
 						last: i * 1 === values.length - 1
 					} )
@@ -870,14 +886,11 @@ const PageProperties = function (
 				optionsList.addItems( [
 					new InnerItemWidget( {
 						classes: [ 'InnerItemWidget' ],
-						property: config.property,
 						inputName: inputName,
-						// Properties[ config.property ][ i ],
 						value: values[ i ],
 						parentWidget: this,
 						index: optionsList.items.length,
 						multiple: multiple,
-						form: config.form,
 						last: i * 1 === values.length - 1
 					} )
 				] );
@@ -886,14 +899,11 @@ const PageProperties = function (
 			optionsList.addItems( [
 				new InnerItemWidget( {
 					classes: [ 'InnerItemWidget' ],
-					property: config.property,
 					inputName: inputName,
-					// Properties[ config.property ],
 					value: values,
 					parentWidget: this,
 					index: optionsList.items.length,
 					multiple: false,
-					form: config.form,
 					last: true
 				} )
 			] );
@@ -925,11 +935,24 @@ const PageProperties = function (
 		// 	];
 		// } else {
 
+		var label = config.property;
+		if ( formField && 'label' in formField ) {
+			if ( formField[ 'label-result' ] ) {
+				label = formField[ 'label-result' ];
+			} else {
+				label = formField.label;
+
+				if ( Array.isArray( label ) ) {
+					label = label[ 0 ];
+				}
+			}
+		}
+
 		var items = [];
 		if ( inputName !== 'OO.ui.HiddenInputWidget' ) {
 			items.push(
 				new OO.ui.FieldLayout( optionsList, {
-					label: config.property,
+					label: label,
 					align: 'top',
 
 					// The following classes are used here:
@@ -945,13 +968,24 @@ const PageProperties = function (
 			var required =
 				formField && 'required' in formField && isTrue( formField.required );
 
+			self.required = required;
+
 			var inputWidget = getInputWidget(
 				inputName,
 				config.property + '-SelectFileWidget',
 				0,
 				'',
-				{ required: required, multiple: multiple }
+
+				// only requires if there aren't files arealdy
+				// loaded, then toggle require attribute on the
+				// input widget if they are removed
+				//
+				{ required: required && optionsList.items.length === 0, multiple: multiple }
 			);
+
+			// required to toggle required for native validation
+			// based on the optionsList
+			self.fileInputWidget = inputWidget;
 
 			var loadedFiles = {};
 
@@ -963,13 +997,11 @@ const PageProperties = function (
 			this.on( 'fileUploadInit', function ( file ) {
 				var innerItemWidgetFile = new InnerItemWidgetFile( {
 					classes: [ 'InnerItemWidgetFile' ],
-					property: config.property,
 					inputName: 'OO.ui.TextInputWidget',
 					value: file.name,
 					parentWidget: self,
 					index: optionsList.items.length,
 					multiple: multiple,
-					form: config.form,
 					loaded: false,
 					last: false
 				} );
@@ -1012,7 +1044,6 @@ const PageProperties = function (
 				optionsList.addItems( [
 					new InnerItemWidget( {
 						classes: [ 'InnerItemWidget' ],
-						property: config.property,
 						inputName: inputName,
 						value: '',
 						parentWidget: self,
@@ -1634,7 +1665,7 @@ const PageProperties = function (
 				for ( var i in data.pagenameFormula ) {
 					options.push( {
 						data: data.pagenameFormula[ i ],
-						label: 'pagename formula of ' + i // mw.msg("pageproperties-jsmodule-forms-userdefined"),
+						label: mw.msg( 'pageproperties-jsmodule-pageproperties-pagenameformulaof', i )
 					} );
 				}
 
@@ -2089,7 +2120,7 @@ const PageProperties = function (
 		frameAContent.push( PropertiesStack.$element );
 
 		SubmitButton = new OO.ui.ButtonInputWidget( {
-			label: 'Submit', // mw.msg(
+			label: mw.msg( 'pageproperties-jsmodule-pageproperties-submit' ),
 			flags: [ 'primary', 'progressive' ],
 			type: 'submit'
 		} );

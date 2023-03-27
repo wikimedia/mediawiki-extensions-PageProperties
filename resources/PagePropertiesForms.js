@@ -93,6 +93,7 @@ const PagePropertiesForms = ( function () {
 		for ( var field of [
 			'required',
 			'default',
+			'label',
 			'help-message',
 			'preferred-input',
 			'multiple',
@@ -113,7 +114,15 @@ const PagePropertiesForms = ( function () {
 						Model.fields[ property ].selectHelpInput.getValue() === 'override'
 					) {
 						fields[ property ][ field ] =
-							getPropertyValue( property, 'help-message' ) || [];
+							getPropertyValue( property, field ) || [];
+					}
+					continue;
+				case 'label':
+					if (
+						Model.fields[ property ].selectLabelInput.getValue() === 'override'
+					) {
+						fields[ property ][ field ] =
+							getPropertyValue( property, field ) || [];
 					}
 					continue;
 				case 'preferred-input':
@@ -801,7 +810,7 @@ const PagePropertiesForms = ( function () {
 			rows: 2
 		} );
 
-		Model.fields[ SelectedProperty.label ][ 'help-message' ][ config.index ] =
+		Model.fields[ SelectedProperty.label ][ config.field ][ config.index ] =
 			inputWidget;
 
 		fieldset.addItems( [
@@ -940,8 +949,7 @@ const PagePropertiesForms = ( function () {
 			value: getPropertyValue( null, 'default' )
 		} );
 
-		// eslint-disable-next-line dot-notation
-		Model.fields[ SelectedProperty.label ][ 'default' ] = defaultValueInput;
+		Model.fields[ SelectedProperty.label ].default = defaultValueInput;
 
 		var toggleInputOnCreate = new OO.ui.ToggleSwitchWidget( {
 			value: !!getPropertyValue( null, 'on-create-only' )
@@ -956,13 +964,6 @@ const PagePropertiesForms = ( function () {
 
 		Model.fields[ SelectedProperty.label ][ 'value-formula' ] = valueFormulaInput;
 
-		let optionsList = new ListWidget();
-
-		var addOption = new OO.ui.ButtonWidget( {
-			// label: "add option",
-			icon: 'add'
-		} );
-
 		// @todo, add "populate with values from property"
 		// for the inputs of type ManageProperties.optionsInputs
 		// and ManageProperties.multiselectInputs
@@ -976,26 +977,101 @@ const PagePropertiesForms = ( function () {
 
 		'OO.ui.TagMultiselectWidget',
 */
-
 		// @todo, add "show if another field has a specific value"
+
+		// /////////////////	label-message	//////////////
+
+		var labelMessages = getPropertyValue( null, 'label' ) || [];
+
+		Model.fields[ SelectedProperty.label ].label = {};
+
+		let labelOptionsList = new ListWidget();
+
+		var addLabelOption = new OO.ui.ButtonWidget( {
+			// label: "add option",
+			icon: 'add'
+		} );
+
+		addLabelOption.on( 'click', function () {
+			labelOptionsList.addItems( [
+				new InnerItemWidget( {
+					classes: [ 'InnerItemWidget' ],
+					field: 'label',
+					value: '',
+					index: labelOptionsList.items.length
+				} )
+			] );
+		} );
+
+		for ( var i in labelMessages ) {
+			labelOptionsList.addItems( [
+				new InnerItemWidget( {
+					classes: [ 'InnerItemWidget' ],
+					field: 'label',
+					value: labelMessages[ i ],
+					index: i
+				} )
+			] );
+		}
+
+		var selectLabelInput = new OO.ui.RadioSelectInputWidget( {
+			options: [
+				{
+					data: 'fromproperty',
+					label: mw.msg(
+						'pageproperties-jsmodule-forms-inheritfromproperty'
+					)
+				},
+				{
+					data: 'override',
+					label: mw.msg( 'pageproperties-jsmodule-forms-distinctvalue' )
+				}
+			],
+			value: labelMessages.length ? 'override' : 'fromproperty'
+		} );
+
+		Model.fields[ SelectedProperty.label ].selectLabelInput = selectLabelInput;
+
+		var fieldLabelOptionsList = new OO.ui.FieldLayout( labelOptionsList, {
+			label: new OO.ui.HtmlSnippet(
+				mw.msg( 'pageproperties-jsmodule-forms-field-label-message' )
+			),
+			align: 'top'
+			// help: ""
+			// helpInline: true,
+		} );
+
+		selectLabelInput.on( 'change', function ( value ) {
+			fieldLabelOptionsList.toggle( value === 'override' );
+			addLabelOption.toggle( value === 'override' );
+		} );
+
+		// /////////////////	help-message	//////////////
 
 		var helpMessages = getPropertyValue( null, 'help-message' ) || [];
 
 		Model.fields[ SelectedProperty.label ][ 'help-message' ] = {};
 
-		addOption.on( 'click', function () {
-			optionsList.addItems( [
+		let helpOptionsList = new ListWidget();
+
+		var addHelpOption = new OO.ui.ButtonWidget( {
+			// label: "add option",
+			icon: 'add'
+		} );
+
+		addHelpOption.on( 'click', function () {
+			helpOptionsList.addItems( [
 				new InnerItemWidget( {
 					classes: [ 'InnerItemWidget' ],
 					field: 'help-message',
 					value: '',
-					index: optionsList.items.length
+					index: helpOptionsList.items.length
 				} )
 			] );
 		} );
 
 		for ( var i in helpMessages ) {
-			optionsList.addItems( [
+			helpOptionsList.addItems( [
 				new InnerItemWidget( {
 					classes: [ 'InnerItemWidget' ],
 					field: 'help-message',
@@ -1008,9 +1084,9 @@ const PagePropertiesForms = ( function () {
 		var selectHelpInput = new OO.ui.RadioSelectInputWidget( {
 			options: [
 				{
-					data: 'propertydescription',
+					data: 'fromproperty',
 					label: mw.msg(
-						'pageproperties-jsmodule-forms-frompropertydescription'
+						'pageproperties-jsmodule-forms-inheritfromproperty'
 					)
 				},
 				{
@@ -1018,12 +1094,12 @@ const PagePropertiesForms = ( function () {
 					label: mw.msg( 'pageproperties-jsmodule-forms-distinctvalue' )
 				}
 			],
-			value: helpMessages.length ? 'override' : 'propertydescription'
+			value: helpMessages.length ? 'override' : 'fromproperty'
 		} );
 
 		Model.fields[ SelectedProperty.label ].selectHelpInput = selectHelpInput;
 
-		var fieldOptionsList = new OO.ui.FieldLayout( optionsList, {
+		var fieldHelpOptionsList = new OO.ui.FieldLayout( helpOptionsList, {
 			label: new OO.ui.HtmlSnippet(
 				mw.msg( 'pageproperties-jsmodule-forms-field-help-message' )
 			),
@@ -1033,30 +1109,40 @@ const PagePropertiesForms = ( function () {
 		} );
 
 		selectHelpInput.on( 'change', function ( value ) {
-			fieldOptionsList.toggle( value === 'override' );
-			addOption.toggle( value === 'override' );
+			fieldHelpOptionsList.toggle( value === 'override' );
+			addHelpOption.toggle( value === 'override' );
 		} );
+
+		// /////////////////	preferred-input	//////////////
 
 		var preferredInputValue = getPropertyValue( null, 'preferred-input' );
 
-		var availableInputs = new OO.ui.DropdownInputWidget( {
-			options: ManageProperties.createInputOptions(
-				ManageProperties.getAvailableInputs( SelectedProperty.type ).concat(
-					'OO.ui.HiddenInputWidget'
-				),
-				{
-					key: 'value'
-				}
+		var options = ManageProperties.createInputOptions(
+			ManageProperties.getAvailableInputs( SelectedProperty.type ).concat(
+				'OO.ui.HiddenInputWidget'
 			),
-			// @see https://www.mediawiki.org/wiki/OOUI/Concepts#Overlays
-			$overlay: true,
-			value: preferredInputValue
-		} );
+			{
+				key: 'value'
+			}
+		);
+
+		// *** unfortunately the following does not work well in
+		// nested dialogs, so we fall down to a standard select
+
+		// var availableInputs = new OO.ui.DropdownInputWidget( {
+		// 	options: options,
+		// 	// @see https://www.mediawiki.org/wiki/OOUI/Concepts#Overlays
+		// 	$overlay: true,
+		// 	value: preferredInputValue,
+		// 	classes: [ "pageproperties-overlay-dropdown" ],
+		// } );
+
+		var availableInputs = new PagePropertiesDropdownWidget( { value: preferredInputValue, options: options } );
 
 		Model.fields[ SelectedProperty.label ][ 'preferred-input' ] = availableInputs;
 
 		var fieldAvailableInputs = new OO.ui.FieldLayout( availableInputs, {
-			label: mw.msg( 'pageproperties-jsmodule-manageproperties-preferred-input' ),
+			label: '',	// mw.msg( 'pageproperties-jsmodule-manageproperties-preferred-input' ),
 			// help: 'Multiple values ...',
 			// helpInline: true,
 			align: 'top'
@@ -1095,6 +1181,8 @@ const PagePropertiesForms = ( function () {
 		'OO.ui.RadioSelectInputWidget',
 		'OO.ui.CheckboxMultiselectInputWidget'
 */
+
+		// /////////////////	options	//////////////
 
 		var optionsAsdefinedValue = getPropertyValue( null, 'options-values' ) || [];
 
@@ -1148,7 +1236,7 @@ const PagePropertiesForms = ( function () {
 		} );
 
 		var optionsAsdefinedInput = new OO.ui.TagMultiselectWidget( {
-			value: optionsAsdefinedValue,
+			selected: optionsAsdefinedValue,
 			allowArbitrary: true,
 			orientation: 'vertical'
 		} );
@@ -1249,19 +1337,23 @@ const PagePropertiesForms = ( function () {
 			align: 'top'
 		} );
 
-		var alternateInput = new OO.ui.DropdownInputWidget( {
-			options: ManageProperties.createInputOptions( {
-				autocomplete: mw.msg(
-					'pageproperties-jsmodule-forms-alternateinput-autocomplete'
-				),
-				'infinite-scroll': mw.msg(
-					'pageproperties-jsmodule-forms-alternateinput-infinite-scroll'
-				)
-			} ),
-			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
-			$overlay: true,
-			value: getPropertyValue( 'alternate-input' )
+		var options = ManageProperties.createInputOptions( {
+			autocomplete: mw.msg(
+				'pageproperties-jsmodule-forms-alternateinput-autocomplete'
+			),
+			'infinite-scroll': mw.msg(
+				'pageproperties-jsmodule-forms-alternateinput-infinite-scroll'
+			)
 		} );
+
+		// var alternateInput = new OO.ui.DropdownInputWidget( {
+		// 	options: options,
+		// 	// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
+		// 	$overlay: true,
+		// 	value: getPropertyValue( 'alternate-input' )
+		// } );
+
+		var alternateInput = new PagePropertiesDropdownWidget( { value: getPropertyValue( 'alternate-input' ), options: options } );
 
 		Model.fields[ SelectedProperty.label ][ 'alternate-input' ] = alternateInput;
 
@@ -1271,6 +1363,8 @@ const PagePropertiesForms = ( function () {
 			help: mw.msg( 'pageproperties-jsmodule-forms-field-alternateinput-help' ),
 			helpInline: true
 		} );
+
+		// /////////////////	multiple-input	//////////////
 
 		var selectMultipleValueValue = getPropertyValue( null, 'multiple' );
 
@@ -1329,8 +1423,10 @@ const PagePropertiesForms = ( function () {
 			toggleInputRequired.setDisabled( selected );
 			toggleInputOnCreate.setDisabled( selected );
 			selectHelpInput.setDisabled( selected );
-			fieldOptionsList.toggle( !selected );
-			addOption.toggle( !selected );
+			fieldLabelOptionsList.toggle( !selected );
+			fieldHelpOptionsList.toggle( !selected );
+			addHelpOption.toggle( !selected );
+			addLabelOption.toggle( !selected );
 			selectMultipleValue.setDisabled( selected );
 			fieldMultipleValue.toggle(
 				!ManageProperties.isMultiselect( availableInputs.getValue() ) && !selected
@@ -1360,16 +1456,23 @@ const PagePropertiesForms = ( function () {
 				align: 'top'
 			} ),
 
+			new OO.ui.FieldLayout( selectLabelInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-field-labelmessage-label' ),
+				helpInline: true,
+				align: 'top'
+			} ),
+
+			fieldLabelOptionsList,
+			addLabelOption,
+
 			new OO.ui.FieldLayout( selectHelpInput, {
 				label: mw.msg( 'pageproperties-jsmodule-forms-field-help-label' ),
 				helpInline: true,
 				align: 'top'
 			} ),
 
-			fieldOptionsList,
-
-			// add option in optionsList
-			addOption,
+			fieldHelpOptionsList,
+			addHelpOption,
 
 			new OO.ui.FieldLayout( selectAvailableInputs, {
 				label: mw.msg( 'pageproperties-jsmodule-forms-field-preferredinput' ),
@@ -1418,8 +1521,11 @@ const PagePropertiesForms = ( function () {
 
 		this.$body.append( frame.$element );
 
-		fieldOptionsList.toggle( helpMessages.length );
-		addOption.toggle( selectHelpInput.getValue() === 'override' );
+		fieldLabelOptionsList.toggle( labelMessages.length );
+		fieldHelpOptionsList.toggle( helpMessages.length );
+		addLabelOption.toggle( selectLabelInput.getValue() === 'override' );
+		addHelpOption.toggle( selectHelpInput.getValue() === 'override' );
+
 		fieldAvailableInputs.toggle( preferredInputValue );
 		fieldMultipleValue.toggle(
 			!ManageProperties.isMultiselect( preferredInputValue ) &&

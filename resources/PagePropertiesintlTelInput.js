@@ -15,60 +15,69 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <business@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
 ( function () {
 	// eslint-disable-next-line no-implicit-globals
-	PagePropertiesintlTelInput = function ( config ) {
+	PagePropertiesIntlTelInput = function ( config ) {
+		PagePropertiesIntlTelInput.super.call( this, config );
+
 		var self = this;
-		this.$element = $( '<input>' ).attr( {
+		this.config = config;
+
+		var input = $( '<input>' ).attr( {
 			type: 'tel',
 			name: config.name,
 			value: config.value,
 			class: 'oo-ui-inputWidget-input'
 		} );
 
-		this.connect = function () {
-		};
+		this.input = input;
 
-		this.getValue = function () {
-			return self.iti.getNumber( intlTelInputUtils.numberFormat.INTERNATIONAL );
-		};
+		input.on( 'input', function () {
+			self.config.value = self.getValue();
+			self.emit( 'change', self.config.value );
+		} );
 
-		this.getInputId = function () {
-			return null;
-		};
+		this.$element = $( '<div>' )
+			.attr(
+				'class',
+				'oo-ui-widget oo-ui-widget-enabled oo-ui-inputWidget oo-ui-textInputWidget oo-ui-textInputWidget-type-text'
+			)
+			.append( input );
 
-		this.setLabelledBy = function ( id ) {
-			if ( id ) {
-				this.$element.attr( 'aria-labelledby', id );
-			} else {
-				this.$element.removeAttr( 'aria-labelledby' );
+		self.iti = window.intlTelInput( input.get( 0 ), {
+			utilsScript:
+				'https://cdn.jsdelivr.net/npm/intl-tel-input@16.0.3/build/js/utils.js',
+			initialCountry: 'auto',
+			geoIpLookup: function ( callback ) {
+				$.get( 'https://ipinfo.io', function () {}, 'jsonp' ).always( function (
+					resp
+				) {
+					var countryCode = resp && resp.country ? resp.country : 'us';
+					callback( countryCode );
+				} );
 			}
-		};
+		} );
+	};
 
-		this.isDisabled = function () {
-			return false;
-		};
+	OO.inheritClass( PagePropertiesIntlTelInput, OO.ui.Widget );
+	OO.mixinClass( PagePropertiesIntlTelInput, OO.EventEmitter );
 
-		setTimeout( function () {
-			self.iti = window.intlTelInput( $( "input[name='" + config.name + "']" ).get( 0 ), {
-				utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@16.0.3/build/js/utils.js',
-				initialCountry: 'auto',
-				geoIpLookup: function ( callback ) {
-					$.get( 'https://ipinfo.io', function () {}, 'jsonp' ).always( function ( resp ) {
-						var countryCode = ( resp && resp.country ) ? resp.country : 'us';
-						callback( countryCode );
-					} );
-				}
-			} );
-			// self.iti.setNumber(config.value);
-			$( "input[name='" + config.name + "']" ).closest( '.iti' ).width( '100%' ).wrap( "<div class='oo-ui-widget oo-ui-widget-enabled oo-ui-inputWidget oo-ui-textInputWidget oo-ui-textInputWidget-type-text'></div>" );
+	PagePropertiesIntlTelInput.prototype.getValue = function () {
+		if ( typeof this.iti === 'object' && typeof intlTelInputUtils === 'object' ) {
+			// @TODO show a proper validation message
+			return this.iti.isValidNumber() ?
+				this.iti.getNumber( intlTelInputUtils.numberFormat.INTERNATIONAL ) :
+				'';
+		}
+		return this.config.value;
+	};
 
-		}, 10 );
-
+	PagePropertiesIntlTelInput.prototype.setValue = function () {
+		this.input.val( '' );
 	};
 
 }() );

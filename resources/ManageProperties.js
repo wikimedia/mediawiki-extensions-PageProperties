@@ -19,6 +19,8 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
+/* eslint-disable no-tabs */
+
 // eslint-disable-next-line no-unused-vars
 const ManageProperties = ( function () {
 	var Config;
@@ -40,16 +42,18 @@ const ManageProperties = ( function () {
 		'OO.ui.DropdownInputWidget',
 		'OO.ui.ComboBoxInputWidget',
 		'OO.ui.MenuTagMultiselectWidget',
+		'ButtonMultiselectWidget',
 		'OO.ui.RadioSelectInputWidget',
 		'OO.ui.CheckboxMultiselectInputWidget'
 	];
 
-	var multiselectInputs = [
-		'OO.ui.TagMultiselectWidget',
-		'mw.widgets.TitlesMultiselectWidget',
-		'mw.widgets.UsersMultiselectWidget',
-		'mw.widgets.CategoryMultiselectWidget'
-	];
+	// var multiselectInputs = [
+	// 	'OO.ui.TagMultiselectWidget',
+	// 	'ButtonMultiselectWidget',
+	// 	'mw.widgets.TitlesMultiselectWidget',
+	// 	'mw.widgets.UsersMultiselectWidget',
+	// 	'mw.widgets.CategoryMultiselectWidget'
+	// ];
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -70,7 +74,7 @@ const ManageProperties = ( function () {
 		var inputName = inputNameFromLabel( inputLabel );
 
 		return (
-			inArray( inputName, multiselectInputs ) || inArray( inputName, optionsInputs )
+			isMultiselect( inputName ) /* inArray( inputName, multiselectInputs ) */ || inArray( inputName, optionsInputs )
 		);
 	}
 
@@ -128,7 +132,7 @@ const ManageProperties = ( function () {
 
 			// number
 			case '_num':
-				ret = [ 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget' ];
+				ret = [ 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget', 'RatingWidget' ];
 
 				break;
 
@@ -432,27 +436,28 @@ const ManageProperties = ( function () {
 	}
 
 	function inputInstanceFromName( inputName, config ) {
+		var arr = inputName.split( '.' );
+		var constructor = null;
+		var tags = [];
 		switch ( inputName ) {
 			case 'mw.widgets.datetime.DateTimeInputWidget':
-				return new mw.widgets.datetime.DateTimeInputWidget( config );
+				constructor = mw.widgets.datetime.DateTimeInputWidget;
+				break;
 			case 'intl-tel-input':
-				return new PagePropertiesintlTelInput( config );
+				constructor = PagePropertiesIntlTelInput;
+				break;
+			case 'ButtonMultiselectWidget':
+				constructor = PagePropertiesButtonMultiselectWidget;
+				break;
+			case 'RatingWidget':
+				constructor = PagePropertiesRatingWidget;
+				break;
 			case 'mw.widgets.CategoryMultiselectWidget':
-				var values = config.selected ? config.selected : config.value;
+				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
+				tags = config.selected ? config.selected : config.value;
 				delete config.selected;
 				delete config.value;
-				var widget = addRequiredMixin(
-					mw.widgets.CategoryMultiselectWidget,
-					config
-				);
-
-				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
-				if ( Array.isArray( values ) ) {
-					for ( var value of values ) {
-						widget.addTag( value );
-					}
-				}
-				return widget;
+				break;
 			case 'OO.ui.SelectFileWidget':
 				// prevents error "Failed to set the 'value' property on 'HTMLInputElement':
 				// This input element accepts a filename, which may only be programmatically
@@ -463,8 +468,12 @@ const ManageProperties = ( function () {
 				config.button = {
 					flags: [ 'progressive' ],
 					icon: 'add',
+					// classes: [ 'pageproperties-SelectFileWidget-button' ],
 					label: mw.msg( 'pageproperties-jsmodule-manageproperties-upload' )
 				};
+
+				// we don't use the addRequiredMixin mixin
+				// required is handled in a more complex way
 				return new OO.ui.SelectFileWidget( config );
 
 			case 'OO.ui.MultilineTextInputWidget':
@@ -475,31 +484,33 @@ const ManageProperties = ( function () {
 			case 'OO.ui.TagMultiselectWidget':
 				config.allowArbitrary = true;
 				break;
+
+			default:
+				if ( arr.length === 4 ) {
+					var value = arr.pop();
+					switch ( arr[ 2 ] ) {
+						case 'TitleInputWidget':
+						case 'TitlesMultiselectWidget':
+							// titleNamespace( value );
+							config.namespace = PagePropertiesFunctions.getKeyByValue(
+								mw.config.get( 'wgFormattedNamespaces' ),
+								value
+							);
+							break;
+						case 'TextInputWidget':
+							config.type = value;
+							break;
+						case 'DateInputWidget':
+							config.precision = value;
+							break;
+					}
+				}
 		}
 
-		var arr = inputName.split( '.' );
-		if ( arr.length === 4 ) {
-			var value = arr.pop();
-			switch ( arr[ 2 ] ) {
-				case 'TitleInputWidget':
-				case 'TitlesMultiselectWidget':
-					// titleNamespace( value );
-					config.namespace = PagePropertiesFunctions.getKeyByValue(
-						mw.config.get( 'wgFormattedNamespaces' ),
-						value
-					);
-					break;
-				case 'TextInputWidget':
-					config.type = value;
-					break;
-				case 'DateInputWidget':
-					config.precision = value;
-					break;
-			}
+		if ( !constructor ) {
+			constructor =
+				inputName.indexOf( 'OO.ui' ) === 0 ? OO.ui[ arr[ 2 ] ] : mw.widgets[ arr[ 2 ] ];
 		}
-
-		var constructor =
-			inputName.indexOf( 'OO.ui' ) === 0 ? OO.ui[ arr[ 2 ] ] : mw.widgets[ arr[ 2 ] ];
 
 		// fallback
 		if ( typeof constructor !== 'function' ) {
@@ -512,7 +523,15 @@ const ManageProperties = ( function () {
 			};
 		}
 
-		return addRequiredMixin( constructor, config );
+		var widget = addRequiredMixin( constructor, config );
+
+		if ( Array.isArray( tags ) ) {
+			for ( var value of tags ) {
+				widget.addTag( value );
+			}
+		}
+
+		return widget;
 	}
 
 	function addRequiredMixin( constructor, config ) {
@@ -1599,7 +1618,7 @@ const ManageProperties = ( function () {
 		openDialog,
 		disableMultipleFields,
 		optionsInputs,
-		multiselectInputs,
+		// multiselectInputs,
 		getImportedVocabulariesWidgetCategories,
 		inputNameFromLabel,
 		isMultiselect,

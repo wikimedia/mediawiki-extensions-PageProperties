@@ -1,5 +1,4 @@
-/* stylelint-disable selector-max-id */
-/* stylelint-disable color-named */
+/* stylelint-disable selector-max-id, no-descending-specificity, color-named */
 
 .ItemWidget {
 	padding: 12px 0;
@@ -286,4 +285,45 @@
 	-khtml-user-select: none;
 	-webkit-user-select: none;
 	-o-user-select: none;
+}
+
+.pageproperties-button-multiselect-widget {
+	position: relative;
+	display: inline-block;
+}
+
+.pageproperties-rating-widget {
+	position: relative;
+	display: inline-block;
+}
+
+.pagepropertiesform .iti {
+	width: 100%;
+}
+
+.pageproperties-button-multiselect-widget .oo-ui-buttonElement-button {
+	margin-bottom: 4px;
+	margin-top: 4px;
+	font-size: smaller;
+	border-radius: 12px;
+	padding-top: 0;
+	padding-bottom: 0;
+	min-height: auto;
+}
+
+.pageproperties-button-multiselect-widget .oo-ui-buttonElement-framed.oo-ui-widget-enabled.oo-ui-buttonElement-active > .oo-ui-buttonElement-button {
+	border: 1px solid gray;
+	background: gray;
+}
+
+.pageproperties-button-multiselect-widget .oo-ui-buttonElement-framed.oo-ui-labelElement > .oo-ui-buttonElement-button {
+	padding: 4px 16px;
+}
+
+.pageproperties-SelectFileWidget-button {
+	padding-top: 0;
+}
+
+.pageproperties-dropdown-widget .oo-ui-dropdownInputWidget select {
+	display: block;
 }

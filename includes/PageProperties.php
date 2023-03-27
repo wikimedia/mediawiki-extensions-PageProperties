@@ -1364,6 +1364,18 @@ class PageProperties {
 				$fields[ $label ][ 'help-message-result' ] = self::getMonolingualText( $langCode, $dataValues );
 			}
 
+			if ( !empty( $field['label'] ) ) {
+				$labelText = $field['label'];
+				if ( !is_array( $labelText ) ) {
+					$labelText = [ $labelText ];
+				}
+				$dataValues = [];
+				foreach ( $labelText as $value_ ) {
+					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
+				}
+				$fields[ $label ][ 'label-result' ] = self::getMonolingualText( $langCode, $dataValues );
+			}
+
 			$optionsValues = [];
 			if ( !empty( $field['options-values'] ) ) {
 				$optionsValues = $field['options-values'];
@@ -1380,7 +1392,7 @@ class PageProperties {
 				$results = self::getQueryResults(
 					$field['options-askquery'],
 					!empty( $field['askquery-printouts'] ) ? $field['askquery-printouts'] : [],
-					[ 'limit' => is_int( $field['options-limit'] ) ? $field['options-limit'] : 100 ],
+					[ 'limit' => !empty( $field['options-limit'] ) && is_int( $field['options-limit'] ) ? $field['options-limit'] : 100 ],
 					!empty( $field['askquery-subject'] )
 				);
 

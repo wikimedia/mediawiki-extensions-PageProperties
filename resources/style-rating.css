@@ -1,0 +1,35 @@
+/*
+ * credits: https://iamkate.com/code/star-rating-widget/
+ */
+
+/* stylelint-disable no-descending-specificity */
+
+.pagepropertiesform .rating {
+	display: inline-flex;
+	margin-top: 8px;
+}
+
+.pagepropertiesform .rating input {
+	position: absolute;
+	left: -100vw;
+}
+
+.pagepropertiesform .rating label {
+	width: 48px;
+	height: 48px;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	cursor: pointer;
+	background: url( data:image/svg+xml,%3C%3Fxml version='1.0'%3F%3E%3Csvg xmlns='http://www.w3.org/2000/svg' width='144' height='48'%3E%3Cpath fill='%23000' d='m24 4-6 13-14 1 11 10-3 14 12-7 12 7-3-14 11-10-14-1z'/%3E%3Cpath fill='%23ddd' d='m72 4-6 13-14 1 11 10-3 14 12-7 12 7-3-14 11-10-14-1z'/%3E%3Cpath fill='%23696' d='m120 4-6 13-14 1 11 10-3 14 12-7 12 7-3-14 11-10-14-1z'/%3E%3C/svg%3E ) no-repeat top left;
+}
+
+.pagepropertiesform .rating:not( :hover ) input:indeterminate + label,
+.pagepropertiesform .rating:not( :hover ) input:checked ~ input + label,
+.pagepropertiesform .rating input:hover ~ input + label {
+	background-position: -48px 0;
+}
+
+.pagepropertiesform .rating:not( :hover ) input:focus-visible + label {
+	background-position: -96px 0;
+}

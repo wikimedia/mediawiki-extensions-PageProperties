@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.5b",
+	"version": "1.2.5c",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -208,10 +208,14 @@
 			"scripts": [
 				"intl-tel-input/js/intlTelInput.js",
 				"PagePropertiesintlTelInput.js",
+				"PagePropertiesButtonMultiselectWidget.js",
+				"PagePropertiesRatingWidget.js",
+				"PagePropertiesDropdownWidget.js",
 				"PagePropertiesUpload.js"
 			],
 			"styles": [
 				"intl-tel-input/css/intlTelInput.min.css",
+				"style-rating.css",
 				"style.css"
 			],
 			"dependencies": [
@@ -377,8 +381,10 @@
 				"pageproperties-jsmodule-forms-field-valueformula",
 				"pageproperties-jsmodule-forms-field-valueformula-help",
 				"pageproperties-jsmodule-forms-field-help-label",
+				"pageproperties-jsmodule-forms-field-labelmessage-label",
 				"pageproperties-jsmodule-forms-field-help-message",
-				"pageproperties-jsmodule-forms-frompropertydescription",
+				"pageproperties-jsmodule-forms-field-label-message",
+				"pageproperties-jsmodule-forms-inheritfromproperty",
 				"pageproperties-jsmodule-forms-distinctvalue",
 				"pageproperties-jsmodule-forms-done",
 				"pageproperties-jsmodule-forms-userdefined",
@@ -408,6 +414,7 @@
 				"pageproperties-jsmodule-pageproperties-manage-forms",
 				"pageproperties-jsmodule-forms-required",
 				"pageproperties-jsmodule-forms-notrequired",
+				"pageproperties-jsmodule-pageproperties-pagenameformulaof",
 				"pageproperties-jsmodule-forms-addfield",
 				"pageproperties-permissions-error",
 				"pageproperties-jsmodule-formedit-freetext",
@@ -445,7 +452,8 @@
 				"pageproperties-jsmodule-create-jobs-alert",
 				"pageproperties-jsmodule-manageproperties-existing-property",
 				"pageproperties-jsmodule-manageproperties-existing-category",
-				"pageproperties-jsmodule-manageproperties-existing-form"
+				"pageproperties-jsmodule-manageproperties-existing-form",
+				"pageproperties-jsmodule-pageproperties-submit"
 			]
 		}
 	},
