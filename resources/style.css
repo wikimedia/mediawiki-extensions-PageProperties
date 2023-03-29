@@ -42,8 +42,8 @@
 	vertical-align: top;
 }
 
-.pageproperties_dynamictable_row .oo-ui-fieldLayout:before,
-.oo-ui-fieldLayout:after {
+.pageproperties_dynamictable_row .oo-ui-fieldLayout::before,
+.oo-ui-fieldLayout::after {
 	display: inline;
 }
 
