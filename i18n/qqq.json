@@ -30,6 +30,9 @@
 	"action-pageproperties-canaddsingleproperties": "A label message",
 	"group-pageproperties-pagepropertieseditor-member": "A label message",
 	"group-pageproperties-semanticpropertieseditor-member": "A label message",
+	"group-pageproperties-pagepropertieseditor": "A label message",
+	"group-pageproperties-semanticpropertieseditor": "A label message",
+
 	"pageproperties-jsmodule-manageproperties-upload": "A label message",
 
 	"pageproperties-jsmodule-forms-dialogsearch-selectforms": "A label message",
@@ -203,6 +206,8 @@
 
 	"group-pageproperties-admin-member": "A label message",
 	"group-pageproperties-editor-member": "A label message",
+	"group-pageproperties-admin": "A label message",
+	"group-pageproperties-editor": "A label message",
 
 	"pageproperties-jsmodule-manageproperties-existing-property": "A label message",
 	"pageproperties-jsmodule-manageproperties-existing-category": "A label message",

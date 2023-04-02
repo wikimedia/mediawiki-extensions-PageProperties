@@ -190,6 +190,11 @@
 	"group-pageproperties-pagepropertieseditor-member": "editor of page properties (Page Properties)",
 	"group-pageproperties-semanticpropertieseditor-member": "editor of semantic properties (Page Properties)",
 
+	"group-pageproperties-admin": "Admin of page properties or semantic properties (Page Properties)",
+	"group-pageproperties-editor": "Editor of page properties or semantic properties (Page Properties)",
+	"group-pageproperties-pagepropertieseditor": "Editor of page properties (Page Properties)",
+	"group-pageproperties-semanticpropertieseditor": "Editor of semantic properties (Page Properties)",
+
 	"pageproperties-jsmodule-manageproperties-existing-property": "Existing property",
 	"pageproperties-jsmodule-manageproperties-existing-category": "Existing category",
 	"pageproperties-jsmodule-manageproperties-existing-form": "Existing form",
