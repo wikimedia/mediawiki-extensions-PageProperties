@@ -2173,6 +2173,21 @@ class PageProperties {
 	}
 
 	/**
+	 * @return array
+	 */
+	public static function getUserGroups() {
+		$user = self::$User;
+		$UserGroupManager = self::$userGroupManager;
+		$user_groups = array_unique( array_merge(
+			$UserGroupManager->getUserEffectiveGroups( $user ),
+			$UserGroupManager->getUserImplicitGroups( $user )
+		) );
+		// $key = array_search( '*', $user_groups );
+		// $user_groups[ $key ] = 'all';
+		return $user_groups;
+	}
+
+	/**
 	 * @param Title $title
 	 * @param bool $exclude_current
 	 * @return array

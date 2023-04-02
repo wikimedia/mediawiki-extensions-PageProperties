@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -144,6 +144,8 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$out->addModuleStyles( 'oojs-ui-widgets.styles' );
 
+		$this->addJsConfigVars( $out );
+
 		$hidden_inputs = [];
 
 		$default_of_display_title = $default_of_language = null;
@@ -213,6 +215,18 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	protected function getMessage( $value ) {
 		return Message::newFromSpecifier( $value )->setContext( $this->getContext() );
+	}
+
+	/**
+	 * @param Output $out
+	 */
+	private function addJsConfigVars( $out ) {
+		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
+
+		$out->addJsConfigVars( [
+			'pageproperties-show-notice-outdated-version' => ( $this->user->isAllowed( 'canmanagesemanticproperties' )
+				|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) )
+		] );
 	}
 
 	/**

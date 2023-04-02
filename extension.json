@@ -196,7 +196,8 @@
 				"mediawiki.storage"
 			],
 			"messages": [
-				"prefs-tabs-navigation-hint"
+				"prefs-tabs-navigation-hint",
+				"pageproperties-jsmodule-pageproperties-outdated-version"
 			]
 		},
 		"ext.PageProperties.promise-polyfill": {

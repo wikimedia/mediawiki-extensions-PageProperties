@@ -539,22 +539,30 @@ const ManageProperties = ( function () {
 			constructor.prototype.requiresValidation = false;
 			return new constructor( config );
 		}
-
+		var Input;
 		// add RequiredElement mixin if missing
 		// this only shows the indicator, for
 		// native input validation see PageProperties.js
-		var Input = function ( configInput ) {
-			Input.super.call( this, configInput );
-			// OO.ui.mixin.IndicatorElement.call( this, config );
-			OO.ui.mixin.RequiredElement.call( this, configInput );
-		};
+		if ( 'RequiredElement' in OO.ui.mixin ) {
+			Input = function ( configInput ) {
+				Input.super.call( this, configInput );
+				OO.ui.mixin.RequiredElement.call( this, configInput );
+			};
 
-		OO.inheritClass( Input, constructor );
-		OO.mixinClass( Input, OO.ui.mixin.RequiredElement );
-		OO.mixinClass( Input, OO.ui.mixin.IndicatorElement );
+			OO.inheritClass( Input, constructor );
+			OO.mixinClass( Input, OO.ui.mixin.RequiredElement );
+			OO.mixinClass( Input, OO.ui.mixin.IndicatorElement );
+
+		} else {
+			Input = function ( configInput ) {
+				Input.super.call( this, jQuery.extend( configInput, { indicator: 'required' } ) );
+			};
+
+			OO.inheritClass( Input, constructor );
+			OO.mixinClass( Input, OO.ui.mixin.IndicatorElement );
+		}
 
 		Input.prototype.requiresValidation = true;
-
 		return new Input( config );
 	}
 
