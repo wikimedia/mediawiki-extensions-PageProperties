@@ -505,12 +505,12 @@ const PagePropertiesForms = ( function () {
 			// lengthChange: false,
 			data: data,
 			// stateSave: true,
-			columns: mw
+			columns: [ '' ].concat( mw
 				.msg( 'pageproperties-jsmodule-pageproperties-columns-forms-dialog' )
 				.split( /\s*,\s*/ )
 				.map( function ( x ) {
 					return { title: x };
-				} )
+				} ) )
 		} );
 
 		$( '#pageproperties-forms-datatable-dialog .buttons-wrapper' ).each(
