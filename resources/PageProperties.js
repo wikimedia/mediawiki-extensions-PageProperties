@@ -744,7 +744,7 @@ const PageProperties = function (
 			new OO.ui.ActionFieldLayout( inputWidget, deleteButton, {
 				label: '',
 				align: 'top',
-				help: helpMessage,
+				help: new OO.ui.HtmlSnippet( helpMessage ),
 				helpInline: true,
 				// This can produce:
 				// * inputName-mw.widgets.DateInputWidget
@@ -754,7 +754,7 @@ const PageProperties = function (
 			new OO.ui.FieldLayout( inputWidget, {
 				label: '',
 				align: 'top',
-				help: helpMessage,
+				help: new OO.ui.HtmlSnippet( helpMessage ),
 				helpInline: true,
 				// This can produce:
 				// * inputName-mw.widgets.DateInputWidget
@@ -952,7 +952,7 @@ const PageProperties = function (
 		if ( inputName !== 'OO.ui.HiddenInputWidget' ) {
 			items.push(
 				new OO.ui.FieldLayout( optionsList, {
-					label: label,
+					label: new OO.ui.HtmlSnippet( label ),
 					align: 'top',
 
 					// The following classes are used here:

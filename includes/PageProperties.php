@@ -1361,7 +1361,8 @@ class PageProperties {
 				foreach ( $helpMessages as $value_ ) {
 					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
 				}
-				$fields[ $label ][ 'help-message-result' ] = self::getMonolingualText( $langCode, $dataValues );
+				$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
+				$fields[ $label ][ 'help-message-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $helpMessages[0] ) );
 			}
 
 			if ( !empty( $field['label'] ) ) {
@@ -1373,7 +1374,8 @@ class PageProperties {
 				foreach ( $labelText as $value_ ) {
 					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
 				}
-				$fields[ $label ][ 'label-result' ] = self::getMonolingualText( $langCode, $dataValues );
+				$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
+				$fields[ $label ][ 'label-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $labelText[0] ) );
 			}
 
 			$optionsValues = [];
