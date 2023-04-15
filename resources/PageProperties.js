@@ -210,7 +210,8 @@ const PageProperties = function (
 					// OoUiTagMultiselectWidget => OO.ui.TagMultiselectWidget
 					// MwWidgetsUsersMultiselectWidget => mw.widgets.UsersMultiselectWidget
 
-					var inputName = Model[ property ][ i ].constructor.name
+					var inputName = ( 'constructorName' in Model[ property ][ i ] ? Model[ property ][ i ].constructorName :
+						Model[ property ][ i ].constructor.name )
 						.replace( /^OoUi/, 'OO.ui.' )
 						.replace( /^MwWidgets/, 'mw.widgets.' );
 
@@ -1794,15 +1795,15 @@ const PageProperties = function (
 					// @TODO do the same for '__pagename-formula' and remove
 					// the block on submit
 				} else {
-					Model[ '__content-model' ] = {
-						0: {
-							getValue: function () {
-								// eslint-disable-next-line no-shadow
-								var contentModel = data.contentModels[ 0 ];
-								return Config.contentModels[ contentModel ];
-							}
-						}
+					// eslint-disable-next-line no-shadow
+					var Input = function Input() {
+						this.getValue = function () {
+							// eslint-disable-next-line no-shadow
+							var contentModel = data.contentModels[ 0 ];
+							return Config.contentModels[ contentModel ];
+						};
 					};
+					Model[ '__content-model' ] = { 0: new Input() };
 				}
 			}
 		}

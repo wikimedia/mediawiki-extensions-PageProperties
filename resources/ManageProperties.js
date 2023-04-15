@@ -546,6 +546,7 @@ const ManageProperties = ( function () {
 		if ( 'RequiredElement' in OO.ui.mixin ) {
 			Input = function ( configInput ) {
 				Input.super.call( this, configInput );
+				this.constructorName = constructor.name;
 				OO.ui.mixin.RequiredElement.call( this, configInput );
 			};
 
@@ -556,6 +557,7 @@ const ManageProperties = ( function () {
 		} else {
 			Input = function ( configInput ) {
 				Input.super.call( this, jQuery.extend( configInput, { indicator: 'required' } ) );
+				this.constructorName = constructor.name;
 			};
 
 			OO.inheritClass( Input, constructor );
