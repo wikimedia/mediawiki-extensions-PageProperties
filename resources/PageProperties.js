@@ -2264,7 +2264,7 @@ const PageProperties = function (
 	};
 };
 
-$( document ).ready( function () {
+$( function () {
 	var semanticProperties = JSON.parse(
 		mw.config.get( 'pageproperties-semanticProperties' )
 	);

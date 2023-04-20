@@ -21,7 +21,7 @@
 
 /* eslint-disable no-tabs */
 
-$( document ).ready( function () {
+$( function () {
 	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
 
 	var msg1 = mw.config.get( 'pageproperties-js-alert-1' );

@@ -18,7 +18,6 @@
 		"no-jquery/no-global-selector": "warn",
 		"no-jquery/no-in-array": "warn",
 		"no-jquery/no-parse-html-literal": "warn",
-		"no-jquery/no-ready-shorthand": "warn",
 		"no-jquery/no-sizzle": "warn",
 		"no-jquery/variable-pattern": "warn"
 	}
