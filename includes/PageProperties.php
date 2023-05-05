@@ -2055,7 +2055,7 @@ class PageProperties {
 	 * @return array
 	 */
 	public static function getContentModels() {
-		$services = Mediawiki\MediaWikiServices::getInstance();
+		$services = MediaWiki\MediaWikiServices::getInstance();
 		$contentHandlerFactory = $services->getContentHandlerFactory();
 		$models = $contentHandlerFactory->getContentModels();
 		$options = [];
