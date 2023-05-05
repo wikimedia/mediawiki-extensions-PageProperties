@@ -19,8 +19,6 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
-/* eslint-disable no-tabs */
-
 $( function () {
 	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
 
@@ -58,7 +56,7 @@ $( function () {
 		return output_el;
 	}
 
-	$( '.pageproperties_dynamictable_add_button' ).click( function () {
+	$( '.pageproperties_dynamictable_add_button' ).on( 'click', function () {
 		var $parent_el = $( this ).parents( 'div[id^="form-section-"]' ).first();
 		var semantic_properties = ( $parent_el.attr( 'id' ) === 'form-section-semantic-properties' );
 
@@ -239,7 +237,7 @@ $( function () {
 		}
 	}
 
-	$( '.pageproperties_dynamictable_cancel_button' ).click( function () {
+	$( '.pageproperties_dynamictable_cancel_button' ).on( 'click', function () {
 		var input_value = false;
 		var cell_selector = null;
 		var $tr = $( this ).parents( '.pageproperties_dynamictable_row' ).eq( 0 );
@@ -324,7 +322,7 @@ $( function () {
 				return;
 			}
 			// add row
-			$table.find( '.pageproperties_dynamictable_add_button' ).click();
+			$table.find( '.pageproperties_dynamictable_add_button' ).trigger( 'click' );
 			var $el = $table.find( 'tr:last input' ).eq( 0 );
 			name = $el.attr( 'name' );
 			$el.val( 'robots' );
@@ -361,7 +359,7 @@ $( function () {
 
 	}
 
-	$( '#SEO_meta_robots_noindex_nofollow input' ).change( function () {
+	$( '#SEO_meta_robots_noindex_nofollow input' ).on( 'change', function () {
 		update_noindex_nofollow( $( this ), true );
 	} );
 

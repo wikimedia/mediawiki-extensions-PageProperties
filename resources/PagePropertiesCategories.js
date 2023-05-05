@@ -294,7 +294,6 @@ const PagePropertiesCategories = ( function () {
 									);
 								} );
 						};
-						// eslint-disable-next-line compat/compat
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( {
