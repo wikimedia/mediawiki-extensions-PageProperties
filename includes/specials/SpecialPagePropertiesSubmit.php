@@ -350,7 +350,7 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 
 		if ( !count( $errors ) ) {
 			// unset( $_SESSION['pagepropertiesform-submissiondata-' . $this->formID] );
-			Hooks::run( 'PageProperties::OnEditSemanticSave', [ $this->user, $title, $update_obj, $freetext, $creatingPage ] );
+			MediaWikiServices::getInstance()->getHookContainer()->run( 'PageProperties::OnEditSemanticSave', [ $this->user, $title, $update_obj, $freetext, $creatingPage ] );
 			header( 'Location: ' . $title->getFullURL() );
 			return true;
 		}

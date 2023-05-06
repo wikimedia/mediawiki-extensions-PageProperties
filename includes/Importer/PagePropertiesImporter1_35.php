@@ -22,7 +22,7 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
-use MediaWiki\HookContainer\HookRunner;
+use MediaWiki\HookContainer\HookContainer;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
 
@@ -48,8 +48,8 @@ class PagePropertiesImporter1_35 extends WikiImporter {
 	private $config;
 	/** @var ImportTitleFactory */
 	private $importTitleFactory;
-	/** @var HookRunner */
-	private $hookRunner;
+	/** @var HookContainer */
+	private $hookContainer;
 	/** @var array */
 	private $countableCache = [];
 	/** @var bool */
@@ -62,7 +62,7 @@ class PagePropertiesImporter1_35 extends WikiImporter {
 	 */
 	public function __construct( Config $config ) {
 		$this->config = $config;
-		$this->hookRunner = Hooks::runner();
+		$this->hookContainer = MediaWikiServices::getInstance()->getHookContainer();
 
 		// Default callbacks
 		$this->setPageCallback( [ $this, 'beforeImportPage' ] );
@@ -265,8 +265,8 @@ class PagePropertiesImporter1_35 extends WikiImporter {
 			}
 		}
 
-		return $this->hookRunner->onAfterImportPage( $title, $foreignTitle,
-			$revCount, $sRevCount, $pageInfo );
+		return $this->hookContainer->run( 'AfterImportPage', [ $title, $foreignTitle,
+			$revCount, $sRevCount, $pageInfo ] );
 	}
 
 	/**
