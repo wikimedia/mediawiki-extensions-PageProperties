@@ -2108,7 +2108,7 @@ const PageProperties = function (
 			} );
 
 			frameAContent.push( messageWidget.$element );
-			frameAContent.push( $( '<br />' ) );
+			frameAContent.push( $( '<br>' ) );
 		}
 
 		// var progressBar = new OO.ui.ProgressBarWidget( {

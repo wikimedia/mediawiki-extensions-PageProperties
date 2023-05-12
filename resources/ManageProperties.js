@@ -1217,7 +1217,6 @@ const ManageProperties = ( function () {
 								} );
 						};
 
-						// eslint-disable-next-line compat/compat
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( {
@@ -1319,7 +1318,6 @@ const ManageProperties = ( function () {
 	}
 
 	function loadData( dataToLoad ) {
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 			var payload = {
 				action: 'pageproperties-manageproperties-load-data',

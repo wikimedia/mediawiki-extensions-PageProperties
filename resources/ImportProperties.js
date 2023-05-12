@@ -519,7 +519,6 @@ const ImportProperties = ( function () {
 		}
 
 		// *** we use a polyfill
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 			// @todo verify that uploaded file is not spliced/reduced by the process
 			// @todo ensure that each file chunk does not exceed post_max_size
