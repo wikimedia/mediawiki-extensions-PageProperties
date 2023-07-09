@@ -21,6 +21,8 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
+use MediaWiki\MediaWikiServices;
+
 include_once __DIR__ . '/PagePropertiesPublishStashedFile.php';
 
 class SpecialPagePropertiesSubmit extends SpecialPage {
