@@ -18,7 +18,7 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
@@ -490,7 +490,7 @@ class PagePropertiesHooks {
 
 				$link = [
 					'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
-					'text' => 'Edit semantic',
+					'text' => wfMessage( 'pageproperties-editsemantic-label' )->text(),
 					'href' => $title->getLocalURL( 'action=editsemantic' )
 				];
 
@@ -522,7 +522,7 @@ class PagePropertiesHooks {
 						'context' => 'subject',
 						'exists' => 1,
 						'primary' => 1,
-						// see includes/skins/SkinTemplate.php -> buildContentNavigationUrls()
+						// @see includes/skins/SkinTemplate.php -> buildContentNavigationUrls()
 						'id' => 'ca-nstab-' . $role,
 						'href' => ( $role !== MediaWiki\Revision\SlotRecord::MAIN ? wfAppendQuery( $title->getLocalURL(), 'slot=' . $role ) : $title->getLocalURL() ),
 					];
