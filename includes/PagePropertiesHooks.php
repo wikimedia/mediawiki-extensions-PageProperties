@@ -544,15 +544,17 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) &&
-			( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) ) {
-			$title_ = SpecialPage::getTitleFor( 'ManageProperties' );
-			$links[ 'actions' ][] = [
-				'text' => wfMessage( 'properties-navigation' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
-			];
-
-			return;
-		}
+		// *** this only makes sense if we can edit a specific
+		// property in ManageProperties
+		// if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) &&
+		// 	( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) ) {
+		// 	$title_ = SpecialPage::getTitleFor( 'ManageProperties' );
+		// 	$links[ 'actions' ][] = [
+		// 		'text' => wfMessage( 'manageproperties-label' )->text(), 'href' => $title_->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
+		// 	];
+		//
+		// 	return;
+		// }
 
 		if ( $user->isAllowed( 'pageproperties-caneditpageproperties' ) ) {
 			$title_ = SpecialPage::getTitleFor( 'PageProperties' );
