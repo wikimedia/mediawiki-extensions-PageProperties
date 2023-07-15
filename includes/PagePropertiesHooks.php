@@ -291,12 +291,17 @@ class PagePropertiesHooks {
 	public static function onParserAfterTidy( Parser $parser, &$text ) {
 		$title = $parser->getTitle();
 
-		if ( !$title->canExist() ) {
+		if ( !$title->isKnown() ) {
 			return;
 		}
+
+		if ( empty( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
+			return;
+		}
+
 		$page_properties = \PageProperties::getPageProperties( $title );
 
-		if ( !empty( $page_properties ) && !empty( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
+		if ( !empty( $page_properties ) ) {
 			$parser->addTrackingCategory( 'pageproperties-tracking-category' );
 		}
 	}
@@ -392,8 +397,7 @@ class PagePropertiesHooks {
 			$title = Title::newFromText( $par, NS_MAIN );
 		}
 		if ( $user->isAllowed( 'pageproperties-caneditpageproperties' ) ) {
-			// is article
-			if ( $title && $title->isKnown() && $title->isContentPage() ) {
+			if ( \PageProperties::isKnownArticle( $title ) ) {
 				$bar[ wfMessage( 'pageproperties' )->text() ][] = [
 					'text'   => wfMessage( 'pageproperties-label' )->text(),
 					'href'   => $specialpage_title->getLocalURL() . '/' . wfEscapeWikiText( $title->getPrefixedURL() )
@@ -536,6 +540,10 @@ class PagePropertiesHooks {
 			return;
 		}
 
+		if ( !\PageProperties::isKnownArticle( $title ) ) {
+			return;
+		}
+
 		if ( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) &&
 			( ( defined( 'SMW_VERSION' ) && $title->getNamespace() === SMW_NS_PROPERTY ) || $title->getNamespace() === NS_CATEGORY ) ) {
 			$title_ = SpecialPage::getTitleFor( 'ManageProperties' );
@@ -581,7 +589,7 @@ class PagePropertiesHooks {
 		// $outputPage->addHeadItem( 'page_properties_categories_input','<style> .mw-widgets-tagMultiselectWidget-multilineTextInputWidget{ display: none; } </style>' );
 
 		$title = $outputPage->getTitle();
-		if ( $outputPage->isArticle() && $title->canExist() ) {
+		if ( $outputPage->isArticle() && \PageProperties::isKnownArticle( $title ) ) {
 			if ( empty( $GLOBALS['wgPagePropertiesDisableJsonLD'] ) ) {
 				\PageProperties::setJsonLD( $title, $outputPage );
 			}

@@ -1177,6 +1177,18 @@ class PageProperties {
 	}
 
 	/**
+	 * @param Title $title
+	 * @return bool
+	 */
+	public static function isKnownArticle( $title ) {
+		// *** unfortunately we cannot always rely on $title->isContentPage()
+		// @see https://github.com/debtcompliance/EmailPage/pull/4#discussion_r1191646022
+		// or use $title->exists()
+		return ( $title && $title->canExist() && $title->getArticleID() > 0
+			&& $title->isKnown() );
+	}
+
+	/**
 	 * @param Output $output
 	 * @return int
 	 */

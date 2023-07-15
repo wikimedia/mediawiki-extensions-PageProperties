@@ -256,7 +256,8 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 			}
 		}
 
-		$editingTitle = ( $_GET['context'] === 'EditSemantic' && $this->title->isContentPage() ? $this->title : null );
+		$editingTitle = ( $_GET['context'] === 'EditSemantic' &&
+			\PageProperties::isKnownArticle( $this->title ) ? $this->title : null );
 
 		$creatingPage = !$editingTitle;
 
