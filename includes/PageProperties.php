@@ -1145,7 +1145,7 @@ class PageProperties {
 				// *** keep commented to prevent array_merge_recursive
 				// creating an array instead of a single value
 				// 'targetPage' => null,
-				'isNewPage' => $title->isContentPage() && !$title->isKnown(),
+				'isNewPage' => $title->getArticleId() === 0 || !$title->isKnown() || $obj['config']['context'] === 'parserfunction',
 				// *** keep commented to prevent array_merge_recursive
 				// creating an array instead of a single value
 				// 'context' => null,

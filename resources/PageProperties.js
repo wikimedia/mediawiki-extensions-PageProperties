@@ -46,6 +46,8 @@ const PageProperties = function (
 	var ActionWidget;
 	var Self;
 	var SubmitButton;
+	// make shallow copy
+	var RecordedForms = SemanticForms.slice();
 
 	function inArray( val, arr ) {
 		return jQuery.inArray( val, arr ) !== -1;
@@ -149,6 +151,10 @@ const PageProperties = function (
 
 	function getSemanticForms() {
 		return SemanticForms;
+	}
+
+	function isNewForm( form ) {
+		return !inArray( form, RecordedForms );
 	}
 
 	function getPageCategories() {
@@ -648,7 +654,8 @@ const PageProperties = function (
 		var required =
 			formField && 'required' in formField && isTrue( formField.required );
 
-		if ( formField && 'default' in formField && config.value === '' && ( Config.isNewPage || required ) ) {
+		if ( formField && 'default' in formField && config.value === '' &&
+			( Config.isNewPage || required || isNewForm( form ) ) ) {
 			config.value = formField[ 'default-result' ];
 		}
 
