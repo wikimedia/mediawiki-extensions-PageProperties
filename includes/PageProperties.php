@@ -1139,9 +1139,7 @@ class PageProperties {
 			'properties' => [],
 			'sessionData' => [],
 			'config' => [
-				'actionUrl' => SpecialPage::getTitleFor( 'PagePropertiesSubmit' )->getLocalURL()
-					. '/' . wfEscapeWikiText( $title->getPrefixedURL() )
-					. '?' . $_SERVER['QUERY_STRING'],
+				'actionUrl' => SpecialPage::getTitleFor( 'PagePropertiesSubmit', $title->getPrefixedDBkey() )->getLocalURL(),
 				'returnUrl' => 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? "s" : "" ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]",
 				'allowedMimeTypes' => $allowedMimeTypes,
 				// *** keep commented to prevent array_merge_recursive
