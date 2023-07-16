@@ -318,5 +318,7 @@
 
 	"pageproperties-form-section-semantic-properties": "A label message",
 
-	"pageproperties-form-section-semantic-manage-properties": "A label message"
+	"pageproperties-form-section-semantic-manage-properties": "A label message",
+	"pageproperties-jsmodule-forms-field-mappingformula": "The label for the mapping formula on the field definition page. This will be used to adjust the value shown the user for the field's options.",
+	"pageproperties-jsmodule-forms-field-mappingformula-help": "Help for field labelled by pageproperties-jsmodule-forms-field-mappingformula."
 }

@@ -161,6 +161,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			'options-printouts' => 'array',
 			'askquery-subject' => 'bool',
 			'options-formula' => 'string',
+			'mapping-formula' => 'string',
 			'options-limit' => 'int',
 			'alternate-input' => 'string'
 		];

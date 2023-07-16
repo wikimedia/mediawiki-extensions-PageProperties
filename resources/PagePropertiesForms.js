@@ -105,6 +105,7 @@ const PagePropertiesForms = ( function () {
 			'askquery-printouts',
 			'askquery-subject',
 			'options-formula',
+			'mapping-formula',
 			'options-limit',
 			'alternate-input'
 		] ) {
@@ -1323,6 +1324,21 @@ const PagePropertiesForms = ( function () {
 			align: 'top'
 		} );
 
+		// @credits: WikiTeq
+		var optionMappingInput = new OO.ui.TextInputWidget( {
+			value: getPropertyValue( null, 'mapping-formula' )
+		} );
+
+		Model.fields[ SelectedProperty.label ][ 'mapping-formula' ] = optionMappingInput;
+
+		var fieldOptionMapping = new OO.ui.FieldLayout( optionMappingInput, {
+			label: mw.msg( 'pageproperties-jsmodule-forms-field-mappingformula' ),
+			help: mw.msg( 'pageproperties-jsmodule-forms-field-mappingformula-help' ),
+			helpInline: true,
+			align: 'top'
+		} );
+		// ///////////////////////////
+
 		var optionslimitInputValue = getPropertyValue( null, 'options-limit' );
 		var optionslimitInput = new OO.ui.NumberInputWidget( {
 			value: optionslimitInputValue || 100
@@ -1489,6 +1505,7 @@ const PagePropertiesForms = ( function () {
 			fieldPrintouts,
 			fieldQuerysubject,
 			fieldOptionFormula,
+			fieldOptionMapping,
 			fieldOptionslimit,
 			fieldAlternateInput,
 
@@ -1563,6 +1580,9 @@ const PagePropertiesForms = ( function () {
 			fieldOptionFormula.toggle(
 				inArray( availableInputsValue, ManageProperties.optionsInputs ) &&
 					selectOptionsFromValue === 'options-askquery'
+			);
+			fieldOptionMapping.toggle(
+				inArray( availableInputsValue, ManageProperties.optionsInputs )
 			);
 			fieldOptionslimit.toggle(
 				inArray( availableInputsValue, ManageProperties.optionsInputs )

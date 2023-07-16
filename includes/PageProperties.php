@@ -1448,8 +1448,18 @@ class PageProperties {
 				}
 			}
 
+			// @credits: WikiTeq
 			if ( count( $optionsValues ) ) {
-				$fields[ $label ][ 'options-values-result' ] = array_values( array_unique( $optionsValues ) );
+				$fields[ $label ][ 'options-values-result' ] = [];
+				foreach ( $optionsValues as $val ) {
+					if ( !empty( $field['mapping-formula'] ) ) {
+						$value_ = $replaceFormula( [ 'value' => [ $val ] ], $field['mapping-formula'] );
+						$valueParsed = Parser::stripOuterParagraph( $output->parseAsContent( $value_ ) );
+						$fields[ $label ][ 'options-values-result' ][ $val ] = $valueParsed;
+					} else {
+						$fields[ $label ][ 'options-values-result' ][ $val ] = $val;
+					}
+				}
 			}
 		}
 

@@ -324,6 +324,7 @@
 	"pageproperties-form-model-label": "Content model",
 
 	"pageproperties-form-section-semantic-manage-properties": "manage semantic properties",
-	"pageproperties-js-alert-1": "Are you sure you want to delete this property?"
-
+	"pageproperties-js-alert-1": "Are you sure you want to delete this property?",
+	"pageproperties-jsmodule-forms-field-mappingformula": "option label formula",
+	"pageproperties-jsmodule-forms-field-mappingformula-help": "This will adjust how options are shown to the user without affecting their saved value. <value> will be replaced with the value of the current option. You can use parser functions and wikitext."
 }

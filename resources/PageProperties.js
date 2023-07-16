@@ -127,11 +127,9 @@ const PageProperties = function (
 		// SemanticMediaWiki/src/DataValues/Va lueValidator/AllowsListConstraintValueValidator.php
 		if ( inArray( inputName, ManageProperties.optionsInputs ) ) {
 			if (
-				PagePropertiesFunctions.getNestedProp( [ 'options', 'length' ], config )
+				config.options && Object.keys( config.options ).length
 			) {
-				config.options = ManageProperties.createInputOptions( config.options, {
-					key: 'value'
-				} );
+				config.options = ManageProperties.createInputOptions( config.options );
 			} else if ( '_PVAL' in SemanticProperties[ property ].properties ) {
 				config.options = ManageProperties.createInputOptions(
 					// eslint-disable-next-line no-underscore-dangle

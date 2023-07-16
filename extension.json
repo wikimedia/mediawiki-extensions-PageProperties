@@ -454,7 +454,9 @@
 				"pageproperties-jsmodule-manageproperties-existing-property",
 				"pageproperties-jsmodule-manageproperties-existing-category",
 				"pageproperties-jsmodule-manageproperties-existing-form",
-				"pageproperties-jsmodule-pageproperties-submit"
+				"pageproperties-jsmodule-pageproperties-submit",
+				"pageproperties-jsmodule-forms-field-mappingformula",
+				"pageproperties-jsmodule-forms-field-mappingformula-help"
 			]
 		}
 	},
