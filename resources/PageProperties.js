@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -2143,9 +2143,10 @@ const PageProperties = function (
 		};
 		var form = new OO.ui.FormLayout( {
 			$content: frameAContent,
-			action: Config.actionUrl + '&' + Object.keys( queryObj ).map( ( key ) => {
-				return `${key}=${encodeURIComponent( queryObj[ key ] )}`;
-			} ).join( '&' ),
+			action: Config.actionUrl + ( Config.actionUrl.indexOf( '?' ) === -1 ? '?' : '&' ) +
+					Object.keys( queryObj ).map( ( key ) => {
+						return `${key}=${encodeURIComponent( queryObj[ key ] )}`;
+					} ).join( '&' ),
 			method: 'post',
 			enctype: 'multipart/form-data',
 			classes: [ 'pagepropertiesform' ],
