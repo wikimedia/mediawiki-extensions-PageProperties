@@ -17,11 +17,12 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 use MediaWiki\Extension\PageProperties\ReplaceText as ReplaceText;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
 use SMW\MediaWiki\MediaWikiNsContentReader;
@@ -59,6 +60,8 @@ class PageProperties {
 	public static $formIndex = 0;
 	/** @var int */
 	public static $queryLimit = 500;
+	/** @var Logger */
+	private static $Logger;
 
 	/**
 	 * @see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
@@ -150,6 +153,7 @@ class PageProperties {
 	 * @return void
 	 */
 	public static function initialize() {
+		self::$Logger = LoggerFactory::getInstance( 'PageProperties' );
 		self::$User = RequestContext::getMain()->getUser();
 		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
 		self::initSMW();
@@ -451,17 +455,24 @@ class PageProperties {
 		$export_rdf = SpecialPage::getTitleFor( 'ExportRDF' );
 		if ( $export_rdf->isKnown() ) {
 			$export_url = $export_rdf->getFullURL( [ 'page' => $title->getFullText(), 'recursive' => '1', 'backlinks' => 0 ] );
-			$foaf = new \EasyRdf\Graph( $export_url );
-			$foaf->load();
 
-			$format = \EasyRdf\Format::getFormat( 'jsonld' );
-			$output = $foaf->serialise( $format, [
-				// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
-				// this will convert
-				// [{"@value":"a"},{"@value":"b"}]
-				// to ["a", "b"]
-				'compact' => true,
-			] );
+			try {
+				$foaf = new \EasyRdf\Graph( $export_url );
+				$foaf->load();
+
+				$format = \EasyRdf\Format::getFormat( 'jsonld' );
+				$output = $foaf->serialise( $format, [
+					// ***see vendor/easyrdf/easyrdf/lib/Serialiser/JsonLd.php
+					// this will convert
+					// [{"@value":"a"},{"@value":"b"}]
+					// to ["a", "b"]
+					'compact' => true,
+				] );
+
+			} catch ( Exception $e ) {
+				self::$Logger->error( 'EasyRdf error: ' . $export_url );
+				return;
+			}
 
 			// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
 			if ( is_scalar( $output ) ) {
