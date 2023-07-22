@@ -590,6 +590,12 @@ class PagePropertiesHooks {
 		// *** this is required only for CategoriesMultiselectWidget, now removed
 		// $outputPage->addHeadItem( 'page_properties_categories_input','<style> .mw-widgets-tagMultiselectWidget-multilineTextInputWidget{ display: none; } </style>' );
 
+		// *** the rationale for this is that for background processes
+		// is not a good practice to display an indicator
+		if ( empty( $GLOBALS['wgPagePropertiesKeepAnnoyingSMWVerticalBarLoader'] ) ) {
+			$outputPage->addScript( Html::inlineScript( 'var elements = document.getElementsByClassName( "smw-indicator-vertical-bar-loader" ); if ( elements.length ) { elements[0].remove(); }' ) );
+		}
+
 		$title = $outputPage->getTitle();
 		if ( $outputPage->isArticle() && \PageProperties::isKnownArticle( $title ) ) {
 			if ( empty( $GLOBALS['wgPagePropertiesDisableJsonLD'] ) ) {
