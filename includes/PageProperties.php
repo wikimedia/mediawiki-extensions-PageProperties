@@ -208,16 +208,6 @@ class PageProperties {
 
 		$buttonText = array_shift( $argv );
 
-		$defaultParameters = [
-			'css-class',
-			'redirect-page',
-			'submit-text',
-			'paging',
-			'email-to',
-			'navigation-next',
-			'navigation-back',
-		];
-
 		list( $forms, $options ) = self::parseParameters( $argv, $defaultParameters );
 
 		if ( empty( $options['button-type'] ) ) {
@@ -347,8 +337,8 @@ class PageProperties {
 |?Caption
 |template=DisplayPictures
 |template?File=DisplayPicture
-|separator=,<nowiki> </nowiki>
-|values-separator=<br>
+|values-separator=,<nowiki> </nowiki>
+|separator=<br>
 }}
 
 */
@@ -433,7 +423,8 @@ class PageProperties {
 		}
 
 		// 'noparse' => true,
-		return [ $ret, 'isHTML' => true ];
+		// 'isHTML' => true
+		return [ $ret ];
 	}
 
 	/**
