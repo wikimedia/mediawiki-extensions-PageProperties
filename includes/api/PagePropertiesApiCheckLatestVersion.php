@@ -42,6 +42,16 @@ class PagePropertiesApiCheckLatestVersion extends ApiBase {
 	 * @inheritDoc
 	 */
 	public function execute() {
+		$user = $this->getUser();
+		\PageProperties::initialize();
+
+		// @see SpecialPageProperties -> addJsConfigVars
+		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
+		if ( !( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+			|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) ) ) {
+			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
+		}
+
 		$result = $this->getResult();
 		$contents = file_get_contents( 'https://www.mediawiki.org/wiki/Extension:PageProperties' );
 
