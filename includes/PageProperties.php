@@ -583,25 +583,18 @@ class PageProperties {
 			}
 		}
 
-		$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
-
-		if ( $html_title_already_set ) {
-			$html_title = $outputPage->getHtmlTitle();
-		}
-
-		// can be different from the html title
-		$outputPage->setPageTitle( $page_title );
-
-		if ( $html_title_already_set ) {
-			$outputPage->setHtmlTitle( $html_title );
-		}
-
 		// page_title can be null
 		if ( empty( $page_title ) ) {
 			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; } .mw-body .firstHeading { border-bottom: none; margin-bottom: 0; margin-top: 0; } </style>' );
 		}
 
-		if ( !$html_title_already_set && empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
+		$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
+
+		if ( $html_title_already_set ) {
+			return;
+		}
+
+		if ( empty( $page_title ) && !array_key_exists( 'title', $meta ) ) {
 			$html_title = '';
 
 			if ( $wgSitename != $title->getText() ) {
@@ -609,10 +602,9 @@ class PageProperties {
 			}
 
 			$html_title .= $wgSitename;
-
 			$outputPage->setHTMLTitle( $html_title );
 
-		} elseif ( !$html_title_already_set && array_key_exists( 'title', $meta ) ) {
+		} elseif ( array_key_exists( 'title', $meta ) ) {
 			$outputPage->setHTMLTitle( $meta[ 'title' ] );
 		}
 	}
