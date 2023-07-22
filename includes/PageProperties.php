@@ -540,8 +540,8 @@ class PageProperties {
 		$meta = [];
 		$mainPage = Title::newMainPage();
 
-		// the current page is other than the main page
-		if ( $mainPage->getText() != $title->getText() ) {
+		// the current page is different than the main page
+		if ( $mainPage->getPrefixedDBkey() != $title->getPrefixedDBkey() ) {
 			// null, [ 'meta_entire_site' => 1 ]
 			$page_properties = self::getPageProperties( $mainPage, true );
 
@@ -572,8 +572,15 @@ class PageProperties {
 
 		$page_title = self::getDisplayTitle( $title );
 
-		if ( $page_title === false ) {
+		if ( $page_title !== false ) {
+			// can be different from the html title
+			$outputPage->setPageTitle( $page_title );
+
+		} else {
 			$page_title = $title->getText();
+			if ( !empty( $GLOBALS['wgPagePropertiesDisplayAlwaysUnprefixedTitles'] ) ) {
+				$outputPage->setPageTitle( $page_title );
+			}
 		}
 
 		$html_title_already_set = ( array_key_exists( 'title', $meta ) && class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) );
