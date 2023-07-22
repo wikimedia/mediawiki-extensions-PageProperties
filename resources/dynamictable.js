@@ -401,6 +401,7 @@ $( function () {
 
 	// display every 3 days
 	if (
+		!mw.config.get( 'pageproperties-disableVersionCheck' ) &&
 		showNoticeOutdatedVersion &&
 		!mw.cookie.get( 'pageproperties-check-latest-version' )
 	) {

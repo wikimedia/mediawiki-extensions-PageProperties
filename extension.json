@@ -460,5 +460,15 @@
 			]
 		}
 	},
+	"config": {
+		"PagePropertiesDisableJsonLD": false,
+		"PagePropertiesAddTrackingCategory": false,
+		"PagePropertiesDisableSidebarLink": false,
+		"PagePropertiesDisableNavigationLink": false,
+		"PagePropertiesOpenExternalLinksInNewTab": false,
+		"PagePropertiesDisplayAlwaysUnprefixedTitles": false,
+		"PagePropertiesCreateJobsWarningLimit": 0,
+		"PagePropertiesDisableVersionCheck": false
+	},
 	"manifest_version": 1
 }

@@ -161,10 +161,6 @@ class PageProperties {
 		if ( !array_key_exists( 'wgPagePropertiesShowSlotsNavigation', $GLOBALS ) ) {
 			$GLOBALS['wgPagePropertiesShowSlotsNavigation'] = self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' );
 		}
-
-		if ( !array_key_exists( 'wgPagePropertiesCreateJobsWarningLimit', $GLOBALS ) ) {
-			$GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] = 0;
-		}
 	}
 
 	/**
@@ -1191,6 +1187,7 @@ class PageProperties {
 			'pageproperties-properties' => json_encode( $obj['properties'], true ),
 			'pageproperties-sessionData' => json_encode( $obj['sessionData'], true ),
 			'pageproperties-config' => json_encode( $obj['config'], true ),
+			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
 		] );
 	}
 

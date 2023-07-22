@@ -2398,6 +2398,7 @@ $( function () {
 
 	// display every 3 days
 	if (
+		!mw.config.get( 'pageproperties-disableVersionCheck' ) &&
 		config.canManageSemanticProperties &&
 		!mw.cookie.get( 'pageproperties-check-latest-version' )
 	) {

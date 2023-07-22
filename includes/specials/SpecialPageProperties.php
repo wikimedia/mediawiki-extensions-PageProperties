@@ -224,6 +224,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
 
 		$out->addJsConfigVars( [
+			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
 			'pageproperties-show-notice-outdated-version' => ( $this->user->isAllowed( 'canmanagesemanticproperties' )
 				|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) )
 		] );
