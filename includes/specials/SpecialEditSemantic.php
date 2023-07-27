@@ -193,7 +193,25 @@ class SpecialEditSemantic extends SpecialPage {
 			]
 		] );
 
-		$out->addHTML( '<div class="pagepropertiesform-wrapper" id="pagepropertiesform-wrapper-' . $formID . '"></div>' );
+		// @see SpecialRecentChanges
+		$loadingContainer = Html::rawElement(
+			'div',
+			[ 'class' => 'rcfilters-head mw-rcfilters-head', 'id' => 'mw-rcfilters-spinner-wrapper', 'style' => 'position: relative' ],
+			Html::rawElement(
+				'div',
+				[ 'class' => 'mw-rcfilters-spinner', 'style' => 'margin-top: auto; top: 25%' ],
+				Html::element(
+					'div',
+					[ 'class' => 'mw-rcfilters-spinner-bounce' ]
+				)
+			)
+		);
+
+		$out->addHTML( Html::rawElement( 'div', [
+				'id' => 'pagepropertiesform-wrapper-' . $formID,
+				'class' => 'pagepropertiesform-wrapper'
+			], $loadingContainer )
+		);
 	}
 
 	/**

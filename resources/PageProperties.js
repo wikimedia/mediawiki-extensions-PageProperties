@@ -2256,6 +2256,8 @@ const PageProperties = function (
 			toolbarD.initialize();
 		}
 
+		$( '#mw-rcfilters-spinner-wrapper' ).remove();
+
 		setTimeout( function () {
 			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
 		}, 30 );
