@@ -319,6 +319,7 @@
 				"datatables/datatables.min.css"
 			],
 			"dependencies": [
+				"mediawiki.rcfilters.filters.base.styles",
 				"ext.PageProperties.Common"
 			],
 			"messages": [
