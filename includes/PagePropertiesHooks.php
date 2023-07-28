@@ -353,7 +353,7 @@ class PagePropertiesHooks {
 	public static function onOutputPageParserOutput( OutputPage $out, ParserOutput $parserOutput ) {
 		$parserOutput->addWrapperDivClass( 'pageproperties-content-model-' . $out->getTitle()->getContentModel() );
 
-		if ( $parserOutput->getFlag( 'pagepropertiesform' ) ) {
+		if ( $parserOutput->getExtensionData( 'pagepropertiesform' ) !== null ) {
 			$pageForms = $parserOutput->getExtensionData( 'pagepropertiesforms' );
 
 			\PageProperties::addJsConfigVars( $out, [

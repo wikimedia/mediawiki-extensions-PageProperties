@@ -256,7 +256,7 @@ class PageProperties {
 	 */
 	public static function parserFunctionPagepropertiesForm( Parser $parser, ...$argv ) {
 		$out = $parser->getOutput();
-		$out->setFlag( 'pagepropertiesform' );
+		$out->setExtensionData( 'pagepropertiesform', true );
 		$title = $parser->getTitle();
 
 /*
@@ -328,7 +328,7 @@ class PageProperties {
 	 * @return array
 	 */
 	public static function parserFunctionPageproperties( Parser $parser, ...$argv ) {
-		$parser->getOutput()->setFlag( 'pageproperties' );
+		$parser->getOutput()->setExtensionData( 'pageproperties', true );
 
 /*
 
