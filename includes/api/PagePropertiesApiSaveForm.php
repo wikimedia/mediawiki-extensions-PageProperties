@@ -53,7 +53,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		$result = $this->getResult();
 
 		$params = $this->extractRequestParams();
-		$form = json_decode( $params['formFields'], true );
+		$form = json_decode( $params['formfields'], true );
 		$fields = json_decode( $params['fields'], true );
 		$dialogAction = $params['dialogAction'];
 		$previousLabel = $params['previousLabel'];
@@ -103,7 +103,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
 			$update_items[$previousLabel] = $label;
 
-			if ( empty( $params['confirmJobExecution'] ) ) {
+			if ( empty( $params['confirm-job-execution'] ) ) {
 				$jobsCount = $this->createJobs( $update_items, true );
 
 				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
@@ -259,7 +259,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 	 */
 	public function getAllowedParams() {
 		return [
-			'formFields' => [
+			'formfields' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
@@ -267,15 +267,15 @@ class PagePropertiesApiSaveForm extends ApiBase {
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
-			'previousLabel' => [
+			'previous-label' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			],
-			'dialogAction' => [
+			'dialog-action' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			],
-			'confirmJobExecution' => [
+			'confirm-job-execution' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			]

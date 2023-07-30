@@ -1760,10 +1760,10 @@ const PagePropertiesForms = ( function () {
 
 		var payload = {
 			action: 'pageproperties-manageproperties-saveform',
-			dialogAction: action,
-			previousLabel: SelectedForm.label,
+			'dialog-action': action,
+			'previous-label': SelectedForm.label,
 			format: 'json',
-			formFields: {},
+			formfields: {},
 			fields: {}
 		};
 
@@ -1816,11 +1816,11 @@ const PagePropertiesForms = ( function () {
 						}
 
 						payload.fields = orderSelectedFormFields( SelectedForm.fields );
-						payload.formFields = formFields;
+						payload.formfields = formFields;
 
 					// eslint-disable no-fallthrough
 					case 'delete':
-						payload.formFields = JSON.stringify( payload.formFields );
+						payload.formfields = JSON.stringify( payload.formfields );
 						payload.fields = JSON.stringify( payload.fields );
 
 						var callApi = function ( postData, resolve, reject ) {
@@ -1852,7 +1852,7 @@ const PagePropertiesForms = ( function () {
 													callApi,
 													[
 														// eslint-disable-next-line max-len
-														$.extend( postData, { confirmJobExecution: true } ),
+														$.extend( postData, { 'confirm-job-execution': true } ),
 														resolve,
 														reject
 													]

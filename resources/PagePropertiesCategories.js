@@ -250,7 +250,7 @@ const PagePropertiesCategories = ( function () {
 													callApi,
 													[
 														// eslint-disable-next-line max-len
-														$.extend( payload, { confirmJobExecution: true } ),
+														$.extend( payload, { 'confirm-job-execution': true } ),
 														resolve,
 														reject
 													]
@@ -298,8 +298,8 @@ const PagePropertiesCategories = ( function () {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( {
 									action: 'pageproperties-manageproperties-savecategory',
-									dialogAction: action,
-									previousLabel: SelectedItem.label,
+									'dialog-action': action,
+									'previous-label': SelectedItem.label,
 									format: 'json',
 									data: JSON.stringify( obj )
 								}, resolve, reject );

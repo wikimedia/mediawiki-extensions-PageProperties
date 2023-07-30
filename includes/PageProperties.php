@@ -1399,8 +1399,12 @@ class PageProperties {
 				}
 
 			} elseif ( !empty( $field['options-askquery'] ) ) {
+				$parser = MediaWikiServices::getInstance()->getParserFactory()->getInstance();
+				$title = RequestContext::getMain()->getTitle();
+				$poptions = $output->parserOptions();
+				$parsedAsk = $parser->preprocess( $field['options-askquery'], $title, $poptions );
 				$results = self::getQueryResults(
-					$field['options-askquery'],
+					$parsedAsk,
 					!empty( $field['askquery-printouts'] ) ? $field['askquery-printouts'] : [],
 					[ 'limit' => !empty( $field['options-limit'] ) && is_int( $field['options-limit'] ) ? $field['options-limit'] : 100 ],
 					!empty( $field['askquery-subject'] )

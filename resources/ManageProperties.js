@@ -1166,7 +1166,7 @@ const ManageProperties = ( function () {
 													callApi,
 													[
 														// eslint-disable-next-line max-len
-														$.extend( payload, { confirmJobExecution: true } ),
+														$.extend( payload, { 'confirm-job-execution': true } ),
 														resolve,
 														reject
 													]
@@ -1221,8 +1221,8 @@ const ManageProperties = ( function () {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( {
 									action: 'pageproperties-manageproperties-saveproperty',
-									dialogAction: action,
-									previousLabel: SelectedProperty.label,
+									'dialog-action': action,
+									'previous-label': SelectedProperty.label,
 									format: 'json',
 									data: JSON.stringify( obj )
 								}, resolve, reject );

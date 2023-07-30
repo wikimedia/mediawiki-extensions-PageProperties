@@ -4,12 +4,10 @@
 	},
 	"pageproperties": "Page Properties",
 	"manageproperties": "Manage Properties",
-
 	"pageproperties-jsmodule-unknown-error": "unknown error",
 	"pageproperties-jsmodule-created-jobs": "$1 {{PLURAL|$1|job|jobs}} created",
 	"pageproperties-jsmodule-create-jobs-alert": "$1 {{PLURAL|$1|page|pages}} will be affected by this edit, continue?",
 	"pageproperties-jsmodule-forms-field-options-from": "Options from",
-
 	"pageproperties-jsmodule-forms-optionsfrom-property": "property declaration",
 	"pageproperties-jsmodule-forms-optionsfrom-optionsvalues": "as defined",
 	"pageproperties-jsmodule-forms-optionsfrom-optionswikilist": "wiki list",
@@ -29,7 +27,6 @@
 	"pageproperties-jsmodule-forms-field-optionformula-help": "wikitext and parser functions allowed (use <subject> and <Property a> to retrieve the values respectively of the query result subjects and of the property with name \"Property a\")",
 	"pageproperties-jsmodule-forms-alternateinput-autocomplete": "autocomplete",
 	"pageproperties-jsmodule-forms-alternateinput-infinite-scroll": "infinite scroll",
-
 	"pageproperties-editsemantic-titlenotset": "title not set",
 	"pageproperties-editsemantic-title-exists": "title exists",
 	"pageproperties-editsemantic-contentsnotsaved": "contents not saved",
@@ -37,10 +34,8 @@
 	"pageproperties-editsemantic-editing": "Editing",
 	"pageproperties-editsemantic-semantic": "(semantic)",
 	"pageproperties-editsemantic-newpageforms": "Create $1",
-
 	"pageproperties-editsemantic-publishfileerror": "publish file error ($1)",
 	"pageproperties-editsemantic-publishfilejoberror": "publish file error: $1 (file $2)",
-
 	"pageproperties-form-section-forms": "Forms",
 	"pageproperties-jsmodule-forms-fields": "Fields",
 	"pageproperties-jsmodule-forms-create-form": "Create form",
@@ -68,14 +63,11 @@
 	"pageproperties-jsmodule-forms-done": "Done",
 	"pageproperties-jsmodule-forms-required": "required",
 	"pageproperties-jsmodule-forms-notrequired": "not required",
-
 	"pageproperties-jsmodule-pageproperties-pagenameformulaof": "pagename formula of $1",
 	"pageproperties-jsmodule-pageproperties-submit": "Submit",
-
 	"apihelp-pageproperties-manageproperties-saveform-example-1": "save form",
 	"apihelp-pageproperties-manageproperties-saveform-summary": "save form",
 	"pageproperties-jsmodule-pageproperties-columns-forms": "name, page name, fields",
-
 	"pageproperties-jsmodule-forms-userdefined": "user defined",
 	"pageproperties-jsmodule-forms-formula": "formula",
 	"pageproperties-jsmodule-forms-rootpage-help": "Optionally specify a root page for the title page entered by the user",
@@ -96,7 +88,6 @@
 	"pageproperties-jsmodule-forms-alert-formname": "Please enter form name",
 	"pageproperties-jsmodule-forms-alert-propertyname": "Please enter a property name",
 	"pageproperties-jsmodule-forms-alert-categoryname": "Please enter a category name",
-
 	"pageproperties-jsmodule-forms-alert-fields": "Please add at least one field",
 	"pageproperties-form-section-forms-label": "",
 	"pageproperties-jsmodule-forms-definefield": "Define field",
@@ -106,11 +97,9 @@
 	"pageproperties-jsmodule-formedit-freetext": "Freetext",
 	"pageproperties-jsmodule-formedit-properties": "properties",
 	"pageproperties-jsmodule-formedit-wiki": "wiki",
-
 	"pageproperties-jsmodule-pageproperties-addremoveforms": "Add/remove forms",
 	"pageproperties-jsmodule-pageproperties-manage-categories": "Manage categories",
 	"pageproperties-jsmodule-pageproperties-manage-forms": "Manage forms",
-
 	"pageproperties-jsmodule-import-goback": "go back",
 	"pageproperties-jsmodule-import-goforward": "go forward",
 	"pageproperties-jsmodule-import-selectfile": "Select a csv file",
@@ -140,10 +129,8 @@
 	"pageproperties-jsmodule-import-previewimport": "Preview import…",
 	"pageproperties-jsmodule-import-selectproperty": "Select property",
 	"pageproperties-jsmodule-import-importpreview": "Import preview",
-
 	"pageproperties-jsmodule-forms-contentmodels": "Content model",
 	"pageproperties-jsmodule-forms-contentmodels-help": "Default content model for pages created through this form",
-
 	"pageproperties-import-api-totalpages": "total pages",
 	"pageproperties-import-api-skipped": "skipped",
 	"pageproperties-import-api-invalidtitles": "invalid titles",
@@ -153,14 +140,12 @@
 	"pageproperties-import-api-text": "text",
 	"pageproperties-import-api-properties": "properties",
 	"pageproperties-import-api-badtitle": "(#bad title)",
-
 	"pageproperties-form-section-properties": "Properties",
 	"pageproperties-form-section-categories": "Categories",
 	"pageproperties-form-section-import": "Import",
 	"pageproperties-form-section-properties-label": "",
 	"pageproperties-form-section-categories-label": "",
 	"pageproperties-form-section-import-label": "",
-
 	"pageproperties-editsemantic-label": "Edit semantic",
 	"manageproperties-label": "Manage properties",
 	"pageproperties-new-article": "New article",
@@ -174,7 +159,6 @@
 	"pageproperties-property-allows-multiple-values": "Allows multiple values",
 	"pageproperties-semantic-form": "Semantic form",
 	"pageproperties-permissions-error": "Permission error: cannot manage or edit page properties",
-
 	"right-pageproperties-caneditpageproperties": "Edit page properties (Page Properties)",
 	"right-pageproperties-caneditsemanticproperties": "Edit semantic properties (Page Properties)",
 	"right-pageproperties-canmanagesemanticproperties": "Manage semantic properties (Page Properties)",
@@ -185,17 +169,14 @@
 	"action-pageproperties-canmanagesemanticproperties": "manage semantic properties (Page Properties)",
 	"action-pageproperties-cancomposeforms": "compose forms (Page Properties)",
 	"action-pageproperties-canaddsingleproperties": "add single properties (Page Properties)",
-
 	"group-pageproperties-admin-member": "admin of page properties or semantic properties (Page Properties)",
 	"group-pageproperties-editor-member": "editor of page properties or semantic properties (Page Properties)",
 	"group-pageproperties-pagepropertieseditor-member": "editor of page properties (Page Properties)",
 	"group-pageproperties-semanticpropertieseditor-member": "editor of semantic properties (Page Properties)",
-
 	"group-pageproperties-admin": "Admin of page properties or semantic properties (Page Properties)",
 	"group-pageproperties-editor": "Editor of page properties or semantic properties (Page Properties)",
 	"group-pageproperties-pagepropertieseditor": "Editor of page properties (Page Properties)",
 	"group-pageproperties-semanticpropertieseditor": "Editor of semantic properties (Page Properties)",
-
 	"pageproperties-jsmodule-manageproperties-existing-property": "Existing property",
 	"pageproperties-jsmodule-manageproperties-existing-category": "Existing category",
 	"pageproperties-jsmodule-manageproperties-existing-form": "Existing form",
@@ -218,7 +199,6 @@
 	"pageproperties-jsmodule-manageproperties-_pefu": "Declares an external URL with placeholders $1, $2",
 	"pageproperties-jsmodule-manageproperties-_peid": "Specifies an external identifier",
 	"pageproperties-jsmodule-manageproperties-_pplb": "Adds localizable labels to a property",
-
 	"pageproperties-jsmodule-manageproperties-name": "Name",
 	"pageproperties-jsmodule-manageproperties-type": "Type",
 	"pageproperties-jsmodule-manageproperties-imported": "Imported",
@@ -235,7 +215,6 @@
 	"pageproperties-jsmodule-manageproperties-delete": "Delete",
 	"pageproperties-jsmodule-manageproperties-delete-confirm": "Are you sure you want to delete this property ?",
 	"pageproperties-jsmodule-manageproperties-upload": "upload",
-
 	"pageproperties-jsmodule-pageproperties-delete-confirm": "Are you sure you want to delete this field ?",
 	"pageproperties-jsmodule-pageproperties-create-property": "Create property",
 	"pageproperties-jsmodule-pageproperties-create-category": "Create category",
@@ -246,9 +225,7 @@
 	"pageproperties-jsmodule-pageproperties-columns": "name, type, vocabulary, description",
 	"pageproperties-jsmodule-pageproperties-columns-categories": "name, vocabulary",
 	"pageproperties-jsmodule-pageproperties-outdated-version": "This version of PageProperties is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageProperties\">Update</a>",
-
 	"pageproperties-jsmodule-forms-addfield": "add/remove fields",
-
 	"apihelp-pageproperties-manageproperties-load-data-example-1": "Load manage properties data",
 	"apihelp-pageproperties-manageproperties-load-data-summary": "Load manage properties data",
 	"apihelp-pageproperties-check-latest-version-example-1": "check extension's latest version",
@@ -259,72 +236,69 @@
 	"apihelp-pageproperties-manageproperties-savecategory-summary": "save category",
 	"apihelp-pageproperties-manageproperties-import-example-1": "semantic import",
 	"apihelp-pageproperties-manageproperties-import-summary": "semantic import",
-
 	"pageproperties-form-section-semantic-manage-properties-label": "Here you can create, edit, remove and rename properties without to deal with property pages. Renamed properties already annotated will be automatically updated in all the pages which make use of them. To use the [https://schema.org/docs/full.html schema.org] vocabulary in your wiki add in [[MediaWiki:Smw_import_schema|this page]] a subset of the [https://www.semantic-mediawiki.org/wiki/MediaWiki:Smw_import_schema following list]. [https://www.semantic-mediawiki.org/wiki/Help:Import_vocabulary Check here] to find out more.<br /><br />",
-
 	"pageproperties-form-section-semantic-properties-label": "Here you can set semantic properties without having to manually annotate them on the page. <!--Attention: the values of properties both manually annotated on the page or set through forms, and set here, will be merged together.--><br /><br />",
 	"pageproperties-form-section-semantic-properties": "semantic properties",
 	"pageproperties-js-alert-2": "Submitting the form will delete stored semantic properties, continue?",
-
 	"pageproperties-tracking-category": "Pages with PageProperties",
 	"pageproperties-extension-desc": "Allows to easily edit display title, language and content model of a page. To associate semantic properties to pages (provided that Semantic MediaWiki is installed), and to set arbitrary SEO meta tags for the entire wiki or specific pages",
-
 	"pageproperties-form-fieldset-language": "language",
 	"pageproperties-form-fieldset-publishing": "publishing",
-
 	"pageproperties-form-language-label": "language",
 	"pageproperties-form-language-help": "type a letter to scroll the select there",
-
 	"pageproperties-form-meta_robots_noindex_nofollow-label": "noindex, nofollow",
-
 	"pageproperties-form-meta_googlebot_notranslate-label": "notranslate",
 	"pageproperties_dynamictable_addfield": "add field",
-
 	"pageproperties-form-seo_entire_wiki-label": "apply to entire wiki (set values can be overwritten from other pages)",
 	"pageproperties-form-seo_entire_wiki-help": "",
-
 	"pageproperties-form-access-label": "access",
 	"pageproperties-form-publish_as-label": "publish as",
 	"pageproperties-form-publish_as-help": "attribution used for links from external pages",
-
 	"pageproperties-form-published-label": "published",
 	"pageproperties-form-published-help": "If unselected the page is considered a draft and will be not visible to regular visitors",
 	"pageproperties-form-meta_keywords-label": "keywords",
 	"pageproperties-form-meta_keywords-help": "keywords",
-
 	"pageproperties-form-meta_description-label": "description",
 	"pageproperties-form-meta_description-help": "https://moz.com/learn/seo/meta-description<br /><br />",
-
 	"pageproperties-form-meta_copyright-label": "copyright",
 	"pageproperties-form-meta_copyright-help": "copyright",
-
 	"pageproperties-form-meta_author-label": "author",
 	"pageproperties-form-meta_robots-label": "robots",
 	"pageproperties-form-meta_robots-help": "https://moz.com/learn/seo/robots-meta-directives",
-
 	"pageproperties-form-seo_subpages-label": "Sub-pages (apply to pages inlcuded in this page)",
 	"pageproperties-form-seo_subpages-help_": "Select to let subpages inherit these values",
 	"pageproperties-return": "← [[$1|$2]]",
-
 	"pageproperties-form-section-main": "main",
 	"pageproperties-form-section-seo": "SEO",
-
 	"pageproperties-form-section-main-label": "",
 	"pageproperties-form-section-seo-label": "Here you can set arbitrary metadata for this page and its subpages. If the extension [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] is installed, you can use the related parameters without the need to annotate them manually on the page.<br /><br />",
-
 	"pageproperties-form-section-main-label-entire-wiki": "Here you can set arbitrary metadata for this page, its subpages and even the entire wiki. If the extension [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] is installed, you can use the related parameters without the need to annotate them manually on the page. <br /><br />",
-
 	"pageproperties-form-displaytitle-label": "Display title",
 	"pageproperties-form-displaytitle-help": "can be blank",
 	"pageproperties-form-categories-label": "Categories",
-
 	"pageproperties_form-displaytitle-option-default": "default",
 	"pageproperties_form-displaytitle-option-override": "as defined:",
-
 	"pageproperties-form-model-label": "Content model",
-
 	"pageproperties-form-section-semantic-manage-properties": "manage semantic properties",
 	"pageproperties-js-alert-1": "Are you sure you want to delete this property?",
 	"pageproperties-jsmodule-forms-field-mappingformula": "option label formula",
-	"pageproperties-jsmodule-forms-field-mappingformula-help": "This will adjust how options are shown to the user without affecting their saved value. <value> will be replaced with the value of the current option. You can use parser functions and wikitext."
+	"pageproperties-jsmodule-forms-field-mappingformula-help": "This will adjust how options are shown to the user without affecting their saved value. <value> will be replaced with the value of the current option. You can use parser functions and wikitext.",
+
+	"apihelp-pageproperties-manageproperties-saveproperty-param-data": "saveproperty param data",
+	"apihelp-pageproperties-manageproperties-load-data-param-dataset": "load data param dataset",
+	"apihelp-pageproperties-manageproperties-savecategory-param-data": "savecategory param data",
+	"apihelp-pageproperties-manageproperties-import-param-options": "import param options",
+	"apihelp-pageproperties-manageproperties-saveform-param-formfields": "saveform param formFields",
+	"apihelp-pageproperties-manageproperties-saveproperty-param-dialog-action": "saveproperty param dialogAction",
+	"apihelp-pageproperties-manageproperties-savecategory-param-dialog-action": "savecategory param dialogAction",
+	"apihelp-pageproperties-manageproperties-import-param-config": "import param config",
+	"apihelp-pageproperties-manageproperties-saveform-param-fields": "saveform param fields",
+	"apihelp-pageproperties-manageproperties-import-param-file": "import param file",
+	"apihelp-pageproperties-manageproperties-saveproperty-param-previous-label": "saveproperty param previousLabel",
+	"apihelp-pageproperties-manageproperties-savecategory-param-previous-label": "savecategory param previousLabel",
+	"apihelp-pageproperties-manageproperties-savecategory-param-confirm-job-execution": "savecategory param confirm job execution",
+	"apihelp-pageproperties-manageproperties-saveform-param-previous-label": "saveform param previous label",
+	"apihelp-pageproperties-manageproperties-saveproperty-param-confirm-job-execution": "saveproperty param confirm job execution",
+	"apihelp-pageproperties-manageproperties-saveform-param-dialog-action": "saveform param dialog action",
+	"apihelp-pageproperties-manageproperties-saveform-param-confirm-job-execution": "saveform param confirm job execution"
 }

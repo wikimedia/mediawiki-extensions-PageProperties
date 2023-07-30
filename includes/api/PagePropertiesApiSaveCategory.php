@@ -54,8 +54,8 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 
 		$params = $this->extractRequestParams();
 		$data = json_decode( $params['data'], true );
-		$dialogAction = $params['dialogAction'];
-		$previousLabel = $params['previousLabel'];
+		$dialogAction = $params['dialog-action'];
+		$previousLabel = $params['previous-label'];
 
 		$errors = [];
 		$update_items = [];
@@ -63,7 +63,7 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 		if ( $dialogAction === 'delete' ) {
 			$update_items[$previousLabel] = null;
 
-			if ( empty( $params['confirmJobExecution'] ) ) {
+			if ( empty( $params['confirm-job-execution'] ) ) {
 				$jobsCount = $this->createJobs( $update_items, true );
 
 				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
@@ -95,7 +95,7 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
 			$update_items[$previousLabel] = $label;
 
-			if ( empty( $params['confirmJobExecution'] ) ) {
+			if ( empty( $params['confirm-job-execution'] ) ) {
 				$jobsCount = $this->createJobs( $update_items, true );
 
 				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
@@ -206,15 +206,15 @@ class PagePropertiesApiSaveCategory extends ApiBase {
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
-			'dialogAction' => [
+			'dialog-action' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],
-			'previousLabel' => [
+			'previous-label' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			],
-			'confirmJobExecution' => [
+			'confirm-job-execution' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false
 			]
