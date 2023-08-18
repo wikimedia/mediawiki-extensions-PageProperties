@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <business@topway.it>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -25,6 +25,8 @@
 const ManageProperties = ( function () {
 	var Config;
 	var PageProperties;
+
+	// var PagePropertiesInputConfig;
 	var Model = {};
 	var SemanticProperties;
 	var ImportedVocabularies;
@@ -36,13 +38,15 @@ const ManageProperties = ( function () {
 	var processDialog;
 	var DataTable;
 	var WindowManager;
-	var WindowManagerAlert;
 
 	var optionsInputs = [
 		'OO.ui.DropdownInputWidget',
 		'OO.ui.ComboBoxInputWidget',
 		'OO.ui.MenuTagMultiselectWidget',
 		'ButtonMultiselectWidget',
+
+		// should also be in the list ? https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.ButtonSelectWidget
+		// "OO.ui.ButtonSelectWidget"
 		'OO.ui.RadioSelectInputWidget',
 		'OO.ui.CheckboxMultiselectInputWidget'
 	];
@@ -99,7 +103,7 @@ const ManageProperties = ( function () {
 		"OO.ui.MultilineTextInputWidget",
 		"OO.ui.MultiselectWidget",
 		"OO.ui.ButtonSelectWidget",
-		"OO.ui.CheckboxInputWidget",
+		"OO.ui.CheckboxMultiselectInputWidget",
 		"OO.ui.DropdownInputWidget",
 		"mw.widgets.DateInputWidget",
 		"mw.widgets.datetime.DateTimeInputWidget",
@@ -108,6 +112,10 @@ const ManageProperties = ( function () {
 		"mw.widgets.TitlesMultiselectWidget",
 		"mw.widgets.UserInputWidget",
 		"mw.widgets.UsersMultiselectWidget",
+		'ButtonMultiselectWidget',
+		'OO.ui.MenuTagMultiselectWidget',
+		'intl-tel-input',
+		'RatingWidget'
 */
 
 		//  "OO.ui.TextInputWidget"
@@ -117,6 +125,7 @@ const ManageProperties = ( function () {
 		switch ( dataType ) {
 			// Annotation URI
 			case '_anu':
+				// @TODO use an object in the form { 'OO.ui.TextInputWidget-type-url': mw.msg() },
 				ret = [ 'OO.ui.TextInputWidget (url)' ];
 				break;
 
@@ -127,19 +136,17 @@ const ManageProperties = ( function () {
 
 			// Quantity
 			case '_qty':
-				ret = [ 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget' ];
+				ret = [ 'OO.ui.NumberInputWidget', 'OO.ui.TextInputWidget (number)' ];
 				break;
 
 			// number
 			case '_num':
-				ret = [ 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget', 'RatingWidget' ];
-
+				ret = [ 'OO.ui.NumberInputWidget', 'OO.ui.TextInputWidget (number)', 'RatingWidget' ];
 				break;
 
 			// temperature
 			case '_tem':
-				ret = [ 'OO.ui.TextInputWidget (number)', 'OO.ui.NumberInputWidget' ];
-
+				ret = [ 'OO.ui.NumberInputWidget', 'OO.ui.TextInputWidget (number)' ];
 				break;
 
 			// Record
@@ -231,6 +238,97 @@ const ManageProperties = ( function () {
 		var filter = [ '_boo', '_wpg' ];
 		if ( !inArray( dataType, filter ) ) {
 			ret = ret.concat( optionsInputs );
+		}
+
+		return ret;
+	}
+
+	function getAvailableInputsSchema( type, format ) {
+		var ret = [];
+		switch ( type ) {
+			case 'string':
+				switch ( format ) {
+					case 'color':
+						ret = [ 'OO.ui.TextInputWidget (color)' ];
+						break;
+					case 'date':
+						ret = [ 'mw.widgets.DateInputWidget' ];
+						break;
+					case 'datetime':
+						ret = [ 'mw.widgets.datetime.DateTimeInputWidget' ];
+						break;
+					case 'datetime-local':
+						ret = [ 'mw.widgets.datetime.DateTimeInputWidget' ];
+						break;
+					case 'email':
+						ret = [ 'OO.ui.TextInputWidget (email)' ];
+						break;
+					case 'month':
+						ret = [ 'mw.widgets.DateInputWidget (precision month)' ];
+						break;
+					case 'password':
+						ret = [ 'OO.ui.TextInputWidget (password)' ];
+						break;
+					case 'number':
+						ret = [
+							'OO.ui.NumberInputWidget',
+							'OO.ui.TextInputWidget (number)',
+							'RatingWidget'
+						];
+						break;
+					case 'range':
+						// @TODO add range input
+						ret = [
+							'OO.ui.TextInputWidget'
+						];
+						break;
+					case 'tel':
+						ret = [
+							'intl-tel-input',
+							'OO.ui.TextInputWidget (tel)',
+							'OO.ui.TagMultiselectWidget'
+						];
+						break;
+					case 'text':
+						ret = [
+							'OO.ui.TextInputWidget',
+							'OO.ui.TagMultiselectWidget',
+							'mw.widgets.CategoryMultiselectWidget',
+							'OO.ui.SelectFileWidget'
+						];
+						break;
+					case 'textarea':
+						ret = [ 'OO.ui.MultilineTextInputWidget' ];
+						break;
+					case 'time':
+						ret = [ 'mw.widgets.datetime.DateTimeInputWidget' ];
+						break;
+					case 'url':
+						ret = [ 'OO.ui.TextInputWidget (url)' ];
+						break;
+					case 'week':
+						ret = [ 'OO.ui.TextInputWidget' ];
+						break;
+				}
+
+				break;
+
+			case 'number':
+			case 'integer':
+				ret = [
+					'OO.ui.NumberInputWidget',
+					'OO.ui.TextInputWidget (number)',
+					'RatingWidget'
+				];
+
+				break;
+			case 'boolean':
+				ret = [ 'OO.ui.ToggleSwitchWidget' ];
+				break;
+
+			// select rather a type and toggle "multiple values"
+			case 'array':
+				break;
 		}
 
 		return ret;
@@ -347,6 +445,7 @@ const ManageProperties = ( function () {
 			// "_SUBP", // Subproperty of - because the input type
 			'_PVALI', // Allows value list
 			'__pageproperties_preferred_input',
+			'__pageproperties_input_config',
 			'__pageproperties_allows_multiple_values'
 		] );
 	}
@@ -439,6 +538,11 @@ const ManageProperties = ( function () {
 		var arr = inputName.split( '.' );
 		var constructor = null;
 		var tags = [];
+
+		if ( isMultiselect( inputName ) && !( 'selected' in config ) ) {
+			config.selected = config.value;
+		}
+
 		switch ( inputName ) {
 			case 'mw.widgets.datetime.DateTimeInputWidget':
 				constructor = mw.widgets.datetime.DateTimeInputWidget;
@@ -454,7 +558,7 @@ const ManageProperties = ( function () {
 				break;
 			case 'mw.widgets.CategoryMultiselectWidget':
 				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
-				tags = config.selected ? config.selected : config.value;
+				tags = config.selected;
 				delete config.selected;
 				delete config.value;
 				break;
@@ -463,8 +567,12 @@ const ManageProperties = ( function () {
 				// This input element accepts a filename, which may only be programmatically
 				// set to the empty string"
 				delete config.value;
-				config.accept = Config.allowedMimeTypes;
+				if ( !( 'accept' in config ) ) {
+					config.accept = Config.allowedMimeTypes;
+				}
+				// if (!('accept' in config ) ) {
 				config.buttonOnly = true;
+				// }
 				config.button = {
 					flags: [ 'progressive' ],
 					icon: 'add',
@@ -477,12 +585,18 @@ const ManageProperties = ( function () {
 				return new OO.ui.SelectFileWidget( config );
 
 			case 'OO.ui.MultilineTextInputWidget':
-				config.autosize = true;
-				config.rows = 2;
+				if ( !( 'autosize' in config ) ) {
+					config.autosize = true;
+				}
+				if ( !( 'rows' in config ) ) {
+					config.rows = 2;
+				}
 				break;
 
 			case 'OO.ui.TagMultiselectWidget':
-				config.allowArbitrary = true;
+				if ( !( 'allowArbitrary' in config ) ) {
+					config.allowArbitrary = true;
+				}
 				break;
 
 			default:
@@ -498,10 +612,14 @@ const ManageProperties = ( function () {
 							);
 							break;
 						case 'TextInputWidget':
-							config.type = value;
+							if ( !( 'type' in config ) ) {
+								config.type = value;
+							}
 							break;
 						case 'DateInputWidget':
-							config.precision = value;
+							if ( !( 'precision' in config ) ) {
+								config.precision = value;
+							}
 							break;
 					}
 				}
@@ -571,7 +689,16 @@ const ManageProperties = ( function () {
 	function getPropertyValue( property ) {
 		var allowsMultipleValues = propertyAllowsMultipleValues( property );
 
+		if ( property === '__pageproperties_input_config' ) {
+			if ( property in Model ) {
+				// eslint-disable-next-line no-underscore-dangle
+				return Model.__pageproperties_input_config;
+			}
+			return SelectedProperty.properties[ property ];
+		}
+
 		if ( property in Model ) {
+
 			if ( !( 'getValue' in Model[ property ] ) ) {
 				var values = [];
 				for ( var i in Model[ property ] ) {
@@ -600,18 +727,6 @@ const ManageProperties = ( function () {
 		}
 
 		return propertyValue.slice( -1 )[ 0 ];
-	}
-
-	function createInputOptions( array, config ) {
-		var config = jQuery.extend( { key: 'key', value: 'value' }, config || {} );
-		var ret = [];
-		for ( var i in array ) {
-			ret.push( {
-				data: config.key === 'key' ? i : array[ i ],
-				label: config.value === 'value' ? array[ i ] : i
-			} );
-		}
-		return ret;
 	}
 
 	var InnerItemWidget = function ( config ) {
@@ -752,18 +867,18 @@ const ManageProperties = ( function () {
 
 		var typesInput = new OO.ui.DropdownInputWidget( {
 			// , { key: "value" }
-			options: createInputOptions( TypeLabels ),
+			options: PagePropertiesFunctions.createDropDownOptions( TypeLabels ),
 			value: SelectedProperty.type
 		} );
 
-		var multipleValueInput = new OO.ui.ToggleSwitchWidget( {
+		var multipleFieldsInput = new OO.ui.ToggleSwitchWidget( {
 			value: getPropertyValue( '__pageproperties_allows_multiple_values' )
 		} );
 
 		// eslint-disable-next-line no-underscore-dangle
-		Model.__pageproperties_allows_multiple_values = multipleValueInput;
+		Model.__pageproperties_allows_multiple_values = multipleFieldsInput;
 
-		multipleValueInput.setDisabled(
+		multipleFieldsInput.setDisabled(
 			disableMultipleFields(
 				getPropertyValue( '_TYPE' ),
 				getPropertyValue( '__pageproperties_preferred_input' )
@@ -771,7 +886,7 @@ const ManageProperties = ( function () {
 		);
 
 		var availableInputs = new OO.ui.DropdownInputWidget( {
-			options: createInputOptions( getAvailableInputs( SelectedProperty.type ), {
+			options: PagePropertiesFunctions.createDropDownOptions( getAvailableInputs( SelectedProperty.type ), {
 				key: 'value'
 			} ),
 			value: getPropertyValue( '__pageproperties_preferred_input' )
@@ -781,18 +896,18 @@ const ManageProperties = ( function () {
 		Model.__pageproperties_preferred_input = availableInputs;
 
 		availableInputs.on( 'change', function ( value ) {
-			multipleValueInput.setDisabled(
+			multipleFieldsInput.setDisabled(
 				disableMultipleFields( getPropertyValue( '_TYPE' ), value )
 			);
 		} );
 		typesInput.on( 'change', function ( value ) {
 			SelectedProperty.type = value;
 			availableInputs.setOptions(
-				createInputOptions( getAvailableInputs( value ), {
+				PagePropertiesFunctions.createDropDownOptions( getAvailableInputs( value ), {
 					key: 'value'
 				} )
 			);
-			multipleValueInput.setDisabled(
+			multipleFieldsInput.setDisabled(
 				disableMultipleFields(
 					value,
 					getPropertyValue( '__pageproperties_preferred_input' )
@@ -819,6 +934,17 @@ const ManageProperties = ( function () {
 		// eslint-disable-next-line no-underscore-dangle
 		Model._IMPO = ImportedVocabulariesWidget;
 
+		// var inputConfigButton = new OO.ui.ButtonWidget( {
+		// 	icon: 'settings',
+		// 	flags: []
+		// } );
+
+		// Model.__pageproperties_input_config = getPropertyValue( '__pageproperties_input_config' ) || {};
+
+		// inputConfigButton.on( 'click', function () {
+		// 	PagePropertiesInputConfig.openDialog( Model.__pageproperties_input_config, availableInputs.value, SelectedProperty.type );
+		// } );
+
 		fieldset.addItems( [
 			new OO.ui.FieldLayout( textInputWidget, {
 				label: mw.msg( 'pageproperties-jsmodule-manageproperties-name' ),
@@ -839,7 +965,7 @@ const ManageProperties = ( function () {
 				}
 			),
 
-			new OO.ui.FieldLayout( multipleValueInput, {
+			new OO.ui.FieldLayout( multipleFieldsInput, {
 				label: mw.msg(
 					'pageproperties-jsmodule-manageproperties-multiple-fields'
 				),
@@ -850,6 +976,7 @@ const ManageProperties = ( function () {
 				align: 'top'
 			} ),
 
+			// new OO.ui.ActionFieldLayout( availableInputs, inputConfigButton, {
 			new OO.ui.FieldLayout( availableInputs, {
 				label: mw.msg(
 					'pageproperties-jsmodule-manageproperties-preferred-input'
@@ -1123,7 +1250,6 @@ const ManageProperties = ( function () {
 
 						if ( alert ) {
 							PagePropertiesFunctions.OOUIAlert(
-								WindowManagerAlert,
 								new OO.ui.HtmlSnippet( alert ),
 								{ size: 'medium' }
 							);
@@ -1147,7 +1273,6 @@ const ManageProperties = ( function () {
 											res[ 'pageproperties-manageproperties-saveproperty' ];
 										if ( data[ 'result-action' ] === 'error' ) {
 											PagePropertiesFunctions.OOUIAlert(
-												WindowManagerAlert,
 												new OO.ui.HtmlSnippet( data.error ),
 												{
 													size: 'medium'
@@ -1156,7 +1281,6 @@ const ManageProperties = ( function () {
 										} else {
 											if ( 'jobs-count-warning' in data ) {
 												PagePropertiesFunctions.OOUIAlert(
-													WindowManagerAlert,
 													mw.msg(
 														'pageproperties-jsmodule-create-jobs-alert',
 														parseInt( data[ 'jobs-count-warning' ] )
@@ -1165,7 +1289,7 @@ const ManageProperties = ( function () {
 													// @TODO or return promise
 													callApi,
 													[
-														// eslint-disable-next-line max-len
+
 														$.extend( payload, { 'confirm-job-execution': true } ),
 														resolve,
 														reject
@@ -1174,7 +1298,6 @@ const ManageProperties = ( function () {
 											} else {
 												if ( parseInt( data[ 'jobs-count' ] ) ) {
 													PagePropertiesFunctions.OOUIAlert(
-														WindowManagerAlert,
 														mw.msg(
 															'pageproperties-jsmodule-created-jobs',
 															parseInt( data[ 'jobs-count' ] )
@@ -1183,10 +1306,9 @@ const ManageProperties = ( function () {
 													);
 												}
 												if ( updateData( data ) === true ) {
-													WindowManager.removeWindows( [ 'myDialog' ] );
+													WindowManager.removeActiveWindow();
 												} else {
 													PagePropertiesFunctions.OOUIAlert(
-														WindowManagerAlert,
 														mw.msg( 'pageproperties-jsmodule-unknown-error' ),
 														{ size: 'medium' }
 													);
@@ -1195,7 +1317,6 @@ const ManageProperties = ( function () {
 										}
 									} else {
 										PagePropertiesFunctions.OOUIAlert(
-											WindowManagerAlert,
 											mw.msg( 'pageproperties-jsmodule-unknown-error' ),
 											{ size: 'medium' }
 										);
@@ -1210,7 +1331,6 @@ const ManageProperties = ( function () {
 									// * pageproperties-permissions-error
 									// * pageproperties-permissions-error-b
 									PagePropertiesFunctions.OOUIAlert(
-										WindowManagerAlert,
 										mw.msg( msg ),
 										{ size: 'medium' }
 									);
@@ -1239,7 +1359,7 @@ const ManageProperties = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				WindowManager.removeWindows( [ 'myDialog' ] );
+				WindowManager.removeActiveWindow();
 			}, this );
 	};
 
@@ -1262,7 +1382,7 @@ const ManageProperties = ( function () {
 			.reduce( ( res, key ) => ( ( res[ key ] = obj[ key ] ), res ), {} );
 
 	function initCommonWidgets() {
-		var options = createInputOptions( {
+		var options = PagePropertiesFunctions.createDropDownOptions( {
 			'': 'none'
 		} );
 
@@ -1275,7 +1395,7 @@ const ManageProperties = ( function () {
 
 			options.push( { optgroup: namespace } );
 			options = options.concat(
-				createInputOptions( obj_, {
+				PagePropertiesFunctions.createDropDownOptions( obj_, {
 					value: 'key'
 				} )
 			);
@@ -1285,7 +1405,7 @@ const ManageProperties = ( function () {
 			options: options
 		} );
 
-		var options = createInputOptions( {
+		var options = PagePropertiesFunctions.createDropDownOptions( {
 			'': 'none'
 		} );
 
@@ -1298,7 +1418,7 @@ const ManageProperties = ( function () {
 
 			options.push( { optgroup: namespace } );
 			options = options.concat(
-				createInputOptions( obj_, {
+				PagePropertiesFunctions.createDropDownOptions( obj_, {
 					value: 'key'
 				} )
 			);
@@ -1511,14 +1631,14 @@ const ManageProperties = ( function () {
 	// Config = config;
 	// }
 
-	function preInitialize( config, windowManager, windowManagerAlert ) {
+	function preInitialize( config, windowManager ) {
 		Config = config;
 		WindowManager = windowManager;
-		WindowManagerAlert = windowManagerAlert;
 	}
 
 	function initialize(
 		pageProperties,
+		// pagePropertiesInputConfig,
 		semanticProperties,
 		importedVocabularies,
 		typeLabels,
@@ -1528,6 +1648,7 @@ const ManageProperties = ( function () {
 
 		if ( arguments.length ) {
 			PageProperties = pageProperties;
+			// PagePropertiesInputConfig = pagePropertiesInputConfig;
 			SemanticProperties = semanticProperties;
 			ImportedVocabularies = importedVocabularies;
 			TypeLabels = typeLabels;
@@ -1602,26 +1723,20 @@ const ManageProperties = ( function () {
 			size: 'larger'
 		} );
 
-		WindowManager.addWindows( [ processDialog ] );
-
-		WindowManager.openWindow( processDialog, {
-			title:
-				mw.msg(
-					// The following messages are used here:
-					// * pageproperties-jsmodule-manageproperties-define-property
-					// * pageproperties-jsmodule-manageproperties-define-property - [name]
-					'pageproperties-jsmodule-manageproperties-define-property'
-				) + ( label ? ' - ' + label : '' )
-		} );
-
-		// windowManager.openWindow( 'myDialog', { size: 'larger' } );
+		WindowManager.newWindow( processDialog, mw.msg(
+			// The following messages are used here:
+			// * pageproperties-jsmodule-manageproperties-define-property
+			// * pageproperties-jsmodule-manageproperties-define-property - [name]
+			'pageproperties-jsmodule-manageproperties-define-property'
+		) + ( label ? ' - ' + label : '' )
+		);
 	}
 
 	return {
 		initialize,
 		createToolbar,
-		createInputOptions,
 		getAvailableInputs,
+		getAvailableInputsSchema,
 		inputInstanceFromName,
 		openDialog,
 		disableMultipleFields,
@@ -1632,6 +1747,7 @@ const ManageProperties = ( function () {
 		isMultiselect,
 		preInitialize,
 		loadData,
-		matchLoadedData
+		matchLoadedData,
+		TypeLabels
 	};
 }() );

@@ -4,12 +4,14 @@
 	},
 	"pageproperties": "A label message",
 	"manageproperties": "A label message",
+
 	"pageproperties-editsemantic-titlenotset": "A label message",
 	"pageproperties-editsemantic-contentsnotsaved": "A label message",
 	"pageproperties-editsemantic-creating": "A label message",
 	"pageproperties-editsemantic-editing": "A label message",
 	"pageproperties-editsemantic-semantic": "A label message",
 	"pageproperties-editsemantic-newpageforms": "A label message",
+
 	"pageproperties-editsemantic-publishfileerror": "A label message",
 	"pageproperties-editsemantic-publishfilejoberror": "A label message",
 	"pageproperties-jsmodule-forms-alert-propertyname": "A label message",
@@ -30,10 +32,14 @@
 	"group-pageproperties-semanticpropertieseditor-member": "A label message",
 	"group-pageproperties-pagepropertieseditor": "A label message",
 	"group-pageproperties-semanticpropertieseditor": "A label message",
+
 	"pageproperties-jsmodule-manageproperties-upload": "A label message",
+
 	"pageproperties-jsmodule-forms-dialogsearch-selectforms": "A label message",
 	"pageproperties-jsmodule-forms-dialogsearch-selectproperties": "A label message",
+
 	"pageproperties-form-section-forms": "A label message",
+
 	"pageproperties-jsmodule-unknown-error": "A label message",
 	"pageproperties-jsmodule-created-jobs": "A label message",
 	"pageproperties-jsmodule-create-jobs-alert": "A label message",
@@ -63,6 +69,7 @@
 	"pageproperties-jsmodule-forms-displaycategories": "A label message",
 	"pageproperties-new-article": "A label message",
 	"pageproperties-semantic-form": "A label message",
+
 	"pageproperties-jsmodule-forms-fields": "A label message",
 	"pageproperties-jsmodule-forms-create-form": "A label message",
 	"pageproperties-jsmodule-forms-pagenameformula-help": "A label message",
@@ -84,8 +91,10 @@
 	"pageproperties-jsmodule-forms-done": "A label message",
 	"pageproperties-jsmodule-forms-required": "A label message",
 	"pageproperties-jsmodule-forms-notrequired": "A label message",
+
 	"pageproperties-jsmodule-pageproperties-pagenameformulaof": "A label message",
 	"pageproperties-jsmodule-pageproperties-submit": "A label message",
+
 	"apihelp-pageproperties-manageproperties-saveform-example-1": "A label message",
 	"apihelp-pageproperties-manageproperties-saveform-summary": "A label message",
 	"pageproperties-jsmodule-pageproperties-columns-forms": "A label message",
@@ -115,12 +124,14 @@
 	"pageproperties-jsmodule-formedit-freetext": "A label message",
 	"pageproperties-jsmodule-formedit-properties": "A label message",
 	"pageproperties-jsmodule-formedit-wiki": "A label message",
+
 	"pageproperties-jsmodule-pageproperties-addremoveforms": "A label message",
 	"pageproperties-jsmodule-pageproperties-manage-categories": "A label message",
 	"pageproperties-jsmodule-pageproperties-manage-forms": "A label message",
 	"pageproperties-permissions-error": "A label message",
-	"pageproperties-jsmodule-forms-addfield": "A label message",
+	"pageproperties-jsmodule-forms-add-remove-properties": "A label message",
 	"pageproperties-jsmodule-import-file-upload-max-size": "A label message",
+
 	"pageproperties-editsemantic-label": "A label message",
 	"pageproperties-label": "A label message",
 	"specialpages-group-": "A label message",
@@ -132,6 +143,7 @@
 	"pageproperties-property-allows-multiple-values": "A label message",
 	"apihelp-pageproperties-manageproperties-import-example-1": "A label message",
 	"apihelp-pageproperties-manageproperties-import-summary": "A label message",
+
 	"pageproperties-jsmodule-import-goback": "A label message",
 	"pageproperties-jsmodule-import-goforward": "A label message",
 	"pageproperties-jsmodule-import-selectfile": "A label message",
@@ -161,6 +173,7 @@
 	"pageproperties-jsmodule-import-previewimport": "A label message",
 	"pageproperties-jsmodule-import-selectproperty": "A label message",
 	"pageproperties-jsmodule-import-importpreview": "A label message",
+
 	"pageproperties-import-api-totalpages": "A label message",
 	"pageproperties-import-api-skipped": "A label message",
 	"pageproperties-import-api-invalidtitles": "A label message",
@@ -170,6 +183,7 @@
 	"pageproperties-import-api-text": "A label message",
 	"pageproperties-import-api-properties": "A label message",
 	"pageproperties-import-api-badtitle": "A label message",
+
 	"pageproperties-form-section-properties": "A label message",
 	"pageproperties-form-section-categories": "A label message",
 	"pageproperties-form-section-import": "A label message",
@@ -183,16 +197,19 @@
 	"apihelp-pageproperties-manageproperties-savecategory-example-1": "A label message",
 	"apihelp-pageproperties-manageproperties-savecategory-summary": "A label message",
 	"pageproperties-form-categories-label": "A label message",
+
 	"apihelp-pageproperties-manageproperties-load-data-example-1": "A label message",
 	"apihelp-pageproperties-manageproperties-load-data-summary": "A label message",
 	"apihelp-pageproperties-check-latest-version-example-1": "A label message",
 	"apihelp-pageproperties-check-latest-version-summary": "A label message",
 	"apihelp-pageproperties-manageproperties-saveproperty-example-1": "A label message",
 	"apihelp-pageproperties-manageproperties-saveproperty-summary": "A label message",
+
 	"group-pageproperties-admin-member": "A label message",
 	"group-pageproperties-editor-member": "A label message",
 	"group-pageproperties-admin": "A label message",
 	"group-pageproperties-editor": "A label message",
+
 	"pageproperties-jsmodule-manageproperties-existing-property": "A label message",
 	"pageproperties-jsmodule-manageproperties-existing-category": "A label message",
 	"pageproperties-jsmodule-manageproperties-existing-form": "A label message",
@@ -215,6 +232,7 @@
 	"pageproperties-jsmodule-manageproperties-_pefu": "A label message",
 	"pageproperties-jsmodule-manageproperties-_peid": "A label message",
 	"pageproperties-jsmodule-manageproperties-_pplb": "A label message",
+
 	"pageproperties-jsmodule-manageproperties-name": "A label message",
 	"pageproperties-jsmodule-manageproperties-type": "A label message",
 	"pageproperties-jsmodule-manageproperties-imported": "A label message",
@@ -229,6 +247,7 @@
 	"pageproperties-jsmodule-manageproperties-cancel": "A label message",
 	"pageproperties-jsmodule-manageproperties-delete": "A label message",
 	"pageproperties-jsmodule-manageproperties-delete-confirm": "A label message",
+
 	"pageproperties-jsmodule-pageproperties-delete-confirm": "A label message",
 	"pageproperties-jsmodule-pageproperties-create-property": "A label message",
 	"pageproperties-jsmodule-pageproperties-add-property": "A label message",
@@ -237,6 +256,7 @@
 	"pageproperties-jsmodule-pageproperties-no-properties": "A label message",
 	"pageproperties-jsmodule-pageproperties-columns": "A label message",
 	"pageproperties-jsmodule-pageproperties-outdated-version": "A label message",
+
 	"pageproperties-form-section-semantic-manage-properties-label": "A label message",
 	"pageproperties-js-alert-2": "A label message",
 	"pageproperties-tracking-category": "A label message",
@@ -247,42 +267,86 @@
 	"pageproperties_form-displaytitle-option-default": "A label message",
 	"pageproperties_form-displaytitle-option-override": "A label message",
 	"pageproperties-js-alert-1": "A label message",
+
 	"pageproperties-extension-desc": "{{desc|name=PageProperties|url=https://www.mediawiki.org/wiki/Extension:PageProperties}}",
 	"pageproperties-form-fieldset-language": "A label message",
 	"pageproperties-form-fieldset-publishing": "A label message",
+
 	"pageproperties-form-language-label": "A label message",
 	"pageproperties-form-language-help": "A label message",
+
 	"pageproperties-form-meta_robots_noindex_nofollow-label": "A label message",
+
 	"pageproperties-form-meta_googlebot_notranslate-label": "A label message",
 	"pageproperties_dynamictable_addfield": "A label message",
+
 	"pageproperties-form-access-label": "A label message",
 	"pageproperties-form-publish_as-label": "A label message",
 	"pageproperties-form-publish_as-help": "A label message",
+
 	"pageproperties-form-published-label": "A label message",
 	"pageproperties-form-published-help": "A label message",
 	"pageproperties-form-meta_keywords-label": "A label message",
 	"pageproperties-form-meta_keywords-help": "A label message",
+
 	"pageproperties-form-meta_description-label": "A label message",
 	"pageproperties-form-meta_description-help": "A label message",
+
 	"pageproperties-form-meta_copyright-label": "A label message",
 	"pageproperties-form-meta_copyright-help": "A label message",
+
 	"pageproperties-form-meta_author-label": "A label message",
 	"pageproperties-form-meta_robots-label": "A label message",
 	"pageproperties-form-meta_robots-help": "A label message",
+
 	"pageproperties-return": "A label message",
+
 	"pageproperties-form-section-main": "A label message",
 	"pageproperties-form-section-seo": "A label message",
+
 	"pageproperties-form-section-main-label": "A label message",
 	"pageproperties-form-section-seo-label": "A label message",
+
 	"pageproperties-form-section-main-label-entire-wiki": "A label message",
+
 	"pageproperties-form-displaytitle-label": "A label message",
 	"pageproperties-form-displaytitle-help": "A label message",
+
 	"pageproperties-form-model-label": "A label message",
+
 	"pageproperties-form-section-semantic-properties-label": "A label message",
+
 	"pageproperties-form-section-semantic-properties": "A label message",
+
 	"pageproperties-form-section-semantic-manage-properties": "A label message",
 	"pageproperties-jsmodule-forms-field-mappingformula": "The label for the mapping formula on the field definition page. This will be used to adjust the value shown the user for the field's options.",
 	"pageproperties-jsmodule-forms-field-mappingformula-help": "Help for field labelled by pageproperties-jsmodule-forms-field-mappingformula.",
+
+	"pageproperties-property-input-config": "A label message",
+	"pageproperties-jsmodule-inputconfig-dialog-label": "A label message",
+	"pageproperties-jsmodule-inputconfig-addremoveoptions": "A label message",
+	"pageproperties-jsmodule-inputconfig-searchdialog-label": "A label message",
+	"pageproperties-jsmodule-forms-add-content-block": "A label message",
+	"pageproperties-jsmodule-forms-add-field": "A label message",
+	"pageproperties-jsmodule-formfield-label": "A label message",
+	"pageproperties-jsmodule-formfield-propertymodel": "A label message",
+	"pageproperties-jsmodule-formfield-propertymodel-smwproperty": "A label message",
+	"pageproperties-jsmodule-formfield-propertymodel-jsonschema": "A label message",
+	"pageproperties-jsmodule-formfield-smwproperties": "A label message",
+	"pageproperties-jsmodule-formfield-schematypes": "A label message",
+	"pageproperties-jsmodule-formfield-schematextsubtypes": "A label message",
+	"pageproperties-jsmodule-formfield-multiple-values": "A label message",
+	"pageproperties-jsmodule-formfield-availableinputs": "A label message",
+	"pageproperties-jsmodule-formfield-required": "A label message",
+	"pageproperties-jsmodule-formfield-default": "A label message",
+	"pageproperties-jsmodule-forms-contentblock-content": "A label message",
+	"pageproperties-jsmodule-forms-contentblock-content-help": "A label message",
+	"pageproperties-jsmodule-forms-add-block-content": "A label message",
+	"pageproperties-jsmodule-forms-contentblock-newlabel": "A label message",
+	"pageproperties-jsmodule-formfield-newlabel": "A label message",
+	"pageproperties-jsmodule-formfield-existing-field": "A label message",
+	"pageproperties-jsmodule-formfield-empty-field": "A label message",
+	"pageproperties-jsmodule-formfield-default-value": "A label message",
 
 	"apihelp-pageproperties-manageproperties-saveproperty-param-data": "A label message",
 	"apihelp-pageproperties-manageproperties-load-data-param-dataset": "A label message",
@@ -300,5 +364,9 @@
 	"apihelp-pageproperties-manageproperties-saveform-param-previous-label": "A label message",
 	"apihelp-pageproperties-manageproperties-saveproperty-param-confirm-job-execution": "A label message",
 	"apihelp-pageproperties-manageproperties-saveform-param-dialog-action": "A label message",
-	"apihelp-pageproperties-manageproperties-saveform-param-confirm-job-execution": "A label message"
+	"apihelp-pageproperties-manageproperties-saveform-param-confirm-job-execution": "A label message",
+	"apihelp-pageproperties-form-descriptor-summary": "A label message",
+	"apihelp-pageproperties-manageproperties-saveform-param-form-fields": "A label message",
+	"apihelp-pageproperties-form-descriptor-param-forms": "A label message",
+	"apihelp-pageproperties-form-descriptor-example-1": "A label message"
 }

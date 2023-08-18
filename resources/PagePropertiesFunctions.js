@@ -19,6 +19,8 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
+/* eslint-disable no-tabs */
+
 // eslint-disable-next-line no-unused-vars
 const PagePropertiesFunctions = ( function () {
 	function getKeyByValue( obj, value ) {
@@ -35,9 +37,26 @@ const PagePropertiesFunctions = ( function () {
 		return ret;
 	}
 
-	// https://stackoverflow.com/questions/4647817/javascript-object-rename-key
-	function renameObjectKey( o, oldKey, newKey ) {
-		delete jQuery.extend( o, { [ newKey ]: o[ oldKey ] } )[ oldKey ];
+	function renameObjectKey( obj, oldKey, newKey ) {
+		// delete jQuery.extend( o, { [ newKey ]: o[ oldKey ] } )[ oldKey ];
+		// var keys = Object.keys( obj );
+		// var res = keys.reduce( ( acc, key ) => {
+		// 	var value = obj[ key ];
+		// 	if ( key === oldKey ) {
+		// 		key = newKey;
+		// 	}
+		// 	acc[ key ] = value;
+		// 	return acc;
+		// }, {} );
+		var ret = {};
+		for ( var i in obj ) {
+			var k = ( i !== oldKey ? i : newKey );
+			ret[ k ] = obj[ i ];
+			delete obj[ i ];
+		}
+		for ( var i in ret ) {
+			obj[ i ] = ret[ i ];
+		}
 	}
 
 	function createTool( obj, config ) {
@@ -165,7 +184,20 @@ const PagePropertiesFunctions = ( function () {
 		return path.reduce( ( xs, x ) => ( xs && xs[ x ] ) ? xs[ x ] : null, obj );
 	}
 
-	function OOUIAlert( windowManager, text, options, callback, args ) {
+	function isObject( obj ) {
+		return obj !== null && typeof obj === 'object' && !Array.isArray( obj );
+	}
+
+	// https://stackoverflow.com/questions/5072136/javascript-filter-for-objects
+	function filterObject( obj, predicate ) {
+		return Object.keys( obj )
+			.filter( ( key ) => predicate( obj[ key ] ) )
+			// eslint-disable-next-line no-sequences
+			.reduce( ( res, key ) => ( ( res[ key ] = obj[ key ] ), res ), {} );
+	}
+
+	function OOUIAlert( text, options, callback, args ) {
+		var windowManager = createWindowManager();
 		windowManager.addWindows( [ new OO.ui.MessageDialog() ] );
 
 		var obj = { message: text };
@@ -182,6 +214,45 @@ const PagePropertiesFunctions = ( function () {
 			} );
 	}
 
+	function createNewLabel( obj, msg ) {
+		var n = 0;
+		do {
+			var label = msg;
+			if ( n > 0 ) {
+				label = label + ' (' + n + ')';
+			}
+			n++;
+		} while ( label in obj );
+
+		return label;
+	}
+
+	function MockupOOUIClass( value ) {
+		var Value = value;
+		function getValue() {
+			return Value;
+		}
+		function setValue( val ) {
+			Value = val;
+		}
+		return {
+			getValue,
+			setValue
+		};
+	}
+
+	function createDropDownOptions( array, config ) {
+		var config = jQuery.extend( { key: 'key', value: 'value' }, config || {} );
+		var ret = [];
+		for ( var i in array ) {
+			ret.push( {
+				data: config.key === 'key' ? i : array[ i ],
+				label: config.value === 'value' ? array[ i ] : i
+			} );
+		}
+		return ret;
+	}
+
 	return {
 		createToolGroup,
 		createDisabledToolGroup,
@@ -192,6 +263,11 @@ const PagePropertiesFunctions = ( function () {
 		removeNbspFromLayoutHeader,
 		destroyDataTable,
 		getNestedProp,
-		OOUIAlert
+		filterObject,
+		isObject,
+		OOUIAlert,
+		createNewLabel,
+		MockupOOUIClass,
+		createDropDownOptions
 	};
 }() );

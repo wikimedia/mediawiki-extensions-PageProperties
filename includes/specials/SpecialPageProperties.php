@@ -248,7 +248,6 @@ class SpecialPageProperties extends FormSpecialPage {
 				// 'categories' => $this->getCategories(),
 			],
 			'semantic-properties' => [],
-			'semantic-forms' => [],
 			'SEO' => [
 				'meta' => [],
 				'subpages' => true,
@@ -821,7 +820,6 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	public function onSubmit( $data ) {
 		$title = $this->title;
-		// $this->pageProperties['semantic-forms'] = explode( '|', $_POST['semantic_forms'] );
 		$pageProperties = $this->pageProperties['page-properties'];
 
 		if ( $title->getContentModel() != $pageProperties['model'] ) {

@@ -53,10 +53,10 @@ class PagePropertiesApiSaveForm extends ApiBase {
 		$result = $this->getResult();
 
 		$params = $this->extractRequestParams();
-		$form = json_decode( $params['formfields'], true );
+		$form = json_decode( $params['form-fields'], true );
 		$fields = json_decode( $params['fields'], true );
-		$dialogAction = $params['dialogAction'];
-		$previousLabel = $params['previousLabel'];
+		$dialogAction = $params['dialog-action'];
+		$previousLabel = $params['previous-label'];
 
 		if ( $dialogAction !== 'delete' && ( empty( $form['formName'] ) || !count( $fields ) ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
@@ -152,6 +152,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 			'label' => 'array',
 			'help-message' => 'array',
 			'preferred-input' => 'string',
+			'input-config' => 'array',
 			'multiple' => 'bool',
 			'on-create-only' => 'bool',
 			'value-formula' => 'string',
@@ -259,7 +260,7 @@ class PagePropertiesApiSaveForm extends ApiBase {
 	 */
 	public function getAllowedParams() {
 		return [
-			'formfields' => [
+			'form-fields' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true
 			],

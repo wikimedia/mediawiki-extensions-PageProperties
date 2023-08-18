@@ -126,21 +126,21 @@
 	position: relative;
 }
 
-.pageproperties-import-dialog .oo-ui-selectWidget {
+.pageproperties-search-dialog .oo-ui-selectWidget {
 	display: table;
 	width: 100%;
 }
 
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget {
+.pageproperties-search-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget {
 	display: table-row;
 }
 
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label {
+.pageproperties-search-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label {
 	display: table-cell;
 	padding: 8px;
 }
 
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label.right {
+.pageproperties-search-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label.right {
 	text-align: right;
 	color: gray;
 }
@@ -326,4 +326,12 @@
 
 .pageproperties-dropdown-widget .oo-ui-dropdownInputWidget select {
 	display: block;
+}
+
+.pageproperties-form-editbutton a {
+	position: relative;
+}
+
+.mw-widget-dateInputWidget-calendar {
+	z-index: 10;
 }

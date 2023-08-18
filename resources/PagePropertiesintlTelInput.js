@@ -15,8 +15,8 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <business@topway.it>
- * @copyright Copyright © 2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright © 2021-2023, https://wikisphere.org
  */
 
 ( function () {
@@ -48,7 +48,9 @@
 			)
 			.append( input );
 
-		self.iti = window.intlTelInput( input.get( 0 ), {
+		self.fixConfigCountries( config );
+
+		self.iti = window.intlTelInput( input.get( 0 ), $.extend( {
 			utilsScript:
 				'https://cdn.jsdelivr.net/npm/intl-tel-input@16.0.3/build/js/utils.js',
 			initialCountry: 'auto',
@@ -60,7 +62,7 @@
 					callback( countryCode );
 				} );
 			}
-		} );
+		}, config ) );
 	};
 
 	OO.inheritClass( PagePropertiesIntlTelInput, OO.ui.Widget );
@@ -78,6 +80,44 @@
 
 	PagePropertiesIntlTelInput.prototype.setValue = function () {
 		this.input.val( '' );
+	};
+
+	PagePropertiesIntlTelInput.prototype.fixConfigCountries = function ( config ) {
+		// excludeCountries, initialCountry, onlyCountries, preferredCountries
+		var configCountries = [ 'excludeCountries', 'initialCountry', 'onlyCountries', 'preferredCountries' ];
+
+		if ( !Object.keys( config ).filter( ( x ) => configCountries.indexOf( x ) !== -1 ).length ) {
+			return;
+		}
+
+		// first get all countries to handle the error
+		// "No country data for ... "
+		// eslint-disable-next-line new-cap
+		var iso2 = ( new window.intlTelInput( this.input.get( 0 ) ) )
+			.countries.map( ( x ) => x.iso2 );
+
+		for ( var i of configCountries ) {
+			if ( i in config ) {
+				if ( i === 'initialCountry' ) {
+					config[ i ] = config[ i ].toLowerCase();
+					if ( iso2.indexOf( config[ i ] ) === -1 ) {
+						// eslint-disable-next-line no-console
+						console.error( config[ i ] + ' is not a valid country code' );
+						delete config[ i ];
+					}
+					continue;
+				}
+				var values = [];
+				for ( var ii of config[ i ] ) {
+					if ( iso2.indexOf( ii ) === -1 ) {
+						// eslint-disable-next-line no-console
+						console.error( ii + ' is not a valid country code' );
+						values.splice( ii, 1 );
+					}
+				}
+				config[ i ] = values;
+			}
+		}
 	};
 
 }() );

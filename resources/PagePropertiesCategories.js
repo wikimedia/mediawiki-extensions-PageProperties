@@ -24,12 +24,10 @@ const PagePropertiesCategories = ( function () {
 	var Model = {};
 	var processDialog;
 	var SelectedItem;
-
 	var Categories;
 	var ImportedVocabulariesWidgetCategories;
 	var DataTable;
 	var WindowManager;
-	var WindowManagerAlert;
 
 	function getPropertyValue( property ) {
 		if ( property in Model ) {
@@ -210,7 +208,6 @@ const PagePropertiesCategories = ( function () {
 
 						if ( alert ) {
 							PagePropertiesFunctions.OOUIAlert(
-								WindowManagerAlert,
 								new OO.ui.HtmlSnippet( alert ),
 								{ size: 'medium' }
 							);
@@ -232,7 +229,6 @@ const PagePropertiesCategories = ( function () {
 											res[ 'pageproperties-manageproperties-savecategory' ];
 										if ( data[ 'result-action' ] === 'error' ) {
 											PagePropertiesFunctions.OOUIAlert(
-												WindowManagerAlert,
 												new OO.ui.HtmlSnippet( data.error ),
 												{
 													size: 'medium'
@@ -241,7 +237,6 @@ const PagePropertiesCategories = ( function () {
 										} else {
 											if ( 'jobs-count-warning' in data ) {
 												PagePropertiesFunctions.OOUIAlert(
-													WindowManagerAlert,
 													mw.msg(
 														'pageproperties-jsmodule-create-jobs-alert',
 														parseInt( data[ 'jobs-count-warning' ] )
@@ -258,7 +253,6 @@ const PagePropertiesCategories = ( function () {
 											} else {
 												if ( parseInt( data[ 'jobs-count' ] ) ) {
 													PagePropertiesFunctions.OOUIAlert(
-														WindowManagerAlert,
 														mw.msg(
 															'pageproperties-jsmodule-created-jobs',
 															parseInt( data[ 'jobs-count' ] )
@@ -267,13 +261,12 @@ const PagePropertiesCategories = ( function () {
 													);
 												}
 												if ( updateData( data ) === true ) {
-													WindowManager.removeWindows( [ 'myDialog' ] );
+													WindowManager.removeActiveWindow();
 												}
 											}
 										}
 									} else {
 										PagePropertiesFunctions.OOUIAlert(
-											WindowManagerAlert,
 											'unknown error',
 											{ size: 'medium' }
 										);
@@ -288,7 +281,6 @@ const PagePropertiesCategories = ( function () {
 									// * pageproperties-permissions-error
 									// * pageproperties-permissions-error-b
 									PagePropertiesFunctions.OOUIAlert(
-										WindowManagerAlert,
 										mw.msg( msg ),
 										{ size: 'medium' }
 									);
@@ -316,7 +308,7 @@ const PagePropertiesCategories = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				WindowManager.removeWindows( [ 'myDialog' ] );
+				WindowManager.removeActiveWindow();
 			}, this );
 	};
 
@@ -344,17 +336,12 @@ const PagePropertiesCategories = ( function () {
 			size: 'larger'
 		} );
 
-		WindowManager.addWindows( [ processDialog ] );
-
-		WindowManager.openWindow( processDialog, {
-			title:
-				mw.msg(
-					// The following messages are used here:
-					// * pageproperties-jsmodule-manageproperties-define-category
-					// * pageproperties-jsmodule-manageproperties-define-category - [name]
-					'pageproperties-jsmodule-manageproperties-define-category'
-				) + ( label ? ' - ' + label : '' )
-		} );
+		WindowManager.newWindow( processDialog, mw.msg(
+			// The following messages are used here:
+			// * pageproperties-jsmodule-manageproperties-define-category
+			// * pageproperties-jsmodule-manageproperties-define-category - [name]
+			'pageproperties-jsmodule-manageproperties-define-category'
+		) + ( label ? ' - ' + label : '' ) );
 	}
 
 	function initializeDataTable() {
@@ -443,9 +430,8 @@ const PagePropertiesCategories = ( function () {
 		return toolbar;
 	}
 
-	function preInitialize( windowManager, windowManagerAlert ) {
+	function preInitialize( windowManager ) {
 		WindowManager = windowManager;
-		WindowManagerAlert = windowManagerAlert;
 	}
 
 	function initialize( categories ) {

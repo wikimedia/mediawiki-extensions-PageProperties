@@ -89,6 +89,8 @@ class SpecialEditSemantic extends SpecialPage {
 
 		$out->setPageTitle( $this->getDescription() );
 
+		// exit( $spinnerWidget->toString() );
+
 		$out->addModules( 'ext.PageProperties.EditSemantic' );
 	}
 
@@ -97,9 +99,10 @@ class SpecialEditSemantic extends SpecialPage {
 	 * @return array
 	 */
 	private function setData( $out ) {
-		$semanticForms = [];
-		$semanticData = [];
+		$forms = [];
 		$pageCategories = [];
+		$semanticForms = [];
+		$pageProperties = [];
 
 		if ( $this->title && $this->title->isKnown() ) {
 			$pageProperties = \PageProperties::getPageProperties( $this->title );
@@ -110,15 +113,14 @@ class SpecialEditSemantic extends SpecialPage {
 
 			$defaultValues = [
 				'semantic-properties' => [],
-				'semantic-forms' => [],
+				'forms' => [],
 			];
 
 			$pageProperties = array_replace_recursive( $defaultValues, $pageProperties );
 
-			$semanticData = self::getSemanticData( $this->title, $pageProperties );
-
-			if ( is_array( $pageProperties['semantic-forms'] ) ) {
-				$semanticForms = $pageProperties['semantic-forms'];
+			// @TODO retrieve all forms recursively
+			if ( is_array( $pageProperties['forms'] ) ) {
+				$semanticForms = array_keys( $pageProperties['forms'] );
 			}
 
 			$pageCategories = $this->getPageCategories();
@@ -161,25 +163,27 @@ class SpecialEditSemantic extends SpecialPage {
 		}
 
 		// add single properties to semanticProperties list
-		foreach ( $semanticData as $label => $value ) {
-			 \PageProperties::$semanticProperties[] = $label;
-		}
+		// foreach ( $semanticData as $label => $value ) {
+		// 	 \PageProperties::$semanticProperties[] = $label;
+		// }
 
 		$formID = \PageProperties::formID( $this->title ? $this->title : $out->getTitle(), $semanticForms, 1 );
-
-		$pageForms = [
-			$formID => [
-				'forms' => $semanticForms,
-				'options' => [],
-			]
-		];
 
 		$sessionData = [
 			'formID' => $formID,
 			'freetext' => $freetext,
-			'properties' => $semanticData,
+			'properties' => $pageProperties,
 			'pageCategories' => $pageCategories,
 			'errors' => [],
+		];
+
+		$pageForms = [
+			$formID => [
+				// only form names, from descriptors will be retrieved
+				// by \PageProperties::addJsConfigVars
+				'forms' => $semanticForms,
+				'options' => [],
+			]
 		];
 
 		\PageProperties::addJsConfigVars( $out, [
@@ -233,27 +237,5 @@ class SpecialEditSemantic extends SpecialPage {
 			$ret[] = $title->getText();
 		}
 		return $ret;
-	}
-
-	/**
-	 * @param Title $title
-	 * @param array $pageProperties
-	 * @return array
-	 */
-	private function getSemanticData( $title, $pageProperties ) {
-		// *** uncomment to include properties manually annotated on the page
-		// $semanticData = \PageProperties::getSemanticData( $title );
-		$semanticData = [];
-
-		$registeredPageProperties = [];
-		foreach ( $pageProperties['semantic-properties'] as $key => $value ) {
-			if ( !empty( $pageProperties['transformed-properties'][$key] ) ) {
-				$value = $pageProperties['transformed-properties'][$key];
-			}
-			$registeredPageProperties[$key] = ( is_array( $value ) ? $value : [ $value ] );
-		}
-
-		// merge with the recorded properties
-		return array_merge( $semanticData, $registeredPageProperties );
 	}
 }

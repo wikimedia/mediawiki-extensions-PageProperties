@@ -16,7 +16,7 @@
  *
  * @file
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright © 2021-2022, https://wikisphere.org
+ * @copyright Copyright © 2021-2023, https://wikisphere.org
  */
 
 // see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/pages/toolbars.js
@@ -32,11 +32,12 @@ const PageProperties = function (
 	SemanticForms,
 	PageContent,
 	PageCategories,
-	WindowManagerSearch,
-	WindowManagerAlert,
+	WindowManager,
 	Errors
 ) {
 	var Model;
+	var ModelForms;
+	var ModelProperties;
 	var OuterStack;
 	var PropertiesStack;
 	var processDialogSearch;
@@ -53,20 +54,31 @@ const PageProperties = function (
 		return jQuery.inArray( val, arr ) !== -1;
 	}
 
-	function getPropertyValue( property ) {
-		if ( property in Model ) {
-			var ret = [];
-			for ( var i in Model[ property ] ) {
-				var inputWidget = Model[ property ][ i ];
-				var value = inputWidget.getValue();
-				if ( Array.isArray( value ) ) {
-					return value;
-				}
-				ret.push( value );
+	function getPropertyValue( properties, property ) {
+		var ret = [];
+		if (
+			'__transformed-properties' in properties &&
+			property in properties[ '__transformed-properties' ]
+		) {
+			ret = properties[ '__transformed-properties' ][ property ];
+			ret = ret.map( ( x ) => {
+				return { value: x };
+			} );
+		} else {
+			if ( !( property in properties ) ) {
+				ret = [ '' ];
+			} else {
+				// recorded model
+				ret = properties[ property ];
 			}
-			return ret;
+			ret = !Array.isArray( ret ) ? [ ret ] : ret;
+			for ( var i in ret ) {
+				if ( !PagePropertiesFunctions.isObject( ret[ i ] ) ) {
+					ret[ i ] = { value: ret[ i ] };
+				}
+			}
 		}
-		return Properties[ property ];
+		return ret;
 	}
 
 	function inputIsEmpty( inputWidget ) {
@@ -81,66 +93,61 @@ const PageProperties = function (
 			return value.length === 0;
 		}
 
-		if ( typeof value === 'string' ) {
-			value = value.trim() !== '';
+		if ( typeof value === 'boolean' ) {
+			return false;
 		}
 
-		return value === false;
+		return value.trim() === '';
 	}
 
-	function getInputWidget( inputName, property, index, value, config ) {
-		if ( Array.isArray( value ) ) {
-			for ( var i in value ) {
-				if ( value[ i ].trim() === '' ) {
-					delete value[ i ];
+	function getInputWidget( innerItemWidgetConfig, property, config ) {
+		var config = JSON.parse( JSON.stringify( config ) ) || {};
+
+		config.value = Array.isArray( config.value ) ?
+			config.value.map( ( x ) => x.value ) :
+			config.value.value;
+
+		var inputName = innerItemWidgetConfig.inputName;
+		var index = innerItemWidgetConfig.index;
+
+		if ( !( 'name' in config ) || config.name.trim() === '' ) {
+			config.name = `${FormID}-${property}-${index}`;
+		}
+
+		// or innerItemWidgetConfig.parentWidget.model.field
+		var field = innerItemWidgetConfig.parentWidget.config.field;
+
+		if ( Array.isArray( config.value ) ) {
+			for ( var i in config.value ) {
+				if ( config.value[ i ].trim() === '' ) {
+					delete config.value[ i ];
 				}
 			}
-		}
-
-		switch ( inputName ) {
-			case 'OO.ui.ToggleSwitchWidget':
-				// @TODO this doesn't seem correct
-				value = value === '1';
-				break;
-		}
-
-		var config = $.extend(
-			{
-				// workaround for this issue https://www.php.net/manual/en/language.variables.external.php
-				// otherwise we don't kwnow when to remove underscores ...
-				name:
-					'semantic-properties-input-' +
-					encodeURIComponent( property ) +
-					'-' +
-					index,
-				value: value
-			},
-			config || {}
-		);
-
-		if ( ManageProperties.isMultiselect( inputName ) ) {
-			config.selected = value;
-			config.allowArbitrary = true;
 		}
 
 		// see here https://www.semantic-mediawiki.org/wiki/Help:Special_property_Allows_value
 		// SemanticMediaWiki/src/DataValues/Va lueValidator/AllowsListConstraintValueValidator.php
 		if ( inArray( inputName, ManageProperties.optionsInputs ) ) {
-			if (
-				config.options && Object.keys( config.options ).length
-			) {
-				config.options = ManageProperties.createInputOptions( config.options );
-			} else if ( '_PVAL' in SemanticProperties[ property ].properties ) {
-				config.options = ManageProperties.createInputOptions(
-					// eslint-disable-next-line no-underscore-dangle
-					SemanticProperties[ property ].properties._PVAL,
-					{
-						key: 'value'
-					}
+			if ( config.options && Object.keys( config.options ).length ) {
+				config.options = PagePropertiesFunctions.createDropDownOptions(
+					config.options
 				);
+			} else if ( !field.isForm && isSMWProperty( field ) ) {
+				config.options = [];
+				var SMWProperty = getSMWProperty( field );
+				if ( '_PVAL' in SMWProperty.properties ) {
+					config.options = PagePropertiesFunctions.createDropDownOptions(
+						// eslint-disable-next-line no-underscore-dangle
+						SemanticProperties[ SMWProperty ].properties._PVAL,
+						{
+							key: 'value'
+						}
+					);
+				} else {
+					config.options = [];
+				}
 			} else {
 				config.options = [];
-				config.allowArbitrary = true;
 			}
 		}
 
@@ -151,6 +158,25 @@ const PageProperties = function (
 		return SemanticForms;
 	}
 
+	function isSMWProperty( field ) {
+		return (
+			'SMW-property' in field && field[ 'SMW-property' ] in SemanticProperties
+		);
+	}
+
+	function getSMWProperty( field ) {
+		if (
+			'SMW-property' in field &&
+			field[ 'SMW-property' ] in SemanticProperties
+		) {
+			return $.extend(
+				{ label: field[ 'SMW-property' ] },
+				SemanticProperties[ field[ 'SMW-property' ] ]
+			);
+		}
+		return null;
+	}
+
 	function isNewForm( form ) {
 		return !inArray( form, RecordedForms );
 	}
@@ -159,203 +185,126 @@ const PageProperties = function (
 		return PageCategories;
 	}
 
-	function getPreferredInput( form, property ) {
-		var propertyObj = SemanticProperties[ property ];
-
-		if ( form && 'preferred-input' in Forms[ form ].fields[ property ] ) {
-			return Forms[ form ].fields[ property ][ 'preferred-input' ];
+	function getPreferredInput( field ) {
+		if ( 'preferred-input' in field ) {
+			return field[ 'preferred-input' ];
 		}
 
-		if ( '__pageproperties_preferred_input' in propertyObj.properties ) {
-			return ManageProperties.inputNameFromLabel(
+		var SMWProperty = getSMWProperty( field );
+
+		if ( SMWProperty ) {
+			if ( '__pageproperties_preferred_input' in SMWProperty.properties ) {
 				// eslint-disable-next-line no-underscore-dangle
-				propertyObj.properties.__pageproperties_preferred_input[ 0 ]
+				return SMWProperty.properties.__pageproperties_preferred_input[ 0 ];
+			}
+
+			return ManageProperties.getAvailableInputs( SMWProperty.type )[ 0 ];
+		} else if (
+			'property-model' in field &&
+			field[ 'property-model' ] === 'json-schema'
+		) {
+			return ManageProperties.getAvailableInputsSchema(
+				field[ 'jsonSchema-type' ],
+				field[ 'jsonSchema-format' ]
 			);
 		}
-
-		return ManageProperties.inputNameFromLabel(
-			ManageProperties.getAvailableInputs( propertyObj.type )[ 0 ]
-		);
+		// fall-back
+		return 'OO.ui.TextInputWidget';
 	}
 
-	function getModel( formEl ) {
-		var ret = {};
+	function getModel( submit ) {
 		var formattedNamespaces = mw.config.get( 'wgFormattedNamespaces' );
-		var propertiesInForms = getPropertiesInForms();
 
-		for ( var property in Model ) {
-			if ( !formEl && property.indexOf( '__' ) === 0 ) {
-				continue;
-			}
-			// ignore deleted properties
-			// @TODO this shouldn't be anymore necessary
-			if (
-				property.indexOf( '__' ) !== 0 &&
-				!inArray( property, propertiesInForms ) &&
-				!( property in Properties )
-			) {
-				continue;
-			}
-			ret[ property ] = [];
-			for ( var i in Model[ property ] ) {
-				// empty string on error
-				var value =
-					'getValue' in Model[ property ][ i ] ? Model[ property ][ i ].getValue() : '';
-
-				if ( Array.isArray( value ) ) {
-					ret[ property ] = value;
-				} else {
-					ret[ property ].push( value );
+		function getPrefix( inputName, field, filekey ) {
+			// @TODO handle prefix server-side ?
+			var prefix = '';
+			var namespace = null;
+			// filekey can be ""
+			if ( filekey !== null ) {
+				// 'File:';
+				namespace = 6;
+			} else if ( isSMWProperty( field ) ) {
+				switch ( inputName ) {
+					// case 'OO.ui.SelectFileWidget':
+					// namespace = 6;
+					// break;
+					case 'mw.widgets.UserInputWidget':
+					case 'mw.widgets.UsersMultiselectWidget':
+						// User:
+						namespace = 2;
+						break;
 				}
+			}
 
-				// replace multi values inputs with single inputs
-				// for each value
-				if ( formEl ) {
-					// OoUiTagMultiselectWidget => OO.ui.TagMultiselectWidget
-					// MwWidgetsUsersMultiselectWidget => mw.widgets.UsersMultiselectWidget
+			if ( namespace ) {
+				prefix = formattedNamespaces[ namespace ] + ':';
+			}
 
-					var inputName = ( 'constructorName' in Model[ property ][ i ] ? Model[ property ][ i ].constructorName :
-						Model[ property ][ i ].constructor.name )
-						.replace( /^OoUi/, 'OO.ui.' )
-						.replace( /^MwWidgets/, 'mw.widgets.' );
+			return prefix;
+		}
 
-					// @TODO handle prefix server-side ?
-					let prefix = '';
+		// eslint-disable-next-line no-shadow
+		function getValuesRec( model, obj ) {
+			// label
+			for ( var label in model.properties ) {
+				var field = model.properties[ label ].field;
+				obj[ label ] = [];
+				// index
+				for ( var index in model.properties[ label ].items ) {
+					var inputObj = model.properties[ label ].items[ index ];
+					var value =
+						'getValue' in inputObj.default ? inputObj.default.getValue() : '';
 
-					// add namespace prefix for page type
-					// based on the input type
-					if (
-						property in SemanticProperties &&
-						SemanticProperties[ property ].type === '_wpg'
-					) {
-						let namespace = null;
-						switch ( inputName ) {
-							// case 'OO.ui.SelectFileWidget':
-							// namespace = 6;
-							// break;
-							case 'OO.ui.TextInputWidget':
-								// @TODO, do it server-side
-								if ( '__filekey-' + property in Model ) {
-									// 'File:';
-									namespace = 6;
-								}
-								break;
-							case 'mw.widgets.UserInputWidget':
-							case 'mw.widgets.UsersMultiselectWidget':
-								// User:
-								namespace = 2;
-								break;
+					var filekey =
+						'filekey' in inputObj && 'getValue' in inputObj.filekey ?
+							inputObj.filekey.getValue() :
+							null;
+					var prefix = getPrefix(
+						model.properties[ label ].widgetConfig.inputName,
+						field,
+						filekey
+					);
+
+					if ( !Array.isArray( value ) ) {
+						value = [ value ];
+					}
+
+					// eslint-disable-next-line no-shadow
+					for ( var i in value ) {
+						var valueObj = {
+							value: value[ i ]
+						};
+						if ( filekey ) {
+							valueObj.filekey = filekey;
 						}
-
-						if ( namespace ) {
-							prefix = formattedNamespaces[ namespace ] + ':';
+						if ( prefix ) {
+							valueObj.prefix = prefix;
 						}
-					}
-
-					switch ( inputName ) {
-						case 'OO.ui.SelectFileInputWidget':
-						case 'OO.ui.SelectFileWidget':
-							continue;
-					}
-
-					if ( typeof value === 'boolean' ) {
-						value = value ? 1 : 0;
-					}
-
-					var inputValue = value;
-
-					if ( prefix ) {
-						$( '<input>' )
-							.attr( {
-								type: 'hidden',
-
-								name:
-									'semantic-properties-input-' +
-									'__prefix-' +
-									encodeURIComponent( property ) +
-									'-' +
-									i,
-								value: prefix
-							} )
-							.appendTo( formEl );
-					}
-
-					var inputVal = Array.isArray( inputValue ) ? inputValue[ 0 ] : inputValue;
-
-					// @TODO, replace '-input-' with the value of special fields (like 'freetext')
-					var inputNameAttr =
-						'semantic-properties-input-' + encodeURIComponent( property ) + '-';
-
-					// *** keep $(formEl).find otherwise it will lead
-					// to false positives for hidden inputs
-					var inputEl = $( formEl ).find( ":input[name='" + ( inputNameAttr + i ) + "']" );
-
-					if ( !inputEl.get( 0 ) ) {
-						$( '<input>' )
-							.attr( {
-								type: 'hidden',
-								name: inputNameAttr + i,
-								value: inputVal
-							} )
-							.appendTo( formEl );
-
-						// override the value of the existing input
-						// } else if ( prefix || isMultiselect( inputName ) ) {
-					} else {
-						inputEl.val( inputVal );
-					}
-
-					// create inputs for all other values
-					if (
-						ManageProperties.isMultiselect( inputName ) &&
-						inputValue.length > 1
-					) {
-						for ( var ii = 1; ii < inputValue.length; ii++ ) {
-							$( '<input>' )
-								.attr( {
-									type: 'hidden',
-									name: inputNameAttr + ii,
-									value: inputValue[ ii ]
-								} )
-								.appendTo( formEl );
-						}
+						obj[ label ].push( valueObj );
 					}
 				}
 			}
 		}
 
-		return ret;
-	}
-
-	function getPropertiesInForms() {
-		var ret = [];
-
-		for ( var form of SemanticForms ) {
-			for ( var i in Forms[ form ].fields ) {
-				if (
-					Config.targetPage &&
-					isTrue( Forms[ form ].fields[ i ][ 'on-create-only' ] )
-				) {
-					continue;
-				}
-
-				ret.push( i );
-			}
+		var forms = {};
+		for ( var i in ModelForms ) {
+			forms[ i ] = {};
+			getValuesRec( ModelForms[ i ], forms[ i ] );
 		}
-		return ret;
-	}
 
-	// eslint-disable-next-line no-unused-vars
-	function getSingleProperties() {
-		var ret = [];
-		var propertiesInForms = getPropertiesInForms();
-		for ( var i in Properties ) {
-			if ( inArray( i, propertiesInForms ) ) {
-				continue;
-			}
-			ret.push( i );
+		var properties = {};
+		getValuesRec( ModelProperties, properties );
+
+		if ( !submit ) {
+			return { forms: forms, properties: properties };
 		}
-		return ret;
+
+		var model = {};
+		for ( var i in Model ) {
+			model[ i ] = Model[ i ].getValue();
+		}
+
+		return { forms: forms, model: model, properties: properties };
 	}
 
 	var ListWidget = function ListWidget( config ) {
@@ -385,7 +334,6 @@ const PageProperties = function (
 		this.connect( this, {
 			add: 'onAddItem'
 		} );
-
 	};
 
 	OO.inheritClass( ListWidget, OO.ui.Widget );
@@ -397,12 +345,14 @@ const PageProperties = function (
 		}, 30 );
 	};
 
+	// @see onDeleteButtonClick
 	ListWidget.prototype.onItemDelete = function ( itemWidget, isFile ) {
+		var model = itemWidget.parentWidget.config.model;
+		// var property = itemWidget.parentWidget.config.property;
+
 		if ( itemWidget.parentWidget ) {
 			if (
-				!inputIsEmpty(
-					Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ]
-				) &&
+				!inputIsEmpty( model.items[ itemWidget.index ].default ) &&
 				// eslint-disable-next-line no-alert
 				!confirm(
 					mw.msg( 'pageproperties-jsmodule-pageproperties-delete-confirm' )
@@ -415,16 +365,15 @@ const PageProperties = function (
 
 			if ( length > 1 || isFile ) {
 				this.removeItems( [ itemWidget ] );
-				delete Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ];
+				delete model.items[ itemWidget.index ];
 
 				if ( isFile ) {
 					if ( itemWidget.parentWidget.required ) {
 						itemWidget.parentWidget.fileInputWidget.setRequired( true );
 					}
 				}
-
 			} else {
-				Model[ itemWidget.parentWidget.config.property ][ itemWidget.index ].setValue( '' );
+				model.items[ itemWidget.index ].default.setValue( '' );
 			}
 
 			if ( length === 0 ) {
@@ -432,20 +381,6 @@ const PageProperties = function (
 			}
 			return;
 		}
-
-		// currently unused (deletion of single properties through delete icon)
-		// if (
-		// 	(itemWidget.optionsList && !itemWidget.optionsList.getItems().length) ||
-		// 	// eslint-disable-next-line no-alert
-		// 	confirm(mw.msg("pageproperties-jsmodule-pageproperties-delete-confirm"))
-		// ) {
-		// 	this.removeItems([itemWidget]);
-		// 	delete Model[itemWidget.property];
-		// 	delete Properties[itemWidget.property];
-		// 	PanelProperties.messageWidget.toggle(
-		// 		!PanelProperties.optionsList.getItems().length
-		// 	);
-		// }
 	};
 
 	ListWidget.prototype.addItems = function ( items, index ) {
@@ -500,15 +435,8 @@ const PageProperties = function (
 			// flags: ["destructive"],
 		} );
 
+		// the filename is always required
 		var required = true;
-
-		// initialize this here to be used by getInputWidget
-		// @TODO replace File: server-side and simplify here
-		Model[ '__filekey-' + property ][ config.index ] = {
-			getValue: function () {
-				return '';
-			}
-		};
 
 		// *** or set fileInputWidget before creating
 		// InnerItemWidgetFile
@@ -516,19 +444,25 @@ const PageProperties = function (
 			this.parentWidget.fileInputWidget.setRequired( false );
 		}
 
+		// *** attention!! this is related to the OO.ui.TextInputWidget
+		// not the OO.ui.SelectFileWidget
+		var inputConfig = { required: required, value: config.value };
+
 		var inputWidget = getInputWidget(
-			// 'OO.ui.TextInputWidget'
-			config.inputName,
+			config,
 			property,
-			config.index,
-			config.value,
 			// @TODO, enable after adding the logic
 			// for file move server-side on filename edit
 			// , disabled: true
-			{ required: required }
+			inputConfig
 		);
 
-		Model[ property ][ config.index ] = inputWidget;
+		this.parentWidget.config.model.items[ config.index ] = {
+			default: inputWidget,
+			filekey: PagePropertiesFunctions.MockupOOUIClass(
+				'filekey' in config.value ? config.value.filekey : ''
+			)
+		};
 
 		var filePreview = new OO.ui.Widget( {
 			classes: [ 'mw-upload-bookletLayout-filePreview' ]
@@ -537,21 +471,8 @@ const PageProperties = function (
 			progress: 0
 		} );
 
-		// var hiddenInputWidget = new OO.ui.HiddenInputWidget( { name: hiddenInputName } );
-
-		/*
-'semantic-properties-input-' + '__title' + '-' + '0',
-
-		var hiddenInputName = 'semantic-properties-input-' + '__files' +
-				encodeURIComponent( config.property ) +
-				'-' +
-				config.index;
-
-		var hiddenInputWidget = new OO.ui.HiddenInputWidget( { name: hiddenInputName } );
-*/
 		this.progressBarWidget = progressBarWidget;
 		this.textInputWidget = inputWidget;
-		// this.hiddenInputWidget = hiddenInputWidget;
 
 		this.messageWidget = new OO.ui.MessageWidget( {
 			type: 'error',
@@ -579,13 +500,8 @@ const PageProperties = function (
 			self.progressBarWidget.toggle( false );
 			self.textInputWidget.toggle( true );
 
-			// @TODO, use instead the form/expression 'semantic-properties-freetext-',
-			// 'semantic-properties-filekey-', etc.
-			Model[ '__filekey-' + self.property ][ self.index ] = {
-				getValue: function () {
-					return res.upload.filekey;
-				}
-			};
+			self.parentWidget.config.model.items[ config.index ].filekey =
+				PagePropertiesFunctions.MockupOOUIClass( res.upload.filekey );
 		};
 
 		this.errorMessage = function ( errorMessage ) {
@@ -646,49 +562,66 @@ const PageProperties = function (
 			// flags: ["destructive"],
 		} );
 
-		var formField =
-			form in Forms ? Forms[ form ].fields[ property ] : null;
+		var field = this.parentWidget.config.field;
 
 		var required =
-			formField && 'required' in formField && isTrue( formField.required );
+			'required' in field && isTrue( field.required ) && config.index === 0;
 
-		if ( formField && 'default' in formField && config.value === '' &&
-			( Config.isNewPage || required || isNewForm( form ) ) ) {
-			config.value = formField[ 'default-result' ];
+		function isEmpty( value ) {
+			if ( Array.isArray( value ) ) {
+				return !value.length;
+			}
+			return value.value === '';
 		}
 
-		var inputOptions = { required: required };
-
-		if ( formField && 'options-values-result' in formField ) {
-			inputOptions.options = formField[ 'options-values-result' ];
+		// @TODO default and "default-result"
+		// should support multiselect inputs
+		if (
+			'default' in field &&
+			isEmpty( config.value ) &&
+			( Config.isNewPage || required || isNewForm( form ) )
+		) {
+			if ( !Array.isArray( config.value ) ) {
+				config.value.value = field[ 'default-result' ];
+			} else {
+				if ( !Array.isArray( field[ 'default-result' ] ) ) {
+					// eslint-disable-next-line no-console
+					console.error( 'field["default-result"] must be an array' );
+				} else {
+					for ( var i in config.value ) {
+						config.value[ i ].value = field[ 'default-result' ].shift();
+					}
+				}
+			}
 		}
 
-		var inputWidget = getInputWidget(
-			config.inputName,
-			property,
-			config.index,
-			config.value,
-			inputOptions
+		if ( !( 'input-config' in field ) ) {
+			field[ 'input-config' ] = {};
+		}
+		// create shallow copy, otherwise changes are
+		// copied to Forms[ form ].fields[ property ][ 'input-config' ]
+		var inputConfig = $.extend(
+			JSON.parse( JSON.stringify( field[ 'input-config' ] ) ),
+			{ value: config.value, required: required }
 		);
+
+		if ( 'options-values-result' in field ) {
+			inputConfig.options = field[ 'options-values-result' ];
+		}
+
+		var inputWidget = getInputWidget( config, property, inputConfig );
 
 		// mock-up native validation, see the following:
 		// https://stackoverflow.com/questions/8287779/how-to-use-the-required-attribute-with-a-radio-input-field
 		// https://stackoverflow.com/questions/6218494/using-the-html5-required-attribute-for-a-group-of-checkboxes
 
 		if ( config.index === 0 && inputWidget.requiresValidation ) {
-
 			// eslint-disable-next-line  no-underscore-dangle
-			var name_ =
-				'semantic-properties-input-' +
-				encodeURIComponent( property ) +
-				'-' +
-				config.index +
-				'-validation';
+			var name_ = Date.now() + '-validation';
 
 			inputWidget.$element.append(
 				$(
 					'<input class="radio_for_required_checkboxes" type="radio" name="' +
-
 						name_ +
 						'"' +
 						( inputIsEmpty( inputWidget ) ? ' required="required"' : '' ) +
@@ -698,10 +631,8 @@ const PageProperties = function (
 
 			var handleInputValidation = function ( nonEmpty ) {
 				if ( nonEmpty ) {
-
 					$( ":input[name='" + name_ + "']" ).removeAttr( 'required' );
 				} else {
-
 					$( ":input[name='" + name_ + "']" ).attr( 'required', 'required' );
 				}
 			};
@@ -714,7 +645,12 @@ const PageProperties = function (
 				// eslint-disable-next-line  no-underscore-dangle
 				for ( var widget_ of value ) {
 					// eslint-disable-next-line  no-underscore-dangle
-					var value_ = ( 'getValue' in widget_ ? widget_.getValue() : 'data' in widget_ ? widget_.data : '' );
+					var value_ =
+						'getValue' in widget_ ?
+							widget_.getValue() :
+							'data' in widget_ ?
+								widget_.data :
+								'';
 
 					if ( value_.trim() !== '' ) {
 						return true;
@@ -727,22 +663,28 @@ const PageProperties = function (
 			} );
 		}
 
-		Model[ property ][ config.index ] = inputWidget;
+		this.parentWidget.config.model.items[ config.index ] = {
+			default: inputWidget
+		};
 
 		var helpMessage = '';
 		if ( config.last ) {
-			if ( formField && 'help-message' in formField ) {
-				if ( formField[ 'help-message-result' ] ) {
-					helpMessage = formField[ 'help-message-result' ];
+			if ( 'help-message' in field ) {
+				// *** back compatibility, remove
+				if ( field[ 'help-message-result' ] ) {
+					helpMessage = field[ 'help-message-result' ];
 				} else {
-					helpMessage = formField[ 'help-message' ];
+					helpMessage = field[ 'help-message' ];
 
 					if ( Array.isArray( helpMessage ) ) {
 						helpMessage = helpMessage[ 0 ];
 					}
 				}
-			} else if ( SemanticProperties[ property ].description ) {
-				helpMessage = SemanticProperties[ property ].description;
+			} else if ( isSMWProperty( field ) ) {
+				var SMWProperty = getSMWProperty( field );
+				if ( SMWProperty.description ) {
+					helpMessage = SMWProperty.description;
+				}
 			}
 		}
 
@@ -805,74 +747,85 @@ const PageProperties = function (
 			flags: [ 'destructive' ]
 		} );
 
-		var propertyObj = SemanticProperties[ config.property ];
+		var field = config.field;
 
-		var inputName = getPreferredInput(
-			'form' in config ? config.form : null,
-			config.property
+		var inputName = ManageProperties.inputNameFromLabel(
+			getPreferredInput( field )
 		);
 
-		var formField =
-			'form' in config ? Forms[ config.form ].fields[ config.property ] : null;
+		if ( 'type' in field && field.type === 'content-block' ) {
+			var item = new OO.ui.HtmlSnippet( field[ 'content-result' ] );
+			this.$element.append( item.toString() );
+
+			this.items = [ item ];
+			deleteButton.connect( this, {
+				click: 'onDeleteButtonClick'
+			} );
+			return;
+		}
+
+		this.field = field;
+		var SMWProperty = getSMWProperty( field );
 
 		var multiple = false;
 
-		if ( formField && 'multiple' in formField && formField.multiple !== '' ) {
-			multiple = formField.multiple;
-		} else if (
-			!ManageProperties.disableMultipleFields( propertyObj.type, inputName ) &&
-			'__pageproperties_allows_multiple_values' in propertyObj.properties &&
-			// eslint-disable-next-line no-underscore-dangle
-			propertyObj.properties.__pageproperties_allows_multiple_values
-		) {
-			multiple = true;
+		var isMultiselect = ManageProperties.isMultiselect( inputName );
+		if ( !isMultiselect ) {
+			// eslint-disable-next-line eqeqeq
+			if ( [ 'multiple-value' ] in field && field[ 'multiple-value' ] == true ) {
+				multiple = true;
+			} else if (
+				!field.isForm &&
+				SMWProperty &&
+				!ManageProperties.disableMultipleFields( SMWProperty.type, inputName ) &&
+				'__pageproperties_allows_multiple_values' in SMWProperty.properties &&
+				// eslint-disable-next-line no-underscore-dangle
+				SMWProperty.properties.__pageproperties_allows_multiple_values
+			) {
+				multiple = true;
+			}
 		}
+
+		config.model.widgetConfig = {
+			inputName: inputName,
+			multiple: multiple
+		};
 
 		var optionsList = new ListWidget();
 		this.optionsList = optionsList;
-
-		if (
-			!( config.property in Properties ) ||
-			!Properties[ config.property ].length
-		) {
-			Properties[ config.property ] = !ManageProperties.isMultiselect( inputName ) ?
-				[ '' ] :
-				[];
-		}
-
-		var values = getPropertyValue( config.property );
+		var values = getPropertyValue(
+			config.properties,
+			config.property
+		);
 
 		// remove namespace prefix for page type
 		// based on the input type
-		if ( propertyObj.type === '_wpg' ) {
+		if ( SMWProperty && SMWProperty.type === '_wpg' ) {
 			var formattedNamespaces = mw.config.get( 'wgFormattedNamespaces' );
-			for ( var i in values ) {
-				var namespace;
-				switch ( inputName ) {
-					case 'OO.ui.SelectFileWidget':
-						// File:
-						namespace = 6;
-						break;
-					case 'mw.widgets.UserInputWidget':
-					case 'mw.widgets.UsersMultiselectWidget':
-						// User:
-						namespace = 2;
-						break;
-				}
 
-				if ( namespace ) {
+			var namespace;
+			switch ( inputName ) {
+				case 'OO.ui.SelectFileWidget':
+					// File:
+					namespace = 6;
+					break;
+				case 'mw.widgets.UserInputWidget':
+				case 'mw.widgets.UsersMultiselectWidget':
+					// User:
+					namespace = 2;
+					break;
+			}
+
+			if ( namespace ) {
+				for ( var i in values ) {
 					var re = new RegExp( '^' + formattedNamespaces[ namespace ] + ':' );
-					values[ i ] = values[ i ].replace( re, '' );
+					values[ i ].value = values[ i ].value.replace( re, '' );
 				}
 			}
 		}
 
-		Model[ config.property ] = {};
-
 		if ( inputName === 'OO.ui.SelectFileWidget' ) {
-			Model[ '__filekey-' + config.property ] = {};
-
-			values = values.filter( ( x ) => x !== '' );
+			values = values.filter( ( x ) => x.value !== '' );
 			for ( var i in values ) {
 				optionsList.addItems( [
 					new InnerItemWidgetFile( {
@@ -887,7 +840,7 @@ const PageProperties = function (
 					} )
 				] );
 			}
-		} else if ( !ManageProperties.isMultiselect( inputName ) ) {
+		} else if ( !isMultiselect ) {
 			for ( var i in values ) {
 				optionsList.addItems( [
 					new InnerItemWidget( {
@@ -915,38 +868,12 @@ const PageProperties = function (
 			] );
 		}
 
-		// uncomment to allow "inline" edit of semantic properties
-		// this is not the most appropriate in conjunction with forms
-		// since forms can in turn override attributes of semantic properties
-		// if (CanManageSemanticProperties) {
-		// 	var editButton = new OO.ui.ButtonWidget( {
-		// 		icon: 'settings',
-		// 		flags: [ 'progressive' ]
-		// 	} );
-		//
-		// 	editButton.on( 'click', function () {
-		// 		ManageProperties.openDialog( config.property );
-		// 	} );
-		//
-		// 	var items = [
-		// 		// eslint-disable-next-line mediawiki/class-doc
-		// 		new OO.ui.ActionFieldLayout( optionsList, editButton, {
-		// 			label: config.property,
-		// 			align: 'top',
-		//
-		// 			// The following classes are used here:
-		// 			// * inputName-mw.widgets.DateInputWidget
-		// 			classes: [ 'inputName-' + inputName ]
-		// 		} )
-		// 	];
-		// } else {
-
 		var label = config.property;
-		if ( formField && 'label' in formField ) {
-			if ( formField[ 'label-result' ] ) {
-				label = formField[ 'label-result' ];
+		if ( 'label' in field ) {
+			if ( field[ 'label-result' ] ) {
+				label = field[ 'label-result' ];
 			} else {
-				label = formField.label;
+				label = field.label;
 
 				if ( Array.isArray( label ) ) {
 					label = label[ 0 ];
@@ -971,22 +898,33 @@ const PageProperties = function (
 		// }
 
 		if ( inputName === 'OO.ui.SelectFileWidget' ) {
-			var required =
-				formField && 'required' in formField && isTrue( formField.required );
+			var required = 'required' in field && isTrue( field.required );
 
 			self.required = required;
 
-			var inputWidget = getInputWidget(
-				inputName,
-				config.property + '-SelectFileWidget',
-				0,
-				'',
+			var inputConfig = $.extend(
+				JSON.parse(
+					JSON.stringify( 'input-config' in field ? field[ 'input-config' ] : {} )
+				),
+				{
+					required: required && optionsList.items.length === 0,
+					multiple: multiple,
+					value: { value: '' }
+				}
+			);
 
-				// only requires if there aren't files arealdy
+			var inputWidget = getInputWidget(
+				{
+					inputName: inputName,
+					parentWidget: this,
+					index: 0
+				},
+				config.property + '-selectfile',
+				// only require if there aren't files arealdy
 				// loaded, then toggle require attribute on the
 				// input widget if they are removed
 				//
-				{ required: required && optionsList.items.length === 0, multiple: multiple }
+				inputConfig
 			);
 
 			// required to toggle required for native validation
@@ -1004,7 +942,7 @@ const PageProperties = function (
 				var innerItemWidgetFile = new InnerItemWidgetFile( {
 					classes: [ 'InnerItemWidgetFile' ],
 					inputName: 'OO.ui.TextInputWidget',
-					value: file.name,
+					value: { value: file.name },
 					parentWidget: self,
 					index: optionsList.items.length,
 					multiple: multiple,
@@ -1051,7 +989,7 @@ const PageProperties = function (
 					new InnerItemWidget( {
 						classes: [ 'InnerItemWidget' ],
 						inputName: inputName,
-						value: '',
+						value: { value: '' },
 						parentWidget: self,
 						index: optionsList.items.length,
 						multiple: multiple,
@@ -1091,22 +1029,19 @@ const PageProperties = function (
 	ProcessDialogSearch.prototype.initialize = function () {
 		ProcessDialogSearch.super.prototype.initialize.apply( this, arguments );
 		var self = this;
-		var isSelected;
-		var values;
+		this.selectedProperties = Object.keys( Properties[ 'semantic-properties' ] );
+		this.selectedForms = SemanticForms;
+		this.selectedItems = [];
 		function getItems( value ) {
+			var values;
 			switch ( self.data.toolName ) {
 				case 'addremoveproperties':
 					values = Object.keys( SemanticProperties );
-					values = values.filter( ( x ) => !inArray( x, getPropertiesInForms() ) );
-					isSelected = function ( value_ ) {
-						return value_ in Properties;
-					};
+					self.selectedItems = self.selectedProperties;
 					break;
 				case 'addremoveforms':
+					self.selectedItems = self.selectedForms;
 					values = Object.keys( Forms );
-					isSelected = function ( value_ ) {
-						return inArray( value_, SemanticForms );
-					};
 					break;
 			}
 
@@ -1121,7 +1056,7 @@ const PageProperties = function (
 				var menuOptionWidget = new OO.ui.MenuOptionWidget( {
 					data: x,
 					label: x,
-					selected: isSelected( x )
+					selected: inArray( x, self.selectedItems )
 				} );
 
 				if ( self.data.toolName === 'addremoveproperties' ) {
@@ -1142,21 +1077,22 @@ const PageProperties = function (
 		} );
 
 		searchWidget.results.addItems( getItems() );
-		var self = this;
 
 		// searchWidget.getResults() is a SelectWidget
 		// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.SelectWidget
+		var searchWidgetResults = searchWidget.getResults();
+		searchWidgetResults.multiselect = true;
 
-		this.selectWidget = searchWidget.getResults();
-
-		this.selectWidget.multiselect = true;
-		/*
-		this.selectWidget.on("press", function (widget) {
-			if (!widget) {
+		searchWidgetResults.on( 'press', function ( value ) {
+			if ( value === null ) {
 				return;
 			}
-		});
-*/
+			if ( inArray( value.data, self.selectedItems ) ) {
+				self.selectedItems.splice( self.selectedItems.indexOf( value.data ), 1 );
+			} else {
+				self.selectedItems.push( value.data );
+			}
+		} );
 		searchWidget.onQueryChange = function ( value ) {
 			searchWidget.results.clearItems();
 			searchWidget.results.addItems( getItems( value ) );
@@ -1186,40 +1122,72 @@ const PageProperties = function (
 		var dialog = this;
 
 		if ( action === 'save' ) {
-			var items = processDialogSearch.selectWidget.findSelectedItems();
-			var values = items.map( ( x ) => x.data );
+			var values = processDialogSearch.selectedItems;
+
+			var res = getModel( false );
+			Properties[ 'semantic-properties' ] = res.properties;
+			Properties.forms = res.forms;
 
 			switch ( this.data.toolName ) {
 				case 'addremoveproperties':
 					// remove unselected properties
-					for ( var i in Properties ) {
+					for ( var i in Properties[ 'semantic-properties' ] ) {
 						if ( !inArray( i, values ) ) {
-							delete Properties[ i ];
+							delete Properties[ 'semantic-properties' ][ i ];
 						}
 					}
 
 					// add new properties
 					for ( var label of values ) {
-						if ( !( label in Properties ) ) {
-							Properties[ label ] = [ '' ];
+						if ( !( label in Properties[ 'semantic-properties' ] ) ) {
+							Properties[ 'semantic-properties' ][ label ] = [ { value: '' } ];
 						}
 					}
 
-					// PropertiesPanel.populateFieldset();
+					updatePanels( false );
 					break;
 				case 'addremoveforms':
-					var propertiesInForms = getPropertiesInForms();
-					for ( var property of propertiesInForms ) {
-						if ( !inArray( property, values ) ) {
-							delete Properties[ property ];
+					for ( var i in Properties.forms ) {
+						if ( !inArray( i, values ) ) {
+							delete Properties.forms[ i ];
+							delete ModelForms[ i ];
 						}
 					}
 
-					SemanticForms = values;
+					var missingForms = [];
+					for ( var i of values ) {
+						if ( !( i in Forms ) || !Object.keys( Forms[ i ] ).length ) {
+							missingForms.push( i );
+						}
+					}
+					if ( missingForms.length ) {
+						var payload = {
+							action: 'pageproperties-form-descriptor',
+							forms: missingForms.join( '|' )
+						};
+
+						// eslint-disable-next-line no-shadow
+						new mw.Api().postWithToken( 'csrf', payload ).done( function ( res ) {
+							// console.log("res", res);
+
+							if ( 'pageproperties-form-descriptor' in res ) {
+								var data = res[ 'pageproperties-form-descriptor' ];
+
+								// eslint-disable-next-line no-shadow
+								for ( var i in data.forms ) {
+									Forms[ i ] = data.forms[ i ];
+								}
+
+								// SemanticForms = SemanticForms.concat(missingForms)
+								updatePanels( false );
+							}
+						} );
+					} else {
+						updatePanels( false );
+					}
+
 					break;
 			}
-
-			updatePanels();
 		}
 
 		return new OO.ui.Process( function () {
@@ -1232,29 +1200,27 @@ const PageProperties = function (
 		return ProcessDialogSearch.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				WindowManagerSearch.removeWindows( [ DialogSearchName ] );
+				WindowManager.removeActiveWindow();
 			}, this );
 	};
 
 	function openSearchDialog( toolName ) {
 		processDialogSearch = new ProcessDialogSearch( {
 			size: 'medium',
-			classes: [ 'pageproperties-import-dialog' ],
+			classes: [ 'pageproperties-search-dialog' ],
 			data: { toolName: toolName }
 		} );
 
-		WindowManagerSearch.addWindows( [ processDialogSearch ] );
-
-		// see https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs
-		WindowManagerSearch.openWindow( processDialogSearch, {
-			title: mw.msg(
+		WindowManager.newWindow(
+			processDialogSearch,
+			mw.msg(
 				// The following messages are used here:
 				// * pageproperties-jsmodule-forms-dialogsearch-selectforms
 				// * pageproperties-jsmodule-forms-dialogsearch-selectproperties
 				'pageproperties-jsmodule-forms-dialogsearch-select' +
 					( toolName === 'addremoveforms' ? 'forms' : 'properties' )
 			)
-		} );
+		);
 	}
 
 	// https://doc.wikimedia.org/oojs-ui/master/js/#!/api/OO.ui.Toolbar
@@ -1305,36 +1271,37 @@ const PageProperties = function (
 			this.setDisabled( true );
 			this.pushPending();
 
-			ManageProperties.loadData( dataToLoad ).then( ( res ) => {
-				if ( 'semanticProperties' in res ) {
-					SemanticProperties = res.semanticProperties;
-				}
-				if ( 'forms' in res ) {
-					Forms = res.forms;
-				}
-				this.setDisabled( false );
-				this.popPending();
-				onSelect( this );
+			ManageProperties.loadData( dataToLoad )
+				.then( ( res ) => {
+					if ( 'semanticProperties' in res ) {
+						SemanticProperties = res.semanticProperties;
+					}
+					if ( 'forms' in res ) {
+						Forms = res.forms;
+					}
+					this.setDisabled( false );
+					this.popPending();
+					onSelect( this );
+				} )
+				.catch( ( error ) => {
+					// eslint-disable-next-line no-console
+					console.log( 'loadData error', error );
+					this.popPending();
+					this.setDisabled( false );
+					this.setActive( false );
 
-			} ).catch( ( error ) => {
-				// eslint-disable-next-line no-console
-				console.log( 'loadData error', error );
-				this.popPending();
-				this.setDisabled( false );
-				this.setActive( false );
-
-				PagePropertiesFunctions.OOUIAlert(
-					WindowManagerAlert,
-					new OO.ui.HtmlSnippet( error ),
-					{ size: 'medium' }
-				);
-			} );
+					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( error ), {
+						size: 'medium'
+					} );
+				} );
 		};
 
 		var toolGroup = [];
 
-		if ( Config.context !== 'parserfunction' &&
-			( Config.canManageSemanticProperties || Config.canComposeForms ) ) {
+		if (
+			Config.context !== 'parserfunction' &&
+			( Config.canManageSemanticProperties || Config.canComposeForms )
+		) {
 			toolGroup.push( {
 				name: 'addremoveforms',
 				icon: 'add',
@@ -1348,7 +1315,8 @@ const PageProperties = function (
 
 		if (
 			Config.context !== 'parserfunction' &&
-			( Config.canManageSemanticProperties || Config.canAddSingleProperties ) ) {
+			( Config.canManageSemanticProperties || Config.canAddSingleProperties )
+		) {
 			toolGroup.push( {
 				name: 'addremoveproperties',
 				icon: 'add',
@@ -1398,7 +1366,6 @@ const PageProperties = function (
 			OuterStack.setItem( panel );
 
 			// *** this prevents inconsistencies of the datatable layout
-			// @TODO use a "cheapest" way
 			switch ( selected ) {
 				case 'manageproperties':
 					ManageProperties.initialize();
@@ -1439,45 +1406,46 @@ const PageProperties = function (
 
 			$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'none' );
 
-			ManageProperties.loadData( dataToLoad ).then( ( res ) => {
-				// this.setDisabled(false);
-				// this.popPending();
-				ActionWidget.popPending();
-				$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
+			ManageProperties.loadData( dataToLoad )
+				.then( ( res ) => {
+					// this.setDisabled(false);
+					// this.popPending();
+					ActionWidget.popPending();
+					$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
 
-				if ( 'semanticProperties' in res ) {
-					SemanticProperties = res.semanticProperties;
-				}
-				if ( 'forms' in res ) {
-					Forms = res.forms;
-				}
+					if ( 'semanticProperties' in res ) {
+						SemanticProperties = res.semanticProperties;
+					}
+					if ( 'forms' in res ) {
+						Forms = res.forms;
+					}
 
-				ManageProperties.initialize(
-					Self,
-					SemanticProperties,
-					res.importedVocabularies,
-					res.typeLabels,
-					res.propertyLabels
-				);
+					ManageProperties.initialize(
+						Self,
+						// PagePropertiesInputConfig,
+						SemanticProperties,
+						res.importedVocabularies,
+						res.typeLabels,
+						res.propertyLabels
+					);
 
-				PagePropertiesCategories.initialize( res.categories );
+					PagePropertiesCategories.initialize( res.categories );
 
-				PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
+					PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
 
-				onSelect( this );
-			} ).catch( ( error ) => {
-				// eslint-disable-next-line no-console
-				console.log( 'loadData error', error );
-				ActionWidget.popPending();
-				$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
-				this.setActive( false );
+					onSelect( this );
+				} )
+				.catch( ( error ) => {
+					// eslint-disable-next-line no-console
+					console.log( 'loadData error', error );
+					ActionWidget.popPending();
+					$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
+					this.setActive( false );
 
-				PagePropertiesFunctions.OOUIAlert(
-					WindowManagerAlert,
-					new OO.ui.HtmlSnippet( error ),
-					{ size: 'medium' }
-				);
-			} );
+					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( error ), {
+						size: 'medium'
+					} );
+				} );
 		};
 
 		var toolGroup = [
@@ -1568,249 +1536,335 @@ const PageProperties = function (
 
 		this.populateFieldset();
 
-		this.$element.append(
-			'<h3 style="margin-top:0;padding-top:0"><b>' +
-				config.data.label +
-				'</b></h3>'
-		);
+		if ( config.data.type === 'form' && Config.canManageSemanticProperties ) {
+			var editButton = new OO.ui.ButtonWidget( {
+				classes: [ 'pageproperties-form-editbutton' ],
+				icon: 'edit',
+				label: '',
+				framed: false,
+				invisibleLabel: true
+			} );
+
+			editButton.on( 'click', function () {
+				var dataToLoad = ManageProperties.matchLoadedData( [
+					'forms',
+					'semantic-properties',
+					'typeLabels'
+				] );
+
+				if ( !dataToLoad.length ) {
+					return PagePropertiesForms.openDialog( config.data.label );
+				}
+
+				ManageProperties.loadData( dataToLoad ).then( ( res ) => {
+					if ( 'semanticProperties' in res ) {
+						SemanticProperties = res.semanticProperties;
+					}
+					if ( 'forms' in res ) {
+						Forms = res.forms;
+					}
+
+					PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
+
+					PagePropertiesForms.openDialog( config.data.label );
+				} );
+			} );
+
+			this.$element.append(
+				$( '<div style="display: flex;align-items: center">' ).append( [
+					$(
+						'<h3 style="margin-top:0;padding-top:0"><b>' +
+							config.data.label +
+							'</b></h3>'
+					).append(
+						$( '<sup style="margin-left:8px">' ).append( editButton.$element )
+					)
+				] )
+			);
+		} else {
+			this.$element.append(
+				'<h3 style="margin-top:0;padding-top:0"><b>' +
+					config.data.label +
+					'</b></h3>'
+			);
+		}
 		this.$element.append( this.fieldset.$element );
+
 		// this.$element.append(this.messageWidget.$element);
 	}
 
 	OO.inheritClass( PanelLayout, OO.ui.PanelLayout );
+
+	// ^^^
+	function addPropertyItems( model, properties, fields, obj ) {
+		var items = [];
+		model.properties = {};
+
+		for ( var i in fields ) {
+			if (
+				obj.form !== null &&
+				Config.targetPage &&
+				isTrue( fields[ i ][ 'on-create-only' ] )
+			) {
+				continue;
+			}
+
+			if ( obj.form ) {
+				fields[ i ].isForm = true;
+			}
+
+			if ( !( i in model.properties ) ) {
+				model.properties[ i ] = { field: fields[ i ], items: [] };
+			}
+
+			var item = new ItemWidget( {
+				classes: [ 'ItemWidget' ],
+				properties: properties,
+				property: i,
+				model: model.properties[ i ],
+				field: fields[ i ]
+			} );
+
+			items.push( item );
+		}
+
+		return items;
+	}
+
 	PanelLayout.prototype.populateFieldset = function () {
 		this.fieldset.clearItems();
 		var data = this.data;
 
 		var items = [];
-		if ( 'properties' in data && data.properties === true ) {
-			var propertiesInForms = getPropertiesInForms();
-			Properties = PagePropertiesFunctions.sortObjectByKeys( Properties );
 
-			for ( var i in Properties ) {
-				if ( inArray( i, propertiesInForms ) ) {
-					continue;
+		switch ( data.type ) {
+			case 'properties':
+				if ( !( 'semantic-properties' in Properties ) ) {
+					Properties[ 'semantic-properties' ] = {};
+				}
+				// ^^^
+				/*
+				Properties["semantic-properties"] =
+					PagePropertiesFunctions.sortObjectByKeys(
+						Properties["semantic-properties"]
+					);
+				*/
+
+				// @TODO create PageProperties properties
+				// in a dedicated namespace with properties
+				// like a form-field
+				var fields = {};
+				// or call directly new ItemWidget()
+				for ( var i in Properties[ 'semantic-properties' ] ) {
+					fields[ i ] = {
+						'SMW-property': i,
+						isForm: false
+					};
 				}
 
-				// property renamed or deleted
-				if ( !( i in SemanticProperties ) ) {
-					continue;
-				}
-
-				items.push(
-					new ItemWidget( {
-						classes: [ 'ItemWidget' ],
-						property: i
-					} )
+				items = addPropertyItems(
+					ModelProperties,
+					Properties[ 'semantic-properties' ],
+					fields,
+					{
+						multiple: null,
+						form: null
+					}
 				);
-			}
-		} else if ( 'form' in data ) {
-			var formName = data.form;
-			var form = Forms[ formName ];
 
-			for ( var i in form.fields ) {
-				if ( Config.targetPage && isTrue( form.fields[ i ][ 'on-create-only' ] ) ) {
-					continue;
+				break;
+
+			case 'form':
+				var formName = data.form;
+				var form = Forms[ formName ];
+
+				if ( !( 'forms' in Properties ) ) {
+					Properties.forms = {};
 				}
 
-				// property renamed or deleted
-				if ( !( i in SemanticProperties ) ) {
-					continue;
+				if ( !( formName in Properties.forms ) ) {
+					Properties.forms[ formName ] = {};
 				}
 
-				items.push(
-					new ItemWidget( {
-						classes: [ 'ItemWidget' ],
-						property: i,
+				items = addPropertyItems(
+					// @TODO handle multiple instances
+					( ModelForms[ formName ] = {} ),
+					Properties.forms[ formName ],
+					form.fields,
+					{
+						multiple: null,
 						form: formName
-					} )
+					}
 				);
-			}
-		} else if ( 'pagenameFormula' in data ) {
-			var userDefinedInput;
-			var userDefinedField;
-			if ( data.userDefined ) {
-				var inputName = 'mw.widgets.TitleInputWidget';
-				userDefinedInput = new mw.widgets.TitleInputWidget( {
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__title' + '-' + '0',
-					required: true
-				} );
 
-				// eslint-disable-next-line no-underscore-dangle
-				Model.__title = { 0: userDefinedInput };
+				break;
 
-				userDefinedField = new OO.ui.FieldLayout( userDefinedInput, {
-					label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
-					align: 'top',
-
-					// help: new OO.ui.HtmlSnippet("&nbsp;"),
-					// helpInline: true,
-					// The following classes are used here:
-					// * inputName-mw.widgets.TitleInputWidget
-					// * inputName-mw.widgets...
-					classes: [ 'ItemWidget', 'inputName-' + inputName ]
-				} );
-			}
-
-			// show radio
-			// userdefined (default) with title input
-			// pagenameFormula of form x (for each defined pagenameFormula)
-			var options = [];
-			if (
-				Object.keys( data.pagenameFormula ).length > 1 ||
-				( data.userDefined && Object.keys( data.pagenameFormula ).length )
-			) {
+			case 'wiki':
+				var userDefinedInput;
+				var userDefinedField;
 				if ( data.userDefined ) {
-					options.push( {
-						data: '',
-						label: mw.msg( 'pageproperties-jsmodule-forms-userdefined' )
+					var inputName = 'mw.widgets.TitleInputWidget';
+					userDefinedInput = new mw.widgets.TitleInputWidget( {
+						name: `${FormID}-model-target-title`,
+						required: true
 					} );
-				}
 
-				for ( var i in data.pagenameFormula ) {
-					options.push( {
-						data: data.pagenameFormula[ i ],
-						label: mw.msg( 'pageproperties-jsmodule-pageproperties-pagenameformulaof', i )
-					} );
-				}
+					Model[ 'target-title' ] = userDefinedInput;
 
-				var selectPagenameInput = new OO.ui.RadioSelectInputWidget( {
-					options: options,
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__pagename-formula' + '-' + '0'
-				} );
-
-				Model[ '__pagename-formula' ] = { 0: selectPagenameInput };
-
-				selectPagenameInput.on( 'change', function ( value ) {
-					userDefinedField.toggle( value === '' );
-					userDefinedInput.setRequired( value === '' );
-				} );
-
-				items.push(
-					new OO.ui.FieldLayout( selectPagenameInput, {
+					userDefinedField = new OO.ui.FieldLayout( userDefinedInput, {
 						label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
 						align: 'top',
-						classes: [ 'ItemWidget' ]
-					} )
-				);
-			}
 
-			if ( data.userDefined ) {
-				items.push( userDefinedField );
-			}
-
-			if ( data.freeText ) {
-				// @TODO add editor
-				// @see PageForms-5.5.1/includes/forminputs/PF_TextAreaInput.php
-				// libs/PF_wikieditor.js
-
-				var inputName = 'OO.ui.MultilineTextInputWidget';
-				var inputWidget = new OO.ui.MultilineTextInputWidget( {
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__freetext' + '-' + '0',
-					autosize: true,
-					rows: 6,
-					// eslint-disable-next-line no-underscore-dangle
-					value: Model.__freetext ?
-						// eslint-disable-next-line no-underscore-dangle
-						Model.__freetext[ 0 ].getValue() :
-						PageContent
-				} );
-
-				// eslint-disable-next-line no-underscore-dangle
-				Model.__freetext = { 0: inputWidget };
-
-				items.push(
-					new OO.ui.FieldLayout( inputWidget, {
-						label: mw.msg( 'pageproperties-jsmodule-formedit-freetext' ),
-						align: 'top',
-
+						// help: new OO.ui.HtmlSnippet("&nbsp;"),
+						// helpInline: true,
 						// The following classes are used here:
 						// * inputName-mw.widgets.TitleInputWidget
 						// * inputName-mw.widgets...
 						classes: [ 'ItemWidget', 'inputName-' + inputName ]
-					} )
-				);
-			}
-			if ( data.categories ) {
-				var categories = data.categories;
-
-				if ( data.showCategoriesInput ) {
-					var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
-						// eslint-disable-next-line no-useless-concat
-						name: 'semantic-properties-input-' + '__pagecategories' + '-' + '0'
-						// value: categories,
 					} );
-
-					// eslint-disable-next-line no-underscore-dangle
-					Model.__pagecategories = { 0: categoriesInput };
-
-					// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
-					for ( var category of categories ) {
-						categoriesInput.addTag( category );
-					}
-					items.push(
-						new OO.ui.FieldLayout( categoriesInput, {
-							label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
-							align: 'top',
-							classes: [ 'ItemWidget' ]
-						} )
-					);
-				} else {
-					// eslint-disable-next-line no-underscore-dangle
-					Model.__pagecategories = {
-						0: {
-							getValue: function () {
-								return categories;
-							}
-						}
-					};
 				}
-			}
 
-			if ( data.contentModels ) {
 				// show radio
-				if ( data.contentModels.length > 1 ) {
-					var options = [];
-					for ( var contentModel of data.contentModels ) {
+				// userdefined (default) with title input
+				// pagenameFormula of form x (for each defined pagenameFormula)
+				var options = [];
+				if (
+					Object.keys( data.pagenameFormula ).length > 1 ||
+					( data.userDefined && Object.keys( data.pagenameFormula ).length )
+				) {
+					if ( data.userDefined ) {
 						options.push( {
-							data: Config.contentModels[ contentModel ],
-							label: contentModel
+							data: '',
+							label: mw.msg( 'pageproperties-jsmodule-forms-userdefined' )
 						} );
 					}
 
-					var selectContentModelsInput = new OO.ui.RadioSelectInputWidget( {
+					for ( var form in data.pagenameFormula ) {
+						options.push( {
+							data: form,
+							label: mw.msg(
+								'pageproperties-jsmodule-pageproperties-pagenameformulaof',
+								form
+							)
+						} );
+					}
+
+					var selectPagenameInput = new OO.ui.RadioSelectInputWidget( {
 						options: options,
-						// eslint-disable-next-line no-useless-concat
-						name: 'semantic-properties-input-' + '__content-model' + '-' + '0'
+						name: `${FormID}-model-pagename-formula`
 					} );
 
-					Model[ '__content-model' ] = { 0: selectContentModelsInput };
+					Model[ 'pagename-formula' ] = selectPagenameInput;
+
+					selectPagenameInput.on( 'change', function ( value ) {
+						userDefinedField.toggle( value === '' );
+						userDefinedInput.setRequired( value === '' );
+					} );
 
 					items.push(
-						new OO.ui.FieldLayout( selectContentModelsInput, {
-							label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
+						new OO.ui.FieldLayout( selectPagenameInput, {
+							label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
 							align: 'top',
 							classes: [ 'ItemWidget' ]
 						} )
 					);
-
-					// @TODO do the same for '__pagename-formula' and remove
-					// the block on submit
-				} else {
-					// eslint-disable-next-line no-shadow
-					var Input = function Input() {
-						this.getValue = function () {
-							// eslint-disable-next-line no-shadow
-							var contentModel = data.contentModels[ 0 ];
-							return Config.contentModels[ contentModel ];
-						};
-					};
-					Model[ '__content-model' ] = { 0: new Input() };
 				}
-			}
+
+				if ( data.userDefined ) {
+					items.push( userDefinedField );
+				}
+
+				if ( data.freeText ) {
+					// @TODO add editor
+					// @see PageForms-5.5.1/includes/forminputs/PF_TextAreaInput.php
+					// libs/PF_wikieditor.js
+
+					var inputName = 'OO.ui.MultilineTextInputWidget';
+					var inputWidget = new OO.ui.MultilineTextInputWidget( {
+						name: `${FormID}-model-freetext`,
+						autosize: true,
+						rows: 6,
+
+						value: Model.freetext ? Model.freetext.getValue() : PageContent
+					} );
+
+					Model.freetext = inputWidget;
+
+					items.push(
+						new OO.ui.FieldLayout( inputWidget, {
+							label: mw.msg( 'pageproperties-jsmodule-formedit-freetext' ),
+							align: 'top',
+
+							// The following classes are used here:
+							// * inputName-mw.widgets.TitleInputWidget
+							// * inputName-mw.widgets...
+							classes: [ 'ItemWidget', 'inputName-' + inputName ]
+						} )
+					);
+				}
+				if ( data.categories ) {
+					var categories = data.categories;
+
+					if ( data.showCategoriesInput ) {
+						var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
+							name: `${FormID}-model-pagecategories`
+							// value: categories,
+						} );
+
+						Model.pagecategories = categoriesInput;
+
+						// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
+						for ( var category of categories ) {
+							categoriesInput.addTag( category );
+						}
+						items.push(
+							new OO.ui.FieldLayout( categoriesInput, {
+								label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
+								align: 'top',
+								classes: [ 'ItemWidget' ]
+							} )
+						);
+					} else {
+						Model.pagecategories =
+							PagePropertiesFunctions.MockupOOUIClass( categories );
+					}
+				}
+
+				if ( data.contentModels ) {
+					// show radio
+					if ( data.contentModels.length > 1 ) {
+						var options = [];
+						for ( var contentModel of data.contentModels ) {
+							options.push( {
+								data: Config.contentModels[ contentModel ],
+								label: contentModel
+							} );
+						}
+
+						var selectContentModelsInput = new OO.ui.RadioSelectInputWidget( {
+							options: options,
+							name: `${FormID}-model-content-model`
+						} );
+
+						Model[ 'content-model' ] = selectContentModelsInput;
+
+						items.push(
+							new OO.ui.FieldLayout( selectContentModelsInput, {
+								label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
+								align: 'top',
+								classes: [ 'ItemWidget' ]
+							} )
+						);
+					} else {
+						Model[ 'content-model' ] = {
+							getValue: function () {
+								// eslint-disable-next-line no-shadow
+								var contentModel = data.contentModels[ 0 ];
+								return Config.contentModels[ contentModel ];
+							}
+						};
+					}
+				}
 		}
 
 		items = items.filter( function ( x ) {
@@ -1823,60 +1877,53 @@ const PageProperties = function (
 	};
 
 	PanelLayout.prototype.addProperty = function ( property ) {
-		if ( !( property in Properties ) ) {
-			Properties[ property ] = [ '' ];
+		if ( !( property in Properties[ 'semantic-properties' ] ) ) {
+			Properties[ 'semantic-properties' ][ property ] = [ { value: '' } ];
 		}
 
 		this.populateFieldset();
 	};
 
+	// called from ManageProperties
 	function updateData( data ) {
-		Properties = getModel();
+		if ( Config.context !== 'ManageProperties' ) {
+			var res = getModel( false );
+			Properties[ 'semantic-properties' ] = res.properties;
+			Properties.forms = res.forms;
+		}
 
 		switch ( data[ 'result-action' ] ) {
 			case 'update':
 				break;
 			case 'delete':
 				for ( var property of data[ 'deleted-properties' ] ) {
-					// delete Model[property];
-					delete Properties[ property ];
+					delete Properties[ 'semantic-properties' ][ property ];
 				}
-				for ( var form in Forms ) {
-					for ( var property of data[ 'deleted-properties' ] ) {
-						delete Forms[ form ].fields[ property ];
-					}
-				}
+				// @TODO remove SMW-properties properties in forms
 				break;
 
 			case 'create':
 				for ( var property in data[ 'semantic-properties' ] ) {
-					Properties[ property ] = [ '' ];
+					Properties[ 'semantic-properties' ][ property ] = [ { value: '' } ];
 				}
 				break;
 
 			case 'rename':
-				if ( data[ 'previous-label' ] in Properties ) {
+				if ( data[ 'previous-label' ] in Properties[ 'semantic-properties' ] ) {
 					PagePropertiesFunctions.renameObjectKey(
-						Properties,
+						Properties[ 'semantic-properties' ],
 						data[ 'previous-label' ],
 						data.label
 					);
 				}
-				for ( var form in Forms ) {
-					PagePropertiesFunctions.renameObjectKey(
-						Forms[ form ].fields,
-						data[ 'previous-label' ],
-						data.label
-					);
-				}
+				// @TODO rename SMW-properties
+				// for (var form in Forms) {
+				// }
 				break;
 		}
 
 		if ( Config.context !== 'ManageProperties' ) {
-			// initialize();
-			updatePanels();
-			// PagePropertiesCategories.initialize();
-			// PagePropertiesForms.initialize();
+			updatePanels( false );
 		}
 		return true;
 	}
@@ -1892,10 +1939,14 @@ const PageProperties = function (
 		var pagenameFormula = {};
 		var userDefined = false;
 		var freeText = false;
-		var formProperties = [];
 		var formCategories = [];
 		var formContentModels = [];
-		var showCategoriesInput = !SemanticForms.length;
+		var showCategoriesInput = !SemanticForms.length || !Config.isNewPage;
+
+		if ( !( 'semantic-properties' in Properties ) ) {
+			Properties[ 'semantic-properties' ] = {};
+		}
+
 		for ( var form of SemanticForms ) {
 			if ( isTrue( Forms[ form ][ 'show-categories-input' ] ) ) {
 				showCategoriesInput = true;
@@ -1915,18 +1966,6 @@ const PageProperties = function (
 					Forms[ form ][ 'freetext-input' ] === 'show on create' )
 			) {
 				freeText = true;
-			}
-
-			for ( var i in Forms[ form ].fields ) {
-				// *** on-create-only field don't get recorded when creating the form
-				// so exclude them from the form to let them be added as single property
-				if (
-					Config.targetPage &&
-					isTrue( Forms[ form ].fields[ i ][ 'on-create-only' ] )
-				) {
-					continue;
-				}
-				formProperties.push( i );
 			}
 
 			if ( Forms[ form ][ 'content-model' ] ) {
@@ -1949,7 +1988,8 @@ const PageProperties = function (
 					classes: [ 'PanelProperties-panel-section' ],
 					data: {
 						label: form, // mw.msg
-						form: form
+						form: form,
+						type: 'form'
 					}
 				} )
 			);
@@ -1965,9 +2005,7 @@ const PageProperties = function (
 		}
 
 		// create single properties panel
-		if (
-			Object.keys( Properties ).filter( ( x ) => !inArray( x, formProperties ) ).length
-		) {
+		if ( Object.keys( Properties[ 'semantic-properties' ] ).length ) {
 			panels.push(
 				new PanelLayout( {
 					padded: true,
@@ -1976,13 +2014,13 @@ const PageProperties = function (
 					data: {
 						label: mw.msg( 'pageproperties-jsmodule-formedit-properties' ),
 						expanded: false,
-						properties: true
+						type: 'properties'
 					}
 				} )
 			);
 		}
 
-		formCategories = formCategories
+		var categories = formCategories
 			.concat( PageCategories )
 			.filter( function onlyUnique( value, index, self ) {
 				return self.indexOf( value ) === index;
@@ -1994,7 +2032,7 @@ const PageProperties = function (
 			formContentModels.length ||
 			userDefined ||
 			freeText ||
-			formCategories
+			categories
 		) {
 			panels.push(
 				new PanelLayout( {
@@ -2003,6 +2041,7 @@ const PageProperties = function (
 					framed: false,
 					classes: [ 'PanelProperties-panel-section' ],
 					data: {
+						type: 'wiki',
 						label: mw.msg( 'pageproperties-jsmodule-formedit-wiki' ),
 						pagenameFormula: pagenameFormula,
 						contentModels: formContentModels,
@@ -2018,7 +2057,13 @@ const PageProperties = function (
 		return panels.filter( ( x ) => !x.isEmpty );
 	}
 
-	function updatePanels() {
+	function updatePanels( fromModel ) {
+		if ( fromModel ) {
+			var res = getModel( false );
+			Properties[ 'semantic-properties' ] = res.properties;
+			Properties.forms = res.forms;
+		}
+
 		PropertiesStack.clearItems();
 		var panels = getPropertiesPanels();
 		PropertiesStack.addItems( panels );
@@ -2042,44 +2087,25 @@ const PageProperties = function (
 
 	function updateForms( forms ) {
 		Forms = forms;
-		updatePanels();
+		updatePanels( true );
 	}
 
 	function onSubmit() {
 		$( 'input.radio_for_required_checkboxes[name$=-validation]' ).remove();
 		var formEl = $( this ).closest( '.pagepropertiesform' );
 
-		var obj = getModel( formEl );
-		var semanticForms = getSemanticForms();
-
-		var formName = null;
-		for ( var i in semanticForms ) {
-			$( '<input>' )
-				.attr( {
-					type: 'hidden',
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__semanticforms' + '-' + i,
-					value: semanticForms[ i ]
-				} )
-				.appendTo( formEl );
-			formName = semanticForms[ i ];
-		}
-
-		// eslint-disable-next-line no-underscore-dangle
-		if ( !Config.targetPage && !obj.__title && !obj[ '__pagename-formula' ] ) {
-			$( '<input>' )
-				.attr( {
-					type: 'hidden',
-					// eslint-disable-next-line no-useless-concat
-					name: 'semantic-properties-input-' + '__pagename-formula' + '-' + '0',
-
-					// there should be only one form
-					value: Forms[ formName ][ 'pagename-formula' ]
-				} )
-				.appendTo( formEl );
-		}
+		var res = getModel( true );
 
 		// return false;
+		$( '<input>' )
+			.attr( {
+				type: 'hidden',
+				name: 'semantic-properties-model',
+				value: JSON.stringify( res )
+			} )
+			.appendTo( formEl );
+
+		return true;
 	}
 
 	function initialize( pageProperties ) {
@@ -2088,6 +2114,8 @@ const PageProperties = function (
 		}
 
 		Model = {};
+		ModelProperties = {};
+		ModelForms = {};
 		$( '#semantic-properties-wrapper' ).empty();
 
 		var panels = getPropertiesPanels();
@@ -2141,10 +2169,14 @@ const PageProperties = function (
 		};
 		var form = new OO.ui.FormLayout( {
 			$content: frameAContent,
-			action: Config.actionUrl + ( Config.actionUrl.indexOf( '?' ) === -1 ? '?' : '&' ) +
-					Object.keys( queryObj ).map( ( key ) => {
+			action:
+				Config.actionUrl +
+				( Config.actionUrl.indexOf( '?' ) === -1 ? '?' : '&' ) +
+				Object.keys( queryObj )
+					.map( ( key ) => {
 						return `${key}=${encodeURIComponent( queryObj[ key ] )}`;
-					} ).join( '&' ),
+					} )
+					.join( '&' ),
 			method: 'post',
 			enctype: 'multipart/form-data',
 			classes: [ 'pagepropertiesform' ],
@@ -2224,9 +2256,7 @@ const PageProperties = function (
 			Config.context !== 'parserfunction' &&
 			Config.canManageSemanticProperties
 		) {
-			ActionToolbarA = createActionToolbar(
-				Config.context === 'EditSemantic'
-			);
+			ActionToolbarA = createActionToolbar( Config.context === 'EditSemantic' );
 			ToolbarA.$actions.append( ActionToolbarA.$element );
 
 			var actionToolbar = createActionToolbar();
@@ -2287,39 +2317,27 @@ $( function () {
 	var pageForms = JSON.parse( mw.config.get( 'pageproperties-pageForms' ) );
 	// console.log("pageForms", pageForms);
 
-	var properties = JSON.parse( mw.config.get( 'pageproperties-properties' ) );
-	// console.log("properties", properties);
-
 	var sessionData = JSON.parse( mw.config.get( 'pageproperties-sessionData' ) );
 	// console.log("sessionData", sessionData);
 
 	var config = JSON.parse( mw.config.get( 'pageproperties-config' ) );
 	// console.log("config", config);
 
-	// the order is important !! ( first is behind)
-	var windowManagerCommon = PagePropertiesFunctions.createWindowManager();
-	var windowManagerSearch = PagePropertiesFunctions.createWindowManager();
-	var windowManagerManageProperties =
-		PagePropertiesFunctions.createWindowManager();
-	var windowManagerAlert = PagePropertiesFunctions.createWindowManager();
+	var windowManager = new PagePropertiesWindowManager();
 
-	ManageProperties.preInitialize( config, windowManagerManageProperties, windowManagerAlert );
+	ManageProperties.preInitialize( config, windowManager );
 
 	if (
 		config.context === 'ManageProperties' ||
 		config.context === 'EditSemantic'
 	) {
-		PagePropertiesCategories.preInitialize(
-			windowManagerCommon,
-			windowManagerAlert
-		);
-
-		PagePropertiesForms.preInitialize(
-			config,
-			windowManagerCommon,
-			windowManagerSearch,
-			windowManagerAlert
-		);
+		PagePropertiesCategories.preInitialize( windowManager );
+		PagePropertiesForms.preInitialize( config, windowManager );
+	} else if (
+		config.context === 'parserfunction' &&
+		config.canManageSemanticProperties
+	) {
+		PagePropertiesForms.preInitialize( config, windowManager );
 	}
 
 	var pageProperties;
@@ -2362,8 +2380,7 @@ $( function () {
 				semanticForms,
 				pageContent,
 				pageCategories,
-				windowManagerSearch,
-				windowManagerAlert,
+				windowManager,
 				errors
 			);
 
@@ -2390,12 +2407,7 @@ $( function () {
 
 		PagePropertiesForms.initialize( pageProperties, semanticProperties, forms );
 
-		ImportProperties.initialize(
-			config,
-			semanticProperties,
-			windowManagerCommon,
-			windowManagerAlert
-		);
+		ImportProperties.initialize( config, semanticProperties, windowManager );
 	}
 
 	// display every 3 days

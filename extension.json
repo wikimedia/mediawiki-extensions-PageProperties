@@ -49,7 +49,8 @@
 		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php",
 		"PagePropertiesApiSaveCategory": "includes/api/PagePropertiesApiSaveCategory.php",
 		"PagePropertiesApiImport": "includes/api/PagePropertiesApiImport.php",
-		"PagePropertiesApiSaveForm": "includes/api/PagePropertiesApiSaveForm.php"
+		"PagePropertiesApiSaveForm": "includes/api/PagePropertiesApiSaveForm.php",
+		"PagePropertiesApiFormDescriptor": "includes/api/PagePropertiesApiFormDescriptor.php"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\PageProperties\\ReplaceText\\": "includes/ReplaceText/"
@@ -90,7 +91,8 @@
 		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion",
 		"pageproperties-manageproperties-savecategory": "PagePropertiesApiSaveCategory",
 		"pageproperties-manageproperties-import": "PagePropertiesApiImport",
-		"pageproperties-manageproperties-saveform": "PagePropertiesApiSaveForm"
+		"pageproperties-manageproperties-saveform": "PagePropertiesApiSaveForm",
+		"pageproperties-form-descriptor": "PagePropertiesApiFormDescriptor"
 	},
 	"JobClasses": {
 		"PageProperties": "PagePropertiesJob",
@@ -105,7 +107,7 @@
 		{
 			"id": 2227,
 			"constant": "NS_PAGEPROPERTIESFORM_TALK",
-			"name": "PagePropertiesForm talk"
+			"name": "PagePropertiesFormTalk"
 		}
 	],
 	"GroupPermissions": {
@@ -311,6 +313,10 @@
 				"PagePropertiesFunctions.js",
 				"ManageProperties.js",
 				"PagePropertiesCategories.js",
+				"PagePropertiesWindowManager.js",
+				"PagePropertiesInputConfig.js",
+				"PagePropertiesContentBlock.js",
+				"PagePropertiesFormField.js",
 				"PagePropertiesForms.js",
 				"ImportProperties.js",
 				"PageProperties.js"
@@ -384,7 +390,6 @@
 				"pageproperties-jsmodule-forms-field-valueformula-help",
 				"pageproperties-jsmodule-forms-field-help-label",
 				"pageproperties-jsmodule-forms-field-labelmessage-label",
-				"pageproperties-jsmodule-forms-field-help-message",
 				"pageproperties-jsmodule-forms-field-label-message",
 				"pageproperties-jsmodule-forms-inheritfromproperty",
 				"pageproperties-jsmodule-forms-distinctvalue",
@@ -417,7 +422,7 @@
 				"pageproperties-jsmodule-forms-required",
 				"pageproperties-jsmodule-forms-notrequired",
 				"pageproperties-jsmodule-pageproperties-pagenameformulaof",
-				"pageproperties-jsmodule-forms-addfield",
+				"pageproperties-jsmodule-forms-add-remove-properties",
 				"pageproperties-permissions-error",
 				"pageproperties-jsmodule-formedit-freetext",
 				"pageproperties-jsmodule-formedit-properties",
@@ -457,7 +462,33 @@
 				"pageproperties-jsmodule-manageproperties-existing-form",
 				"pageproperties-jsmodule-pageproperties-submit",
 				"pageproperties-jsmodule-forms-field-mappingformula",
-				"pageproperties-jsmodule-forms-field-mappingformula-help"
+				"pageproperties-jsmodule-forms-field-mappingformula-help",
+				"pageproperties-jsmodule-inputconfig-dialog-label",
+				"pageproperties-jsmodule-inputconfig-addremoveoptions",
+				"pageproperties-jsmodule-inputconfig-searchdialog-label",
+				"pageproperties-jsmodule-forms-add-content-block",
+				"pageproperties-jsmodule-forms-add-field",
+				"pageproperties-jsmodule-formfield-label",
+				"pageproperties-jsmodule-formfield-propertymodel",
+				"pageproperties-jsmodule-formfield-propertymodel-smwproperty",
+				"pageproperties-jsmodule-formfield-propertymodel-jsonschema",
+				"pageproperties-jsmodule-formfield-smwproperties",
+				"pageproperties-jsmodule-formfield-schematypes",
+				"pageproperties-jsmodule-formfield-schematextsubtypes",
+				"pageproperties-jsmodule-formfield-schematextsubtypes",
+				"pageproperties-jsmodule-formfield-multiple-values",
+				"pageproperties-jsmodule-formfield-availableinputs",
+				"pageproperties-jsmodule-formfield-required",
+				"pageproperties-jsmodule-formfield-default",
+				"pageproperties-jsmodule-forms-contentblock-content",
+				"pageproperties-jsmodule-forms-contentblock-content-help",
+				"pageproperties-jsmodule-forms-add-block-content",
+				"pageproperties-jsmodule-forms-contentblock-newlabel",
+				"pageproperties-jsmodule-formfield-newlabel",
+				"pageproperties-jsmodule-formfield-existing-field",
+				"pageproperties-jsmodule-formfield-empty-field",
+				"pageproperties-jsmodule-formfield-default-value",
+				"pageproperties-jsmodule-forms-field-help-message"
 			]
 		}
 	},

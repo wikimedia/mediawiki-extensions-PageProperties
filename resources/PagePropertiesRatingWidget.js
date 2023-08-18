@@ -58,7 +58,6 @@
 			// alread selected, and check the previous one
 			input.on( 'click', function () {
 				var ii = $( this ).data( 'i' );
-
 				// eslint-disable-next-line eqeqeq
 				if ( self.isChecked == ii ) {
 					self.isChecked = ii - 1;

@@ -53,7 +53,6 @@ const ImportProperties = ( function () {
 	// var WgMaxArticleSize;
 	var FieldMaxSize = 1000;
 	var WindowManager;
-	var WindowManagerAlert;
 
 	function resetAll() {
 		$( '#import-wrapper' ).empty();
@@ -324,7 +323,7 @@ const ImportProperties = ( function () {
 				// eslint-disable-next-line no-console
 				console.error( err );
 				if ( err !== 'paused' && err !== 'canceled process' ) {
-					PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, 'unknown error', { size: 'medium' } );
+					PagePropertiesFunctions.OOUIAlert( 'unknown error', { size: 'medium' } );
 				}
 			} );
 	}
@@ -347,7 +346,7 @@ const ImportProperties = ( function () {
 		var config = result.config;
 		var data = result.data;
 		var obj = result.obj;
-		var instance;
+		var windowInstance;
 		var start = config.step * config.rate;
 		var end = start + config.rate;
 		var completed = start >= ParsedData.length;
@@ -367,13 +366,12 @@ const ImportProperties = ( function () {
 					data: { multistep: config.multistep }
 				} );
 
-				WindowManager.addWindows( [ processDialogConfirm ] );
-
 				// , {contents: contents}
 				// https://www.mediawiki.org/wiki/OOUI/Windows#Opening
-				instance = WindowManager.openWindow( processDialogConfirm );
+				windowInstance = WindowManager.newWindow( processDialogConfirm );
+
 				var step = config.step;
-				instance.opening.then( function () {
+				windowInstance.opening.then( function () {
 					// processDialogConfirm.booklet.toggleOutline(config.multistep);
 					processDialogConfirm.booklet.addPages( [
 						createBookletPage(
@@ -551,7 +549,7 @@ const ImportProperties = ( function () {
 						// The following messages are used here:
 						// * pageproperties-permissions-error
 						// * pageproperties-permissions-error-b
-						PagePropertiesFunctions.OOUIAlert( WindowManagerAlert, mw.msg( msg ), { size: 'medium' } );
+						PagePropertiesFunctions.OOUIAlert( mw.msg( msg ), { size: 'medium' } );
 					} );
 			} );
 		} );
@@ -609,7 +607,7 @@ const ImportProperties = ( function () {
 			ModelMappedProperties[ self.data.label ] = widget.data;
 			createDataTableHeadingMap();
 
-			WindowManager.removeWindows( [ DialogName ] );
+			WindowManager.removeActiveWindow();
 		} );
 
 		searchWidget.onQueryChange = function ( value ) {
@@ -656,7 +654,7 @@ const ImportProperties = ( function () {
 		return ProcessDialog.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				WindowManager.removeWindows( [ DialogName ] );
+				WindowManager.removeActiveWindow();
 			}, this );
 	};
 
@@ -667,9 +665,7 @@ const ImportProperties = ( function () {
 			data: { label: label }
 		} );
 
-		WindowManager.addWindows( [ processDialog ] );
-
-		WindowManager.openWindow( processDialog );
+		WindowManager.newWindow( processDialog );
 	}
 
 	// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/SearchWidgetDialog.js
@@ -763,7 +759,7 @@ const ImportProperties = ( function () {
 		return ProcessDialogConfirm.super.prototype.getTeardownProcess
 			.call( this, data )
 			.first( function () {
-				WindowManager.removeWindows( [ DialogConfirmName ] );
+				WindowManager.removeActiveWindow();
 			}, this );
 	};
 	/*
@@ -1219,11 +1215,10 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 	}
 
 	// , wgMaxArticleSize
-	function initialize( config, semanticProperties, windowManager, windowManagerAlert ) {
+	function initialize( config, semanticProperties, windowManager ) {
 		Config = config;
 		SemanticProperties = semanticProperties;
 		WindowManager = windowManager;
-		WindowManagerAlert = windowManagerAlert;
 		// WgMaxArticleSize = wgMaxArticleSize;
 
 		Model = {};

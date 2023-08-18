@@ -120,7 +120,9 @@ class PageProperties {
 		"_SUBP",
 		"_SUBC",
 
+		// @TODO move to namespace PagePropertiesProperty
 		"__pageproperties_preferred_input",
+		"__pageproperties_input_config",
 		"__pageproperties_allows_multiple_values",
 	];
 
@@ -690,6 +692,27 @@ class PageProperties {
 	}
 
 	/**
+	 * @param Output $output
+	 * @param array $properties
+	 * @return array
+	 */
+	public static function getFormDescriptors( $output, $properties ) {
+		if ( empty( $properties['forms'] ) ) {
+			return [];
+		}
+
+		// @TODO make it recursive
+		$forms = [];
+		foreach ( $properties['forms'] as $key => $value ) {
+			$forms[] = $key;
+		}
+
+		self::setForms( $output, $forms );
+
+		return self::$forms;
+	}
+
+	/**
 	 * @param SemanticData &$semanticData
 	 * @param string $caller
 	 * @return void
@@ -720,13 +743,60 @@ class PageProperties {
 			}
 		}
 
-		if ( !empty( $page_properties['semantic-forms'] ) ) {
+		// if ( !empty( $page_properties['semantic-forms'] ) ) {
+		// 	$property = new SMW\DIProperty( '__pageproperties_semantic_form' );
+		// 	$semanticData->removeProperty( $property );
+		// 	foreach ( $page_properties['semantic-forms'] as $form ) {
+		// 		if ( !empty( $form ) ) {
+		// 			$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$form, $valueCaption, $subject );
+		// 			$semanticData->addDataValue( $dataValue );
+		// 		}
+		// 	}
+		// }
+
+		if ( !empty( $page_properties['forms'] ) ) {
+			$context = new RequestContext();
+			$context->setTitle( $title );
+			$output = $context->getOutput();
+
+			$forms = self::getFormDescriptors( $output, $page_properties );
+			// @TODO use a method independent from SMW to identify forms
+			// @see updatePagesFormsJobs
 			$property = new SMW\DIProperty( '__pageproperties_semantic_form' );
 			$semanticData->removeProperty( $property );
-			foreach ( $page_properties['semantic-forms'] as $form ) {
-				if ( !empty( $form ) ) {
-					$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$form, $valueCaption, $subject );
-					$semanticData->addDataValue( $dataValue );
+
+			foreach ( $page_properties['forms'] as $form => $values ) {
+				if ( !array_key_exists( $form, $forms ) ) {
+					continue;
+				}
+				$descriptor = $forms[$form];
+				$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$form, $valueCaption, $subject );
+				$semanticData->addDataValue( $dataValue );
+
+				// @TODO make this recursive
+				foreach ( $values as $label => $value ) {
+					if ( strpos( $label, '__' ) === 0 ) {
+						continue;
+					}
+					$field = $descriptor['fields'][$label];
+
+					if ( $field['type'] !== 'property' ) {
+						continue;
+					}
+
+					if ( array_key_exists( 'SMW-property', $field ) ) {
+						$property = SMW\DIProperty::newFromUserLabel( $field['SMW-property'] );
+
+						if ( !is_array( $value ) ) {
+							$value = [ $value ];
+						}
+						foreach ( $value as $val ) {
+							if ( $val !== "" ) {
+								$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$val, $valueCaption, $subject );
+								$semanticData->addDataValue( $dataValue );
+							}
+						}
+					}
 				}
 			}
 		}
@@ -745,10 +815,10 @@ class PageProperties {
 
 			// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
 			foreach ( $semantic_properties as $label => $values ) {
-
 				if ( $label === "" ) {
 					continue;
 				}
+				$property = SMW\DIProperty::newFromUserLabel( $label );
 
 				if ( !is_array( $values ) ) {
 					$values = [ $values ];
@@ -756,7 +826,9 @@ class PageProperties {
 
 				foreach ( $values as $value ) {
 					if ( $value !== "" ) {
-						$property = SMW\DIProperty::newFromUserLabel( $label );
+						if ( is_bool( $value ) ) {
+							$value = ( !empty( $value ) ? 'yes' : 'no' );
+						}
 						$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$value, $valueCaption, $subject );
 						$semanticData->addDataValue( $dataValue );
 					}
@@ -817,31 +889,6 @@ class PageProperties {
 			return false;
 		}
 
-		// remove empty values and implode arrays with
-		// single values
-		$semanticProperties = [];
-		if ( !empty( $obj['semantic-properties'] ) ) {
-			foreach ( $obj['semantic-properties'] as $key => $val ) {
-				$semanticProperties[$key] = $val;
-
-				if ( !is_array( $semanticProperties[$key] ) ) {
-					$semanticProperties[$key] = [ $semanticProperties[$key] ];
-				}
-
-				$semanticProperties[$key] = array_filter( array_values( $semanticProperties[$key] ) );
-
-				if ( count( $semanticProperties[$key] ) === 1 ) {
-					$semanticProperties[$key] = $semanticProperties[$key][0];
-				}
-
-				if ( empty( $semanticProperties[$key] ) ) {
-					unset( $semanticProperties[$key] );
-				}
-			}
-
-			$obj['semantic-properties'] = $semanticProperties;
-		}
-
 		if ( !empty( $obj['SEO'] ) ) {
 			if ( empty( $obj['SEO']['meta'] ) ) {
 				unset( $obj['SEO'] );
@@ -853,7 +900,7 @@ class PageProperties {
 			unset( $obj['page-properties']['categories'] );
 		}
 
-		$keys = [ 'page-properties', 'SEO', 'semantic-properties', 'semantic-forms' ];
+		$keys = [ 'page-properties', 'SEO', 'semantic-properties', 'forms' ];
 
 		// if $obj is empty the related slot will be removed
 		foreach ( $keys as $key ) {
@@ -1083,9 +1130,9 @@ class PageProperties {
 				$obj['config']['context'] === 'EditSemantic' ) {
 				$flags = self::setAllFormsAndSemanticProperties( $out );
 
-				if ( $flags & ALL_FORMS ) {
-					$loadedData[] = 'forms';
-				}
+				// if ( $flags & ALL_FORMS ) {
+				// 	$loadedData[] = 'forms';
+				// }
 
 				if ( $flags & ALL_PROPERTIES ) {
 					$loadedData[] = 'semantic-properties';
@@ -1095,9 +1142,9 @@ class PageProperties {
 			$semanticProperties = self::getSemanticProperties( self::$semanticProperties );
 
 			// remove fields in form related to non-existing properties
-			foreach ( self::$forms as $key => $value ) {
-				self::$forms[$key]['fields'] = array_intersect_key( $value['fields'], $semanticProperties );
-			}
+			// foreach ( self::$forms as $key => $value ) {
+			// 	self::$forms[$key]['fields'] = array_intersect_key( $value['fields'], $semanticProperties );
+			// }
 
 			$obj['forms'] = self::$forms;
 			$obj['semanticProperties'] = $semanticProperties;
@@ -1118,9 +1165,9 @@ class PageProperties {
 			// this is applicable if the form data has been cached
 			// and following one or more properties have been deleted
 			// from the form descriptor
-			if ( !empty( $obj['sessionData'] ) && isset( $obj['sessionData']['properties'] ) ) {
-				$obj['sessionData']['properties'] = array_intersect_key( $obj['sessionData']['properties'], $semanticProperties );
-			}
+			// if ( !empty( $obj['sessionData'] ) && isset( $obj['sessionData']['properties'] ) ) {
+			// 	$obj['sessionData']['properties'] = array_intersect_key( $obj['sessionData']['properties'], $semanticProperties );
+			// }
 		}
 
 		// @TODO only with 'OO.ui.SelectFileWidget'
@@ -1133,7 +1180,6 @@ class PageProperties {
 			'forms' => [],
 			'pageForms' => [],
 			'categories' => [],
-			'properties' => [],
 			'sessionData' => [],
 			'config' => [
 				'actionUrl' => SpecialPage::getTitleFor( 'PagePropertiesSubmit', $title->getPrefixedDBkey() )->getLocalURL(),
@@ -1167,7 +1213,6 @@ class PageProperties {
 			'pageproperties-forms' => json_encode( $obj['forms'], true ),
 			'pageproperties-categories' => json_encode( $obj['categories'], true ),
 			'pageproperties-pageForms' => json_encode( $obj['pageForms'], true ),
-			'pageproperties-properties' => json_encode( $obj['properties'], true ),
 			'pageproperties-sessionData' => json_encode( $obj['sessionData'], true ),
 			'pageproperties-config' => json_encode( $obj['config'], true ),
 			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
@@ -1200,7 +1245,7 @@ class PageProperties {
 
 			self::setForms( $output, array_map( static function ( $title ) {
 				return $title->getText();
-			}, $allForms ) );
+			}, $allForms ), false );
 
 			$ret += ALL_FORMS;
 		}
@@ -1298,9 +1343,10 @@ class PageProperties {
 	/**
 	 * @param Output $output
 	 * @param array $semanticForms
+	 * @param bool $loadForm
 	 * @return array
 	 */
-	public static function setForms( $output, $semanticForms ) {
+	public static function setForms( $output, $semanticForms, $loadForm = true ) {
 		$dataValueFactory = SMW\DataValueFactory::getInstance();
 		$pDescProp = new SMW\DIProperty( '_PDESC' );
 		$langCode = RequestContext::getMain()->getLanguage()->getCode();
@@ -1316,6 +1362,12 @@ class PageProperties {
 			$titleText = $title->getText();
 
 			if ( array_key_exists( $titleText, self::$forms ) ) {
+				continue;
+			}
+
+			// load only form actually in the
+			if ( $loadForm === false ) {
+				self::$forms[$titleText] = [];
 				continue;
 			}
 
@@ -1351,7 +1403,11 @@ class PageProperties {
 
 		foreach ( $fields as $label => $field ) {
 
-			if ( !in_array( $label, self::$semanticProperties ) ) {
+			if ( array_key_exists( 'type', $fields[ $label ] ) && $fields[ $label ][ 'type' ] === 'content-block' ) {
+				$fields[ $label ][ 'content-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $fields[ $label ][ 'content' ] ) );
+			}
+
+			if ( !in_array( $label, self::$semanticProperties ) && !empty( $field['SMW-property'] ) ) {
 				self::$semanticProperties[] = $label;
 			}
 
@@ -1399,14 +1455,17 @@ class PageProperties {
 				}
 
 			} elseif ( !empty( $field['options-askquery'] ) ) {
+				// *** credits WikiTeQ
 				$parser = MediaWikiServices::getInstance()->getParserFactory()->getInstance();
 				$title = RequestContext::getMain()->getTitle();
 				$poptions = $output->parserOptions();
 				$parsedAsk = $parser->preprocess( $field['options-askquery'], $title, $poptions );
+				// -------
 				$results = self::getQueryResults(
 					$parsedAsk,
 					!empty( $field['askquery-printouts'] ) ? $field['askquery-printouts'] : [],
-					[ 'limit' => !empty( $field['options-limit'] ) && is_int( $field['options-limit'] ) ? $field['options-limit'] : 100 ],
+					// 'limit' => !empty( $field['options-limit'] ) && is_int( $field['options-limit'] ) ? $field['options-limit'] : 100
+					[],
 					!empty( $field['askquery-subject'] )
 				);
 
@@ -1513,8 +1572,7 @@ class PageProperties {
 			$text = self::getWikipageContent( $title );
 			if ( !empty( $text ) ) {
 				$obj = json_decode( $text, true );
-				$obj['fields'] = array_intersect_key( $obj['fields'], $semanticProperties );
-
+				// $obj['fields'] = array_intersect_key( $obj['fields'], $semanticProperties );
 				$ret[$title->getText()] = $obj;
 			}
 		}
@@ -1983,7 +2041,7 @@ class PageProperties {
 		$use_regex = false;
 		$user_id = $user->getId();
 		$jobNum = 0;
-
+		$jobs = [];
 		foreach ( $arr as $label => $newLabel ) {
 			$property = SMW\DIProperty::newFromUserLabel( $label );
 

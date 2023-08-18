@@ -92,6 +92,7 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onSMWPropertyinitProperties( SMW\PropertyRegistry $propertyRegistry ) {
+		// @TODO move to namespace PagePropertiesProperty
 		$defs = [
 			'__pageproperties_preferred_input' => [
 				'label' => 'Preferred input',
@@ -100,6 +101,14 @@ class PagePropertiesHooks {
 				'alias' => 'pageproperties-property-preferred-input',
 				'viewable' => true,
 				'annotable' => true
+			],
+			'__pageproperties_input_config' => [
+				'label' => 'Input config',
+				'type' => '_txt',
+				// MW message key
+				'alias' => 'pageproperties-property-input-config',
+				'viewable' => false,
+				'annotable' => false
 			],
 			'__pageproperties_allows_multiple_values' => [
 				'label' => 'Allows multiple values',
@@ -239,10 +248,11 @@ class PagePropertiesHooks {
 
 		if ( !method_exists( ParserOutput::class, 'mergeMapStrategy' ) ) {
 			$semanticData = $parserOutput->getExtensionData( \SMW\ParserData::DATA_ID );
-			if ( ( $semanticData instanceof \SMW\SemanticData ) ) {
-				\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
-				$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, $semanticData );
+			if ( !( $semanticData instanceof \SMW\SemanticData ) ) {
+				$semanticData = new SMW\SemanticData( SMW\DIWikiPage::newFromTitle( $title ) );
 			}
+			\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
+			$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, $semanticData );
 			return;
 		}
 
@@ -272,11 +282,12 @@ class PagePropertiesHooks {
 
 		if ( !self::$SlotsParserOutput[ $key ][ 'content' ]->equals( $content ) ) {
 			$semanticData = $parserOutput->getExtensionData( \SMW\ParserData::DATA_ID );
-			if ( ( $semanticData instanceof \SMW\SemanticData ) ) {
-				\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
-				self::$SlotsParserOutput[ $key ]['data'] = $semanticData;
-				$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, null );
+			if ( !( $semanticData instanceof \SMW\SemanticData ) ) {
+				$semanticData = new SMW\SemanticData( SMW\DIWikiPage::newFromTitle( $title ) );
 			}
+			\PageProperties::updateSemanticData( $semanticData, 'onContentAlterParserOutput' );
+			self::$SlotsParserOutput[ $key ]['data'] = $semanticData;
+			$parserOutput->setExtensionData( \SMW\ParserData::DATA_ID, null );
 
 		// *** this assumes that pageproperties is the last slot, isn't so ?
 		} elseif ( !empty( self::$SlotsParserOutput[ $key ]['data'] ) ) {

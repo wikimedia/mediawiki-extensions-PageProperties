@@ -72,124 +72,330 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 
 		$this->formID = $request->getVal( 'formID' );
 
-		$errors = [];
-		$ret = $this->onFormSubmit( $this->parseFormData(), $errors );
+		$data = $request->getVal( 'semantic-properties-model' );
+
+		$ret = $this->onFormSubmit( $data );
 
 		if ( $ret !== true ) {
-			$this->setSessionData( $ret, $errors );
+			list( $data, $errors ) = $ret;
+			$this->setSessionData( $data, $errors );
 			header( 'Location: ' . $_GET['returnUrl'] );
 		}
 	}
 
 	/**
-	 * @param array $ret
+	 * @param array $data
 	 * @param array $errors
 	 * @return array
 	 */
-	private function setSessionData( $ret, $errors ) {
-		list( $update_obj, $freetext ) = $ret;
-
-		$pageCategories = ( !empty( $update_obj['page-properties']['categories'] ) ?
-			$update_obj['page-properties']['categories'] : [] );
-
-		$semanticProperties = $update_obj['semantic-properties'];
+	private function setSessionData( $data, $errors ) {
+		$data['properties'] = [];
 
 		// @TODO use standard Mediawiki's sessions interface
 		$_SESSION['pagepropertiesform-submissiondata-' . $this->formID] = [
-			'freetext' => $freetext,
-			'properties' => $semanticProperties,
+			'freetext' => $data['model']['freetext'],
+			'properties' => $data['properties'],
+			'forms' => $data['forms'],
 			'errors' => $errors,
-			'pageCategories' => $pageCategories,
+			'pageCategories' => $data['model']['pagecategories'],
 		];
 	}
 
 	/**
+	 * @param array $obj
+	 * @param array|null $descriptor
 	 * @return array
 	 */
-	private function parseFormData() {
+	private	function processValues( $obj, $descriptor = null ) {
 		$ret = [];
-		// e.g. semantic-properties-input-Carbon_copy-0
-		foreach ( $_POST as $key => $value ) {
-			if ( strpos( $key, 'semantic-properties-input-' ) === 0 ) {
-				preg_match( '/^semantic\-properties\-input\-(.+?)\-(\d+)$/', $key, $match );
+		// labels
+		foreach ( $obj as $label => $val ) {
+			$values = [];
 
-				// replace underscore with space
-				// https://www.php.net/manual/en/language.variables.external.php
-				$ret[ urldecode( $match[1] ) ][$match[2]] = $value;
+			if ( $descriptor && $descriptor['fields'][$label]['type'] !== 'property' ) {
+				continue;
+			}
+			// fields
+			foreach ( $val as $value ) {
+				if ( is_array( $value['value'] ) ) {
+					$values = array_merge( $values, $value['value'] );
+
+				} else {
+					$values[] = $value['value'];
+				}
+			}
+			$ret[$label] = $values;
+
+		}
+		return $ret;
+	}
+
+	/**
+	 * @param array $obj
+	 * @param array $value
+	 * @param string $formula
+	 * @param int $i
+	 * @return string
+	 */
+	private	function replaceFormula( $obj, $value, $formula, $i ) {
+		return preg_replace_callback( '/<\s*([^<>]+)\s*>/', static function ( $matches ) use ( $obj, $value, $i ) {
+			switch ( $matches[1] ) {
+				case 'i':
+				case 'n':
+					if ( $i === null ) {
+						return $matches[0];
+					}
+					return $i;
+				case 'value':
+					if ( $i === null ) {
+						return $matches[0];
+					}
+					return $value;
+				default:
+					if ( array_key_exists( $matches[1], $obj ) ) {
+						// @TODO add to form UI
+						// $separator = '';
+						// return implode( $separator, $obj[$matches[1]] );
+						return $obj[$matches[1]][0];
+					}
+
+			}
+		}, $formula );
+	}
+
+	/**
+	 * @param array $obj
+	 * @param array $descriptor
+	 * @return array
+	 */
+	private	function applyFormulas( $obj, $descriptor ) {
+		$ret = [];
+		// labels
+		foreach ( $obj as $label => $val ) {
+			$field = $descriptor['fields'][$label];
+
+			// replace <value>, <label>, <i>, <n> with their values
+			if ( empty( $field['value-formula'] ) ) {
+				$ret[$label] = $val;
+
+			} else {
+				$ret[$label] = [];
+
+				// store original value
+				if ( !array_key_exists( '__transformed-properties', $ret ) ) {
+					$ret['__transformed-properties'] = [];
+				}
+
+				$ret['__transformed-properties'][$label] = [];
+				foreach ( $val as $i => $value ) {
+					$ret['__transformed-properties'][$label][$i] = $value;
+					$ret[$label][$i] = $this->replaceFormula( $obj, $value, $field['value-formula'], $i );
+				}
 			}
 		}
 		return $ret;
 	}
 
 	/**
-	 * @param array $data
-	 * @param array $formula
-	 * @return string
+	 * @param Output $output
+	 * @param array $obj
+	 * @param array $descriptor
+	 * @return array
 	 */
-	private function replaceFormula( $data, $formula ) {
-		preg_match_all( '/<\s*([^<>]+)\s*>/', $formula, $matches, PREG_PATTERN_ORDER );
+	private	function parseWikitext( $output, $obj, $descriptor ) {
+		$ret = [];
+		// labels
+		foreach ( $obj as $label => $val ) {
+			if ( strpos( $label, '__' ) === 0 ) {
+				$ret[$label] = $val;
+				continue;
+			}
+			$field = $descriptor['fields'][$label];
 
-		foreach ( $data as $property => $values ) {
-			if ( in_array( $property, $matches[1] ) ) {
-				$formula = preg_replace( '/\<\s*' . preg_quote( $property, '/' ) . '\s*\>/', \PageProperties::array_last( $values ), $formula );
+			if ( empty( $field['value-formula'] ) ) {
+				$ret[$label] = $val;
+
+			} else {
+				$ret[$label] = [];
+				foreach ( $val as $i => $value ) {
+					$ret[$label][$i] = Parser::stripOuterParagraph( $output->parseAsContent( $value ) );
+				}
+			}
+		}
+		return $ret;
+	}
+
+	/**
+	 * @param string $filename
+	 * @param string $filekey
+	 * @param array &$errors
+	 */
+	private	function publishStashedFile( $filename, $filekey, &$errors ) {
+		$job = new PagePropertiesPublishStashedFile( Title::makeTitle( NS_FILE, $filename ), [
+			'filename' => $filename,
+			'filekey' => $filekey,
+			'comment' => "",
+			// 'tags' => "",
+			'text' => false,
+			'watch' => false,
+			// 'watchlistexpiry' => $watchlistExpiry,
+			// 'session' => $this->getContext()->exportSession()
+		] );
+
+		if ( !$job->run() ) {
+			$errors[] = $this->msg( "pageproperties-editsemantic-publishfilejoberror", $job->getLastError(), $filename )->parse();
+		}
+	}
+
+	/**
+	 * @param array $obj
+	 * @param array $formData
+	 * @param array &$errors
+	 */
+	private	function uploadFiles( $obj, $formData, &$errors ) {
+		// @TODO handle multiple instances
+		$ret = [];
+		// labels
+		foreach ( $obj as $label => $val ) {
+			// fields
+			foreach ( $val as $i => $value ) {
+				if ( !empty( $formData[$label][$i]['filekey'] ) ) {
+					$this->publishStashedFile( $value, $formData[$label][$i]['filekey'], $errors );
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param array $obj
+	 * @param array $formData
+	 * @return array
+	 */
+	private	function applyPrefixes( $obj, $formData ) {
+		// @TODO handle multiple instances
+		$ret = [];
+
+		// labels
+		foreach ( $obj as $label => $val ) {
+			if ( strpos( $label, '__' ) === 0 ) {
+				$ret[$label] = $val;
+				continue;
+			}
+			$ret[$label] = [];
+			// ***attention! this assumes that
+			// it was a multiselect
+			$prefix = ( !empty( $formData[$label][0]['prefix'] ) ? $formData[$label][0]['prefix']
+				: null );
+			foreach ( $val as $i => $value ) {
+				$ret[$label][$i] = ( $prefix === null ? $value : $prefix . $value );
 			}
 		}
 
-		return $formula;
+		return $ret;
 	}
 
 	/**
 	 * @see includes/specialpage/FormSpecialPage.php
 	 * @todo split the function below in various methods
 	 * @param array $data
-	 * @param array &$errors
 	 * @return true|array
 	 */
-	public function onFormSubmit( $data, &$errors ) {
-		// @todo, use instead the form (expression) 'semantic-properties-freetext-', etc.
-		$arr = [ '__freetext' => null, '__title' => null, '__pagename-formula' => null, '__content-model' => null ];
+	private function onFormSubmit( $data ) {
+		$data = json_decode( $data, true );
+		$errors = [];
+		$output = $this->getOutput();
 
-		foreach ( $arr as $key => $value ) {
-			$arr[$key] = ( array_key_exists( $key, $data ) && count( $data[$key] ) ? $data[$key][0] : null );
+		$forms = \PageProperties::getFormDescriptors( $output, $data );
+
+		$model_keys = [
+			'pagecategories',
+			'target-title',
+			'freetext',
+			'content-model',
+			'pagename-formula'
+		];
+
+		$model = [];
+		foreach ( $model_keys as $key ) {
+			$data['model'][$key] = $model[$key] = ( !empty( $data['model'][$key] ) ? $data['model'][$key] : null );
 		}
 
-		$filekeys = [];
-		foreach ( $data as $key => $values ) {
-			if ( strpos( $key, '__filekey-' ) === 0 ) {
-				$prop = substr( $key, strlen( '__filekey-' ) );
-
-				foreach ( $values as $k => $v ) {
-					if ( !empty( $v ) && !empty( $data[$prop][$k] ) ) {
-						// record only the reference, to handle transformations
-						// *** this is only required in conjunction with value-formula
-						$filekeys[$prop][$k] = $v;
-					}
-				}
-
-				unset( $data[$key] );
-			}
+		// @TODO make recursive
+		$values = [];
+		foreach ( $data['forms'] as $form => $value ) {
+			$values[$form] = $this->processValues( $value, $forms[$form] );
 		}
 
-		$prefixes = [];
-		foreach ( $data as $key => $values ) {
-			if ( strpos( $key, '__prefix-' ) === 0 ) {
-				$prop = substr( $key, strlen( '__prefix-' ) );
-
-				foreach ( $values as $k => $v ) {
-					if ( !empty( $data[$prop][$k] ) ) {
-						$prefixes[$prop][$k] = $v;
-					}
-				}
-
-				unset( $data[$key] );
-			}
+		foreach ( $values as $form => $value ) {
+			$values[$form] = $this->applyFormulas( $value, $forms[$form] );
 		}
 
-		// *** when $freetext is null the main slot will not be handled
-		list( $freetext, $targetTitle, $pagenameFormula, $contentModel ) = array_values( $arr );
+		$pagenameFormula = null;
+		if ( $model['pagename-formula'] ) {
+			$form_ = $model['pagename-formula'];
+		} else {
+			// @TODO ...
+			// get pagename formula of unique form in the page
+			$form_ = array_key_first( $data['forms'] );
+		}
+		if ( !empty( $forms[$form_]['pagename-formula'] ) ) {
+			$pagenameFormula = $this->replaceFormula( $values[$form_], null, $forms[$form_]['pagename-formula'], null );
+		}
 
-		$semanticForms = ( $data['__semanticforms'] ?? [] );
-		$categories = ( $data['__pagecategories'] ?? [] );
+		if ( !empty( $pagenameFormula ) ) {
+			$pagenameFormula = Parser::stripOuterParagraph( $output->parseAsContent( $pagenameFormula ) );
+		}
+
+		$targetTitle = $model['target-title'];
+
+		$currentArticle = ( $_GET['context'] === 'EditSemantic' &&
+			\PageProperties::isKnownArticle( $this->title ) ? $this->title : null );
+
+		$creatingPage = !$currentArticle;
+
+		$title = ( $currentArticle ?? Title::newFromText( $targetTitle, NS_MAIN ) );
+
+		if ( !$title && !empty( $pagenameFormula ) ) {
+			$title = Title::newFromText( $pagenameFormula );
+		}
+
+		if ( !$title ) {
+			$errors[] = $this->msg( "pageproperties-editsemantic-titlenotset" )->text();
+			return [ $data, $errors ];
+		}
+
+		if ( !$currentArticle && $title->isKnown() ) {
+			$errors[] = $this->msg( "pageproperties-editsemantic-title-exists" )->text();
+			return [ $data, $errors ];
+		}
+
+		// now set the output with the target title
+		$context = new RequestContext();
+		$context->setTitle( $title );
+		$output = $context->getOutput();
+
+		// @TODO remove 'on-create-only' at this point
+
+		foreach ( $values as $form => $value ) {
+			$values[$form] = $this->parseWikitext( $output, $value, $forms[$form] );
+		}
+
+		foreach ( $values as $form => $value ) {
+			$this->uploadFiles( $value, $data['forms'][$form], $errors );
+		}
+
+		foreach ( $values as $form => $value ) {
+			$values[$form] = $this->applyPrefixes( $value, $data['forms'][$form] );
+		}
+
+		$properties = $this->processValues( $data['properties'] );
+		$this->uploadFiles( $properties, $data['properties'], $errors );
+		$properties = $this->applyPrefixes( $properties, $data['properties'] );
+
+		$update_obj = [
+			'forms' => $values,
+			'semantic-properties' => $properties,
+		];
 
 		$pageProperties = [];
 		if ( $this->title ) {
@@ -203,153 +409,16 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 		$default_values = [
 			'page-properties' => [],
 			'semantic-properties' => [],
-			'semantic-forms' => [],
+			'forms' => [],
 		];
 
-		$pageProperties = array_merge( $default_values, $pageProperties );
+		unset( $pageProperties['forms'], $pageProperties['semantic-properties'] );
+		$pageProperties = array_merge( $default_values, $pageProperties, $update_obj );
 
-		unset( $data['__pagename-formula'], $data['__semanticforms'], $data['__freetext'],
-			$data['__title'], $data['__pagecategories'], $data['__content-model'] );
-
-		// untransformed data on error
-		$pageProperties['semantic-properties'] = $data;
-
-		$pageProperties['semantic-forms'] = $semanticForms;
-		$pageProperties['page-properties']['categories'] = $categories;
-		$update_obj = $pageProperties;
-
-		// replacements <fieldName> to <fieldValue>
-		$valueFormulas = [];
-		$onCreateOnly = [];
-
-		$output = $this->getOutput();
-
-		\PageProperties::setForms( $output, $semanticForms );
-
-		$forms = \PageProperties::$forms;
-
-		foreach ( $semanticForms as $value ) {
-			foreach ( $forms[$value]['fields'] as $label => $field ) {
-
-				if ( !empty( $field['value-formula'] ) ) {
-					$valueFormulas[$label][] = $field['value-formula'];
-				}
-
-				if ( array_key_exists( 'on-create-only', $field ) && (bool)$field['on-create-only'] === true ) {
-					$onCreateOnly[] = $label;
-				}
-			}
-		}
-
-		// store untransformed properties values
-		// to be used in forms
-		if ( !empty( $valueFormulas ) ) {
-			$update_obj['transformed-properties'] = array_intersect_key( $data, $valueFormulas );
-		}
-
-		// replace field values, without parsing wikitext yet
-		foreach ( $valueFormulas as $label => $values ) {
-			foreach ( $data[$label] as $key => $field ) {
-				foreach ( $values as $formula ) {
-					$data[$label][$key] = $this->replaceFormula( $data, $formula );
-				}
-			}
-		}
-
-		$editingTitle = ( $_GET['context'] === 'EditSemantic' &&
-			\PageProperties::isKnownArticle( $this->title ) ? $this->title : null );
-
-		$creatingPage = !$editingTitle;
-
-		$title = ( $editingTitle ?? Title::newFromText( $targetTitle, NS_MAIN ) );
-
-		if ( !$title && !empty( $pagenameFormula ) ) {
-
-			// get pagename formula with a parsed version of submitted data
-			$data_ = $data;
-			foreach ( $valueFormulas as $label => $values ) {
-				foreach ( $data_[$label] as $key => $field ) {
-					// *** or use trim(strip_tags())
-					$data_[$label][$key] = Parser::stripOuterParagraph( $output->parseAsContent( $data[$label][$key] ) );
-				}
-			}
-
-			$pagenameFormula = $this->replaceFormula( $data_, $pagenameFormula );
-
-			// *** or use trim(strip_tags())
-			$pagenameFormula = Parser::stripOuterParagraph( $output->parseAsContent( $pagenameFormula ) );
-
-			$title = Title::newFromText( $pagenameFormula );
-		}
-
-		if ( !$title ) {
-			$errors[] = $this->msg( "pageproperties-editsemantic-titlenotset" )->text();
-			return [ $pageProperties, $freetext ];
-		}
-
-		if ( !$editingTitle && $title->isKnown() ) {
-			$errors[] = $this->msg( "pageproperties-editsemantic-title-exists" )->text();
-			return [ $pageProperties, $freetext ];
-		}
-
-		// now set the output with the target title
-		$context = new RequestContext();
-		$context->setTitle( $title );
-		$output = $context->getOutput();
-
-		// parse wikitext, with the target context title
-		foreach ( $valueFormulas as $label => $values ) {
-			foreach ( $data[$label] as $key => $field ) {
-				// *** or use trim(strip_tags())
-				$data[$label][$key] = Parser::stripOuterParagraph( $output->parseAsContent( $data[$label][$key] ) );
-			}
-		}
-
-		// reassign filenames after transformations
-		// *** this is only required in conjunction with value-formula
-		$upload = [];
-		foreach ( $filekeys as $label => $values ) {
-			foreach ( $values as $key => $filekey ) {
-				$upload[$filekey] = $data[$label][$key];
-			}
-		}
-
-		// assign prefixes (if any) after transformations
-		foreach ( $prefixes as $prop => $values ) {
-			foreach ( $values as $key => $value ) {
-				$data[$prop][$key] = $value . $data[$prop][$key];
-			}
-		}
-
-		if ( $creatingPage ) {
-			foreach ( $onCreateOnly as $field ) {
-				unset( $data['semantic-properties'][$field] );
-			}
-		}
-
-		$update_obj['semantic-properties'] = $data;
+		$pageProperties['page-properties']['categories'] = (array)$model['pagecategories'];
 
 		// $errors is handled by reference
-		$ret = \PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors, $freetext, $contentModel );
-
-		// publish stashed files
-		foreach ( $upload as $filekey => $filename ) {
-			// see includes/api/ApiUpload.php
-			$job = new PagePropertiesPublishStashedFile( Title::makeTitle( NS_FILE, $filename ),
-				[
-					'filename' => $filename,
-					'filekey' => $filekey,
-					'comment' => "",
-					// 'tags' => "",
-					'text' => false,
-					'watch' => false,
-					// 'watchlistexpiry' => $watchlistExpiry,
-					// 'session' => $this->getContext()->exportSession()
-				] );
-			if ( !$job->run() ) {
-				$errors[] = $this->msg( "pageproperties-editsemantic-publishfilejoberror", $job->getLastError(), $filename )->parse();
-			}
-		}
+		$ret = \PageProperties::setPageProperties( $this->user, $title, $pageProperties, $errors, $model['freetext'], $model['content-model'] );
 
 		if ( !count( $errors ) ) {
 			// unset( $_SESSION['pagepropertiesform-submissiondata-' . $this->formID] );
@@ -359,7 +428,7 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 		}
 
 		$errors[] = $this->msg( "pageproperties-editsemantic-contentsnotsaved" )->text();
-		return [ $pageProperties, $freetext ];
+		return [ $data, $errors ];
 	}
 
 }

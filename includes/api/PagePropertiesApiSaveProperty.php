@@ -81,7 +81,7 @@ class PagePropertiesApiSaveProperty extends ApiBase {
 		if ( $resultAction === 'update' && $previousLabel !== $label ) {
 			$update_items[$previousLabel] = $label;
 
-			if ( empty( $params['confirmJobExecution'] ) ) {
+			if ( empty( $params['confirm-job-execution'] ) ) {
 				$jobsCount = $this->createJobs( $update_items, true );
 
 				if ( $jobsCount > $GLOBALS['wgPagePropertiesCreateJobsWarningLimit'] ) {
