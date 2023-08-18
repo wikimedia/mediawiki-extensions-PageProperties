@@ -375,5 +375,15 @@
 	"apihelp-pageproperties-form-descriptor-summary": "form descriptor summary",
 	"apihelp-pageproperties-manageproperties-saveform-param-form-fields": "saveform-param-form-fields",
 	"apihelp-pageproperties-form-descriptor-param-forms": "form-descriptor-param-forms",
-	"apihelp-pageproperties-form-descriptor-example-1": "form descriptor example-1"
+	"apihelp-pageproperties-form-descriptor-example-1": "form descriptor example-1",
+
+	"pageproperties-jsmodule-forms-fieldalign-label": "field align",
+	"pageproperties-jsmodule-forms-fieldalign-help": "",
+	"pageproperties-jsmodule-forms-align-top": "top",
+	"pageproperties-jsmodule-forms-freetext-left": "left",
+	"pageproperties-jsmodule-forms-freetext-right": "right",
+	"pageproperties-jsmodule-forms-freetext-inline": "inline",
+
+	"pageproperties-jsmodule-forms-popuphelp-label": "popup help",
+	"pageproperties-jsmodule-forms-popuphelp-help": ""
 }

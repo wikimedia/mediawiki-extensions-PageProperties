@@ -34,7 +34,6 @@ const PagePropertiesForms = ( function () {
 	var DataTable;
 	var DataTableB;
 	var DialogName = 'dialogForms';
-	var SemanticProperties;
 	var WindowManager;
 
 	function getPropertyValue( property ) {
@@ -219,6 +218,34 @@ const PagePropertiesForms = ( function () {
 
 		Model[ 'content-model' ] = contentModelsInput;
 
+		var fieldAlignInput = new OO.ui.DropdownInputWidget( {
+			options: PagePropertiesFunctions.createDropDownOptions( {
+				top: mw.msg(
+					'pageproperties-jsmodule-forms-align-top'
+				),
+				left: mw.msg(
+					'pageproperties-jsmodule-forms-freetext-left'
+				),
+				right: mw.msg(
+					'pageproperties-jsmodule-forms-freetext-right'
+				),
+				inline: mw.msg(
+					'pageproperties-jsmodule-forms-freetext-inline'
+				)
+			} ),
+			// @see https://gerrit.wikimedia.org/r/plugins/gitiles/oojs/ui/+/c2805c7e9e83e2f3a857451d46c80231d1658a0f/demos/classes/DialogWithDropdowns.js
+			$overlay: this.$overlay,
+			value: getPropertyValue( 'field-align' ) || 'top'
+		} );
+
+		Model[ 'field-align' ] = fieldAlignInput;
+
+		var popupHelpInput = new OO.ui.ToggleSwitchWidget( {
+			value: getPropertyValue( 'popup-help' ) || false
+		} );
+
+		Model[ 'popup-help' ] = popupHelpInput;
+
 		fieldset.addItems( [
 			new OO.ui.FieldLayout( formNameInput, {
 				label: mw.msg( 'pageproperties-jsmodule-forms-formname' ),
@@ -264,6 +291,20 @@ const PagePropertiesForms = ( function () {
 				label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
 				align: 'top',
 				help: mw.msg( 'pageproperties-jsmodule-forms-contentmodels-help' ),
+				helpInline: true
+			} ),
+
+			new OO.ui.FieldLayout( fieldAlignInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-fieldalign-label' ),
+				align: 'top',
+				help: mw.msg( 'pageproperties-jsmodule-forms-fieldalign-help' ),
+				helpInline: true
+			} ),
+
+			new OO.ui.FieldLayout( popupHelpInput, {
+				label: mw.msg( 'pageproperties-jsmodule-forms-popuphelp-label' ),
+				align: 'top',
+				help: mw.msg( 'pageproperties-jsmodule-forms-popuphelp-help' ),
 				helpInline: true
 			} )
 		] );
@@ -418,7 +459,6 @@ const PagePropertiesForms = ( function () {
 						case 'property':
 							PagePropertiesFormFieldInst.openDialog(
 								initializeDataTableB,
-								SemanticProperties,
 								SelectedForm.fields,
 								label
 							);
@@ -857,7 +897,6 @@ const PagePropertiesForms = ( function () {
 				case 'add-field':
 					PagePropertiesFormFieldInst.openDialog(
 						initializeDataTableB,
-						SemanticProperties,
 						SelectedForm.fields
 					);
 					break;
@@ -936,10 +975,6 @@ const PagePropertiesForms = ( function () {
 		return toolbar;
 	}
 
-	function updateVariables( semanticProperties ) {
-		SemanticProperties = semanticProperties;
-	}
-
 	function preInitialize( config, windowManager ) {
 		Config = config;
 		WindowManager = windowManager;
@@ -954,22 +989,11 @@ const PagePropertiesForms = ( function () {
 
 	function initialize(
 		pageProperties,
-
-		// @TODO not necessary here
-		// pagePropertiesInputConfig,
-
-		// pagePropertiesFormField,
-		// pagePropertiesContentBlock,
-		semanticProperties,
 		forms
 	) {
 		if ( arguments.length ) {
 			PageProperties = pageProperties;
-			// PagePropertiesInputConfig = pagePropertiesInputConfig;
-			// PagePropertiesContentBlock = pagePropertiesContentBlock;
-			SemanticProperties = semanticProperties;
 			Forms = forms;
-			// PagePropertiesFormField = pagePropertiesFormField;
 		}
 
 		if ( Config.context === 'ManageProperties' ) {
@@ -1003,7 +1027,6 @@ const PagePropertiesForms = ( function () {
 
 	return {
 		initialize,
-		updateVariables,
 		createToolbarA,
 		initializeDataTable,
 		preInitialize,

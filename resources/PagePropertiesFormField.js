@@ -40,7 +40,6 @@ const PagePropertiesFormField = function (
 	var ParentObj;
 	var panelLayout;
 	var CurrentLabel;
-	var SemanticProperties;
 	var Callback;
 
 	function inArray( val, arr ) {
@@ -76,7 +75,13 @@ const PagePropertiesFormField = function (
 		multipleValues
 	) {
 		if ( propertyModel === 'smw-property' ) {
-			var dataType = SemanticProperties[ SMWproperty ].type;
+			var dataType = ManageProperties.getSemanticProperty( SMWproperty, 'type' );
+
+			if ( !dataType ) {
+				// eslint-disable-next-line no-console
+				console.error( SMWproperty + ' property does not exist' );
+				dataType = '_wpg';
+			}
 			var ret = ManageProperties.getAvailableInputs( dataType );
 
 			if ( multipleValues === false ) {
@@ -462,11 +467,11 @@ const PagePropertiesFormField = function (
 			} )
 		);
 
-		var SMWpropertiesValue = getPropertyValue( 'SMW-property' ) || Object.keys( SemanticProperties )[ 0 ];
+		var SMWpropertiesValue = getPropertyValue( 'SMW-property' ) || Object.keys( ManageProperties.getSemanticProperties() )[ 0 ];
 
 		var SMWpropertiesInput = new OO.ui.DropdownInputWidget( {
 			options: PagePropertiesFunctions.createDropDownOptions(
-				Object.keys( SemanticProperties ),
+				Object.keys( ManageProperties.getSemanticProperties() ),
 				{ key: 'value' }
 			),
 			value: SMWpropertiesValue
@@ -658,7 +663,12 @@ const PagePropertiesFormField = function (
 
 		inputConfigButton.on( 'click', function () {
 			var SMWproperty = getPropertyValue( 'SMW-property' );
-			var dataType = SemanticProperties[ SMWproperty ].type;
+			var dataType = ManageProperties.getSemanticProperty( SMWproperty, 'type' );
+			if ( !dataType ) {
+				// eslint-disable-next-line no-console
+				console.error( SMWproperty + ' property does not exist' );
+				dataType = '_wpg';
+			}
 			PagePropertiesInputConfigInst.openDialog(
 				Model[ 'input-config' ],
 				availableInputsInput.getValue(),
@@ -902,9 +912,8 @@ const PagePropertiesFormField = function (
 		return window.innerHeight - 100;
 	};
 
-	function openDialog( callback, semanticProperties, parentObj, fieldLabel ) {
+	function openDialog( callback, parentObj, fieldLabel ) {
 		Callback = callback;
-		SemanticProperties = semanticProperties;
 		Model = {};
 		ParentObj = parentObj;
 		// NewField = fieldLabel === null || fieldLabel === undefined;

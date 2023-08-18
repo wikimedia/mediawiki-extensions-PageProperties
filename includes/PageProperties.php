@@ -1407,8 +1407,13 @@ class PageProperties {
 				$fields[ $label ][ 'content-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $fields[ $label ][ 'content' ] ) );
 			}
 
-			if ( !in_array( $label, self::$semanticProperties ) && !empty( $field['SMW-property'] ) ) {
-				self::$semanticProperties[] = $label;
+			// old model
+			if ( !array_key_exists( 'property-model', $fields[ $label ] ) ) {
+				if ( !in_array( $label, self::$semanticProperties ) ) {
+					self::$semanticProperties[] = $label;
+				}
+			} elseif ( !empty( $field['SMW-property'] ) && !in_array( $field['SMW-property'], self::$semanticProperties ) ) {
+				self::$semanticProperties[] = $field['SMW-property'];
 			}
 
 			if ( !empty( $field['default'] ) ) {
@@ -1418,15 +1423,19 @@ class PageProperties {
 
 			if ( !empty( $field['help-message'] ) ) {
 				$helpMessages = $field['help-message'];
-				if ( !is_array( $helpMessages ) ) {
-					$helpMessages = [ $helpMessages ];
+
+				// *** back compatibility, remove
+				if ( is_array( $helpMessages ) ) {
+					$dataValues = [];
+					foreach ( $helpMessages as $value_ ) {
+						$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
+					}
+					$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
+					$fields[ $label ][ 'help-message-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $helpMessages[0] ) );
+
+				} else {
+					$helpMessages = Parser::stripOuterParagraph( $output->parseAsContent( $field['help-message'] ) );
 				}
-				$dataValues = [];
-				foreach ( $helpMessages as $value_ ) {
-					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
-				}
-				$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
-				$fields[ $label ][ 'help-message-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $helpMessages[0] ) );
 			}
 
 			if ( !empty( $field['label'] ) ) {

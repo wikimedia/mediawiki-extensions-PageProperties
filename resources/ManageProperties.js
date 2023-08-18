@@ -63,6 +63,21 @@ const ManageProperties = ( function () {
 		return jQuery.inArray( val, arr ) !== -1;
 	}
 
+	function getSemanticProperties() {
+		return SemanticProperties;
+	}
+
+	function getSemanticProperty( label, prop ) {
+		if ( label in SemanticProperties ) {
+			var ret = $.extend( { label: label }, SemanticProperties[ label ] );
+			if ( prop ) {
+				return ( prop in ret ? ret[ prop ] : null );
+			}
+			return ret;
+		}
+		return null;
+	}
+
 	function isMultiselect( inputName ) {
 		// return inArray(inputName, ManageProperties.multiselectInputs))
 		return inputName.indexOf( 'Multiselect' ) !== -1;
@@ -1450,8 +1465,12 @@ const ManageProperties = ( function () {
 					.done( function ( res ) {
 						// console.log("res", res);
 						if ( 'pageproperties-manageproperties-load-data' in res ) {
+							var data = res[ 'pageproperties-manageproperties-load-data' ];
+							if ( 'semanticProperties' in data ) {
+								SemanticProperties = res.semanticProperties;
+							}
 							Config.loadedData = Config.loadedData.concat( dataToLoad );
-							resolve( res[ 'pageproperties-manageproperties-load-data' ] );
+							resolve( data );
 						} else {
 							reject();
 						}
@@ -1500,14 +1519,7 @@ const ManageProperties = ( function () {
 		}
 
 		if ( Config.context === 'EditSemantic' ) {
-			PageProperties.updateSemanticProperties( SemanticProperties );
 			PageProperties.updateData( data );
-		}
-
-		PagePropertiesForms.updateVariables( SemanticProperties );
-
-		if ( Config.context === 'ManageProperties' ) {
-			ImportProperties.updateVariables( SemanticProperties );
 		}
 
 		initialize();
@@ -1631,15 +1643,14 @@ const ManageProperties = ( function () {
 	// Config = config;
 	// }
 
-	function preInitialize( config, windowManager ) {
+	function preInitialize( config, windowManager, semanticProperties ) {
 		Config = config;
 		WindowManager = windowManager;
+		SemanticProperties = semanticProperties;
 	}
 
 	function initialize(
 		pageProperties,
-		// pagePropertiesInputConfig,
-		semanticProperties,
 		importedVocabularies,
 		typeLabels,
 		propertyLabels
@@ -1648,8 +1659,6 @@ const ManageProperties = ( function () {
 
 		if ( arguments.length ) {
 			PageProperties = pageProperties;
-			// PagePropertiesInputConfig = pagePropertiesInputConfig;
-			SemanticProperties = semanticProperties;
 			ImportedVocabularies = importedVocabularies;
 			TypeLabels = typeLabels;
 			PropertyLabels = propertyLabels;
@@ -1748,6 +1757,8 @@ const ManageProperties = ( function () {
 		preInitialize,
 		loadData,
 		matchLoadedData,
-		TypeLabels
+		TypeLabels,
+		getSemanticProperties,
+		getSemanticProperty
 	};
 }() );

@@ -26,7 +26,6 @@
 const PageProperties = function (
 	Config,
 	FormID,
-	SemanticProperties,
 	Properties,
 	Forms,
 	SemanticForms,
@@ -132,13 +131,13 @@ const PageProperties = function (
 				config.options = PagePropertiesFunctions.createDropDownOptions(
 					config.options
 				);
-			} else if ( !field.isForm && isSMWProperty( field ) ) {
+			} else if ( field.form === null && isSMWProperty( field ) ) {
 				config.options = [];
 				var SMWProperty = getSMWProperty( field );
 				if ( '_PVAL' in SMWProperty.properties ) {
 					config.options = PagePropertiesFunctions.createDropDownOptions(
 						// eslint-disable-next-line no-underscore-dangle
-						SemanticProperties[ SMWProperty ].properties._PVAL,
+						SMWProperty.properties._PVAL,
 						{
 							key: 'value'
 						}
@@ -160,19 +159,13 @@ const PageProperties = function (
 
 	function isSMWProperty( field ) {
 		return (
-			'SMW-property' in field && field[ 'SMW-property' ] in SemanticProperties
+			'SMW-property' in field && field[ 'SMW-property' ] in ManageProperties.getSemanticProperties()
 		);
 	}
 
 	function getSMWProperty( field ) {
-		if (
-			'SMW-property' in field &&
-			field[ 'SMW-property' ] in SemanticProperties
-		) {
-			return $.extend(
-				{ label: field[ 'SMW-property' ] },
-				SemanticProperties[ field[ 'SMW-property' ] ]
-			);
+		if ( 'SMW-property' in field ) {
+			return ManageProperties.getSemanticProperty( field[ 'SMW-property' ] );
 		}
 		return null;
 	}
@@ -183,6 +176,22 @@ const PageProperties = function (
 
 	function getPageCategories() {
 		return PageCategories;
+	}
+
+	function getFieldAlign( field ) {
+		if ( field.form === null ) {
+			return 'top';
+		}
+		return 'field-align' in Forms[ field.form ] ?
+			Forms[ field.form ][ 'field-align' ] : 'top';
+	}
+
+	function getHelpInline( field ) {
+		if ( field.form === null ) {
+			return true;
+		}
+		return 'popup-help' in Forms[ field.form ] ?
+			!isTrue( Forms[ field.form ][ 'popup-help' ] ) : true;
 	}
 
 	function getPreferredInput( field ) {
@@ -430,11 +439,6 @@ const PageProperties = function (
 			)
 		);
 
-		var deleteButton = new OO.ui.ButtonWidget( {
-			icon: 'close'
-			// flags: ["destructive"],
-		} );
-
 		// the filename is always required
 		var required = true;
 
@@ -515,20 +519,26 @@ const PageProperties = function (
 		// eslint-disable-next-line no-unused-vars
 		this.fail = function ( res ) {};
 
-		var widget = new OO.ui.ActionFieldLayout( filePreview, deleteButton, {
-			label: '',
-			align: 'top',
-			// This can produce:
-			// * inputName-mw.widgets.DateInputWidget
-			// * inputName-mw.widgets...
-			classes: [ 'inputName-' + config.inputName ]
+		var deleteButton = new OO.ui.ButtonWidget( {
+			icon: 'close'
+			// flags: ["destructive"],
 		} );
-
-		this.$element.append( widget.$element );
-
 		deleteButton.connect( this, {
 			click: 'onDeleteButtonClick'
 		} );
+		this.$element.append(
+			$( '<div style="display: table; width: 100%">' ).append( [
+				$(
+					'<div style="display: table-cell">'
+				).append(
+					filePreview.$element
+				),
+				$( '<div style="display: table-cell; width: 1%">'
+				).append(
+					deleteButton.$element
+				)
+			] )
+		);
 	};
 
 	OO.inheritClass( InnerItemWidgetFile, OO.ui.Widget );
@@ -545,7 +555,6 @@ const PageProperties = function (
 		this.parentWidget = config.parentWidget;
 		this.index = config.index;
 		var property = this.parentWidget.config.property;
-		var form = this.parentWidget.config.form;
 
 		OO.ui.mixin.GroupWidget.call(
 			this,
@@ -556,11 +565,6 @@ const PageProperties = function (
 				config
 			)
 		);
-
-		var deleteButton = new OO.ui.ButtonWidget( {
-			icon: 'close'
-			// flags: ["destructive"],
-		} );
 
 		var field = this.parentWidget.config.field;
 
@@ -579,7 +583,7 @@ const PageProperties = function (
 		if (
 			'default' in field &&
 			isEmpty( config.value ) &&
-			( Config.isNewPage || required || isNewForm( form ) )
+			( Config.isNewPage || required || isNewForm( field.form ) )
 		) {
 			if ( !Array.isArray( config.value ) ) {
 				config.value.value = field[ 'default-result' ];
@@ -667,54 +671,31 @@ const PageProperties = function (
 			default: inputWidget
 		};
 
-		var helpMessage = '';
-		if ( config.last ) {
-			if ( 'help-message' in field ) {
-				// *** back compatibility, remove
-				if ( field[ 'help-message-result' ] ) {
-					helpMessage = field[ 'help-message-result' ];
-				} else {
-					helpMessage = field[ 'help-message' ];
+		if ( !config.multiple ) {
+			this.$element.append( inputWidget.$element );
 
-					if ( Array.isArray( helpMessage ) ) {
-						helpMessage = helpMessage[ 0 ];
-					}
-				}
-			} else if ( isSMWProperty( field ) ) {
-				var SMWProperty = getSMWProperty( field );
-				if ( SMWProperty.description ) {
-					helpMessage = SMWProperty.description;
-				}
-			}
-		}
-
-		var widget = config.multiple ?
-			new OO.ui.ActionFieldLayout( inputWidget, deleteButton, {
-				label: '',
-				align: 'top',
-				help: new OO.ui.HtmlSnippet( helpMessage ),
-				helpInline: true,
-				// This can produce:
-				// * inputName-mw.widgets.DateInputWidget
-				// * inputName-mw.widgets...
-				classes: [ 'inputName-' + config.inputName ]
-			} ) :
-			new OO.ui.FieldLayout( inputWidget, {
-				label: '',
-				align: 'top',
-				help: new OO.ui.HtmlSnippet( helpMessage ),
-				helpInline: true,
-				// This can produce:
-				// * inputName-mw.widgets.DateInputWidget
-				// * inputName-mw.widgets...
-				classes: [ 'inputName-' + config.inputName ]
+		} else {
+			var deleteButton = new OO.ui.ButtonWidget( {
+				icon: 'close'
+				// flags: ["destructive"],
 			} );
-
-		this.$element.append( widget.$element );
-
-		deleteButton.connect( this, {
-			click: 'onDeleteButtonClick'
-		} );
+			deleteButton.connect( this, {
+				click: 'onDeleteButtonClick'
+			} );
+			this.$element.append(
+				$( '<div style="display: table; width: 100%">' ).append( [
+					$(
+						'<div style="display: table-cell">'
+					).append(
+						inputWidget.$element
+					),
+					$( '<div style="display: table-cell; width: 1%">'
+					).append(
+						deleteButton.$element
+					)
+				] )
+			);
+		}
 	};
 
 	OO.inheritClass( InnerItemWidget, OO.ui.Widget );
@@ -749,6 +730,9 @@ const PageProperties = function (
 
 		var field = config.field;
 
+		var fieldAlign = getFieldAlign( field );
+		var helpInline = getHelpInline( field );
+
 		var inputName = ManageProperties.inputNameFromLabel(
 			getPreferredInput( field )
 		);
@@ -775,7 +759,7 @@ const PageProperties = function (
 			if ( [ 'multiple-value' ] in field && field[ 'multiple-value' ] == true ) {
 				multiple = true;
 			} else if (
-				!field.isForm &&
+				field.form === null &&
 				SMWProperty &&
 				!ManageProperties.disableMultipleFields( SMWProperty.type, inputName ) &&
 				'__pageproperties_allows_multiple_values' in SMWProperty.properties &&
@@ -783,6 +767,24 @@ const PageProperties = function (
 				SMWProperty.properties.__pageproperties_allows_multiple_values
 			) {
 				multiple = true;
+			}
+		}
+
+		var helpMessage = '';
+		if ( 'help-message' in field ) {
+			if ( field[ 'help-message-result' ] ) {
+				helpMessage = field[ 'help-message-result' ];
+			} else {
+				helpMessage = field[ 'help-message' ];
+
+				if ( Array.isArray( helpMessage ) ) {
+					helpMessage = helpMessage[ 0 ];
+				}
+			}
+		} else if ( isSMWProperty( field ) ) {
+			var SMWProperty = getSMWProperty( field );
+			if ( SMWProperty.description ) {
+				helpMessage = SMWProperty.description;
 			}
 		}
 
@@ -886,8 +888,9 @@ const PageProperties = function (
 			items.push(
 				new OO.ui.FieldLayout( optionsList, {
 					label: new OO.ui.HtmlSnippet( label ),
-					align: 'top',
-
+					align: fieldAlign,
+					helpInline: helpMessage ? helpInline : true,
+					help: new OO.ui.HtmlSnippet( helpMessage ),
 					// The following classes are used here:
 					// * inputName-mw.widgets.DateInputWidget
 					// * inputName-mw.widgets. ...
@@ -977,7 +980,13 @@ const PageProperties = function (
 			upload.initialize( inputWidget, this );
 			inputWidget.on( 'change', upload.uploadFiles.bind( upload ) );
 
-			items.push( inputWidget );
+			var fieldUploadInput = new OO.ui.FieldLayout( inputWidget, {
+				label: fieldAlign === 'top' ? '' : new OO.ui.HtmlSnippet( '&nbsp;' ),
+				align: fieldAlign,
+				classes: [ ' pageproperties-form-button-addoption' ]
+			} );
+
+			items.push( fieldUploadInput );
 		} else if ( multiple ) {
 			var addOption = new OO.ui.ButtonWidget( {
 				// label: "add field",
@@ -998,7 +1007,13 @@ const PageProperties = function (
 				] );
 			} );
 
-			items.push( addOption );
+			var fieldAddOption = new OO.ui.FieldLayout( addOption, {
+				label: fieldAlign === 'top' ? '' : new OO.ui.HtmlSnippet( '&nbsp;' ),
+				align: fieldAlign,
+				classes: [ ' pageproperties-form-button-addoption' ]
+			} );
+
+			items.push( fieldAddOption );
 		}
 
 		for ( var item of items ) {
@@ -1036,7 +1051,7 @@ const PageProperties = function (
 			var values;
 			switch ( self.data.toolName ) {
 				case 'addremoveproperties':
-					values = Object.keys( SemanticProperties );
+					values = Object.keys( ManageProperties.getSemanticProperties() );
 					self.selectedItems = self.selectedProperties;
 					break;
 				case 'addremoveforms':
@@ -1063,7 +1078,7 @@ const PageProperties = function (
 					menuOptionWidget.$element.append(
 						$(
 							'<span class="oo-ui-labelElement-label right">' +
-								SemanticProperties[ x ].typeLabel +
+								ManageProperties.getSemanticProperty( x, 'typeLabel' ) +
 								'</span>'
 						)
 					);
@@ -1273,9 +1288,6 @@ const PageProperties = function (
 
 			ManageProperties.loadData( dataToLoad )
 				.then( ( res ) => {
-					if ( 'semanticProperties' in res ) {
-						SemanticProperties = res.semanticProperties;
-					}
 					if ( 'forms' in res ) {
 						Forms = res.forms;
 					}
@@ -1413,17 +1425,12 @@ const PageProperties = function (
 					ActionWidget.popPending();
 					$( ToolbarA.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
 
-					if ( 'semanticProperties' in res ) {
-						SemanticProperties = res.semanticProperties;
-					}
 					if ( 'forms' in res ) {
 						Forms = res.forms;
 					}
 
 					ManageProperties.initialize(
 						Self,
-						// PagePropertiesInputConfig,
-						SemanticProperties,
 						res.importedVocabularies,
 						res.typeLabels,
 						res.propertyLabels
@@ -1431,7 +1438,7 @@ const PageProperties = function (
 
 					PagePropertiesCategories.initialize( res.categories );
 
-					PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
+					PagePropertiesForms.initialize( Self, Forms );
 
 					onSelect( this );
 				} )
@@ -1520,7 +1527,6 @@ const PageProperties = function (
 
 	function PanelLayout( config ) {
 		PanelLayout.super.call( this, config );
-
 		/*
 		this.messageWidget = new OO.ui.MessageWidget({
 			type: "notice",
@@ -1557,15 +1563,10 @@ const PageProperties = function (
 				}
 
 				ManageProperties.loadData( dataToLoad ).then( ( res ) => {
-					if ( 'semanticProperties' in res ) {
-						SemanticProperties = res.semanticProperties;
-					}
 					if ( 'forms' in res ) {
 						Forms = res.forms;
 					}
-
-					PagePropertiesForms.initialize( Self, SemanticProperties, Forms );
-
+					PagePropertiesForms.initialize( Self, Forms );
 					PagePropertiesForms.openDialog( config.data.label );
 				} );
 			} );
@@ -1610,7 +1611,7 @@ const PageProperties = function (
 			}
 
 			if ( obj.form ) {
-				fields[ i ].isForm = true;
+				fields[ i ].form = obj.form;
 			}
 
 			if ( !( i in model.properties ) ) {
@@ -1642,13 +1643,6 @@ const PageProperties = function (
 				if ( !( 'semantic-properties' in Properties ) ) {
 					Properties[ 'semantic-properties' ] = {};
 				}
-				// ^^^
-				/*
-				Properties["semantic-properties"] =
-					PagePropertiesFunctions.sortObjectByKeys(
-						Properties["semantic-properties"]
-					);
-				*/
 
 				// @TODO create PageProperties properties
 				// in a dedicated namespace with properties
@@ -1658,7 +1652,7 @@ const PageProperties = function (
 				for ( var i in Properties[ 'semantic-properties' ] ) {
 					fields[ i ] = {
 						'SMW-property': i,
-						isForm: false
+						form: null
 					};
 				}
 
@@ -1671,7 +1665,6 @@ const PageProperties = function (
 						form: null
 					}
 				);
-
 				break;
 
 			case 'form':
@@ -1713,10 +1706,7 @@ const PageProperties = function (
 
 					userDefinedField = new OO.ui.FieldLayout( userDefinedInput, {
 						label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
-						align: 'top',
-
-						// help: new OO.ui.HtmlSnippet("&nbsp;"),
-						// helpInline: true,
+						align: data.fieldAlign,
 						// The following classes are used here:
 						// * inputName-mw.widgets.TitleInputWidget
 						// * inputName-mw.widgets...
@@ -1764,7 +1754,7 @@ const PageProperties = function (
 					items.push(
 						new OO.ui.FieldLayout( selectPagenameInput, {
 							label: mw.msg( 'pageproperties-jsmodule-forms-pagename' ),
-							align: 'top',
+							align: data.fieldAlign,
 							classes: [ 'ItemWidget' ]
 						} )
 					);
@@ -1793,7 +1783,7 @@ const PageProperties = function (
 					items.push(
 						new OO.ui.FieldLayout( inputWidget, {
 							label: mw.msg( 'pageproperties-jsmodule-formedit-freetext' ),
-							align: 'top',
+							align: data.fieldAlign,
 
 							// The following classes are used here:
 							// * inputName-mw.widgets.TitleInputWidget
@@ -1820,7 +1810,7 @@ const PageProperties = function (
 						items.push(
 							new OO.ui.FieldLayout( categoriesInput, {
 								label: mw.msg( 'pageproperties-jsmodule-forms-categories' ),
-								align: 'top',
+								align: data.fieldAlign,
 								classes: [ 'ItemWidget' ]
 							} )
 						);
@@ -1851,7 +1841,7 @@ const PageProperties = function (
 						items.push(
 							new OO.ui.FieldLayout( selectContentModelsInput, {
 								label: mw.msg( 'pageproperties-jsmodule-forms-contentmodels' ),
-								align: 'top',
+								align: data.fieldAlign,
 								classes: [ 'ItemWidget' ]
 							} )
 						);
@@ -1928,10 +1918,6 @@ const PageProperties = function (
 		return true;
 	}
 
-	function updateSemanticProperties( semanticProperties ) {
-		SemanticProperties = semanticProperties;
-	}
-
 	function getPropertiesPanels() {
 		var panels = [];
 
@@ -1942,13 +1928,14 @@ const PageProperties = function (
 		var formCategories = [];
 		var formContentModels = [];
 		var showCategoriesInput = !SemanticForms.length || !Config.isNewPage;
+		var fieldAlign = 'top';
 
 		if ( !( 'semantic-properties' in Properties ) ) {
 			Properties[ 'semantic-properties' ] = {};
 		}
 
 		for ( var form of SemanticForms ) {
-			if ( isTrue( Forms[ form ][ 'show-categories-input' ] ) ) {
+			if ( 'show-categories-input' in Forms[ form ] && isTrue( Forms[ form ][ 'show-categories-input' ] ) ) {
 				showCategoriesInput = true;
 			}
 
@@ -1978,6 +1965,12 @@ const PageProperties = function (
 				for ( var i of Forms[ form ].categories ) {
 					formCategories.push( i );
 				}
+			}
+
+			// this will set the fieldAlign of the wiki
+			// section as the fieldAlign of last form
+			if ( 'field-align' in Forms[ form ] ) {
+				fieldAlign = Forms[ form ][ 'field-align' ];
 			}
 
 			panels.push(
@@ -2048,7 +2041,8 @@ const PageProperties = function (
 						userDefined: userDefined,
 						freeText: freeText,
 						categories: formCategories,
-						showCategoriesInput: showCategoriesInput
+						showCategoriesInput: showCategoriesInput,
+						fieldAlign: fieldAlign
 					}
 				} )
 			);
@@ -2297,8 +2291,7 @@ const PageProperties = function (
 		getModel,
 		getSemanticForms,
 		getPageCategories,
-		updateForms,
-		updateSemanticProperties
+		updateForms
 	};
 };
 
@@ -2325,7 +2318,7 @@ $( function () {
 
 	var windowManager = new PagePropertiesWindowManager();
 
-	ManageProperties.preInitialize( config, windowManager );
+	ManageProperties.preInitialize( config, windowManager, semanticProperties );
 
 	if (
 		config.context === 'ManageProperties' ||
@@ -2374,7 +2367,6 @@ $( function () {
 			pageProperties = new PageProperties(
 				config,
 				formID,
-				semanticProperties,
 				properties,
 				forms,
 				semanticForms,
@@ -2397,17 +2389,14 @@ $( function () {
 	if ( config.context === 'ManageProperties' ) {
 		ManageProperties.initialize(
 			pageProperties,
-			semanticProperties,
 			null,
 			null,
 			null
 		);
 
 		PagePropertiesCategories.initialize( categories );
-
-		PagePropertiesForms.initialize( pageProperties, semanticProperties, forms );
-
-		ImportProperties.initialize( config, semanticProperties, windowManager );
+		PagePropertiesForms.initialize( pageProperties, forms );
+		ImportProperties.initialize( config, windowManager );
 	}
 
 	// display every 3 days

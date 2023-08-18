@@ -28,7 +28,6 @@ const ImportProperties = ( function () {
 	var myStack;
 	// used to refresh datatable
 	var FileContent;
-	var SemanticProperties;
 	var fileInputWidget;
 	var processDialog;
 	var booklet;
@@ -56,7 +55,7 @@ const ImportProperties = ( function () {
 
 	function resetAll() {
 		$( '#import-wrapper' ).empty();
-		initialize( SemanticProperties );
+		initialize();
 	}
 
 	function createToolbar() {
@@ -568,7 +567,7 @@ const ImportProperties = ( function () {
 		ProcessDialog.super.prototype.initialize.apply( this, arguments );
 
 		function getItems( value ) {
-			var values = Object.keys( SemanticProperties );
+			var values = Object.keys( ManageProperties.getSemanticProperties() );
 			if ( value ) {
 				var valueLowerCase = value.toLowerCase();
 				values = values.filter(
@@ -584,7 +583,7 @@ const ImportProperties = ( function () {
 				menuOptionWidget.$element.append(
 					$(
 						'<span class="oo-ui-labelElement-label right">' +
-							SemanticProperties[ x ].typeLabel +
+							ManageProperties.getSemanticProperty( x, 'typeLabel' ) +
 							'</span>'
 					)
 				);
@@ -1210,14 +1209,9 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 		this.outlineItem.setLabel( 'Page Three' );
 	};
 
-	function updateVariables( semanticProperties ) {
-		SemanticProperties = semanticProperties;
-	}
-
 	// , wgMaxArticleSize
-	function initialize( config, semanticProperties, windowManager ) {
+	function initialize( config, windowManager ) {
 		Config = config;
-		SemanticProperties = semanticProperties;
 		WindowManager = windowManager;
 		// WgMaxArticleSize = wgMaxArticleSize;
 
@@ -1353,7 +1347,6 @@ ProcessDialogConfirm.prototype.getSetupProcess = function ( data ) {
 		$( '#import-wrapper' ).append( myStack.$element );
 	}
 	return {
-		initialize,
-		updateVariables
+		initialize
 	};
 }() );

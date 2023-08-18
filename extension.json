@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.2.5c",
+	"version": "1.3.0",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -488,7 +488,15 @@
 				"pageproperties-jsmodule-formfield-existing-field",
 				"pageproperties-jsmodule-formfield-empty-field",
 				"pageproperties-jsmodule-formfield-default-value",
-				"pageproperties-jsmodule-forms-field-help-message"
+				"pageproperties-jsmodule-forms-field-help-message",
+				"pageproperties-jsmodule-forms-fieldalign-label",
+				"pageproperties-jsmodule-forms-fieldalign-help",
+				"pageproperties-jsmodule-forms-align-top",
+				"pageproperties-jsmodule-forms-freetext-left",
+				"pageproperties-jsmodule-forms-freetext-right",
+				"pageproperties-jsmodule-forms-freetext-inline",
+				"pageproperties-jsmodule-forms-popuphelp-label",
+				"pageproperties-jsmodule-forms-popuphelp-help"
 			]
 		}
 	},

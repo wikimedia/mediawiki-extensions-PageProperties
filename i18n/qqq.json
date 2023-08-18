@@ -368,5 +368,15 @@
 	"apihelp-pageproperties-form-descriptor-summary": "A label message",
 	"apihelp-pageproperties-manageproperties-saveform-param-form-fields": "A label message",
 	"apihelp-pageproperties-form-descriptor-param-forms": "A label message",
-	"apihelp-pageproperties-form-descriptor-example-1": "A label message"
+	"apihelp-pageproperties-form-descriptor-example-1": "A label message",
+
+	"pageproperties-jsmodule-forms-fieldalign-label": "A label message",
+	"pageproperties-jsmodule-forms-fieldalign-help": "A label message",
+	"pageproperties-jsmodule-forms-align-top": "A label message",
+	"pageproperties-jsmodule-forms-freetext-left": "A label message",
+	"pageproperties-jsmodule-forms-freetext-right": "A label message",
+	"pageproperties-jsmodule-forms-freetext-inline": "A label message",
+
+	"pageproperties-jsmodule-forms-popuphelp-label": "A label message",
+	"pageproperties-jsmodule-forms-popuphelp-help": "A label message"
 }
