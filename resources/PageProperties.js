@@ -179,6 +179,9 @@ const PageProperties = function (
 	}
 
 	function getFieldAlign( field ) {
+		if ( 'field-align' in field ) {
+			return field[ 'field-align' ];
+		}
 		if ( field.form === null ) {
 			return 'top';
 		}
@@ -1652,10 +1655,10 @@ const PageProperties = function (
 				for ( var i in Properties[ 'semantic-properties' ] ) {
 					fields[ i ] = {
 						'SMW-property': i,
-						form: null
+						form: null,
+						'field-align': data.fieldAlign
 					};
 				}
-
 				items = addPropertyItems(
 					ModelProperties,
 					Properties[ 'semantic-properties' ],
@@ -2007,7 +2010,8 @@ const PageProperties = function (
 					data: {
 						label: mw.msg( 'pageproperties-jsmodule-formedit-properties' ),
 						expanded: false,
-						type: 'properties'
+						type: 'properties',
+						fieldAlign: fieldAlign
 					}
 				} )
 			);
