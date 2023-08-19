@@ -597,7 +597,6 @@ const PagePropertiesInputConfig = function ( windowManager ) {
 					// ],
 					text: [ 'string', 'Text to insert' ],
 					title: [ 'string', 'The title text.' ]
-
 					// value: ["string", "The value of the input."],
 				};
 
@@ -736,6 +735,68 @@ const PagePropertiesInputConfig = function ( windowManager ) {
 					disabled: [ 'boolean', 'Disable the widget.' ],
 					id: [ 'string', 'The HTML id attribute used in the rendered tag.' ],
 					text: [ 'string', 'Text to insert' ]
+				};
+
+			case 'OO.ui.SelectFileWidget':
+				return {
+					accept: [
+						'array',
+						'MIME types to accept.'
+					],
+					accessKey: [ 'string', 'The access key' ],
+					// button: [
+					// 	'object',
+					// 	'Config to pass to select file button.'
+					// ],
+					// @TODO uncomment ...
+					// buttonOnly: [
+					// 	'boolean',
+					// 	'Show only the select file button, no info field. Requires showDropTarget to be false'
+					// ],
+					dir: [ 'string', 'The directionality of the input (ltr/rtl).' ],
+					disabled: [ 'boolean', 'Disable the widget.' ],
+					droppable: [
+						'boolean',
+						'Whether to accept files by drag and drop'
+					],
+					icon: [
+						'string',
+						'The symbolic name of the icon (e.g., ‘remove’ or ‘menu’), or a map of symbolic names.'
+					],
+					id: [ 'string', 'The HTML id attribute used in the rendered tag.' ],
+					inputFilter: [
+						'string',
+						'The name of an input filter function. Input filters modify the value of an input before it is accepted'
+					],
+					inputId: [ 'string', 'The value of the input’s HTML id attribute.' ],
+					// multiple: [
+					// 	'boolean',
+					// 	'Allow multiple files to be selected'
+					// ],
+					invisibleLabel: [
+						'boolean',
+						'Whether the label should be visually hidden (but still accessible to screen-readers).'
+					],
+					name: [
+						'string',
+						'The value of the input’s HTML name attribute.'
+					],
+					notsupported: [
+						'string',
+						'Text to display when file support is missing in the browser.'
+					],
+					placeholder: [ 'string', 'Placeholder text' ],
+					showDropTarget: [
+						'boolean',
+						'Whether to show a drop target. Requires droppable to be true.'
+					],
+					text: [ 'string', 'Text to insert' ],
+					thumbnailSizeLimit: [
+						'number',
+						'File size limit in MiB above which to not try and show a preview (for performance)'
+					],
+					title: [ 'string', 'The title text.' ]
+					// value: ["string", "The value of the input."],
 				};
 		}
 	}

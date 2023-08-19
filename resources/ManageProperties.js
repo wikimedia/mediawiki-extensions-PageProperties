@@ -16,7 +16,7 @@
  *
  * @file
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright © 2021-2022, https://wikisphere.org
+ * @copyright Copyright © 2021-2023, https://wikisphere.org
  */
 
 /* eslint-disable no-tabs */
@@ -585,7 +585,8 @@ const ManageProperties = ( function () {
 				if ( !( 'accept' in config ) ) {
 					config.accept = Config.allowedMimeTypes;
 				}
-				// if (!('accept' in config ) ) {
+				// @TODO uncomment when buttonOnly in input config is enabled
+				// if (!('buttonOnly' in config ) ) {
 				config.buttonOnly = true;
 				// }
 				config.button = {

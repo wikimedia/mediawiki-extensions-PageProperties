@@ -1365,7 +1365,7 @@ class PageProperties {
 				continue;
 			}
 
-			// load only form actually in the
+			// load only forms actually in the page
 			if ( $loadForm === false ) {
 				self::$forms[$titleText] = [];
 				continue;
@@ -1402,6 +1402,12 @@ class PageProperties {
 		};
 
 		foreach ( $fields as $label => $field ) {
+
+			// compound field
+			if ( is_array( $field ) && array_key_exists( 'fields', $field ) ) {
+				$fields[$label]['fields'] = self::processFieldsContent( $output, $dataValueFactory, $pDescProp, $langCode, $field['fields'] );
+				continue;
+			}
 
 			if ( array_key_exists( 'type', $fields[ $label ] ) && $fields[ $label ][ 'type' ] === 'content-block' ) {
 				$fields[ $label ][ 'content-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $fields[ $label ][ 'content' ] ) );

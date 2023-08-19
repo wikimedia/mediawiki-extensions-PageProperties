@@ -101,7 +101,6 @@ const PageProperties = function (
 
 	function getInputWidget( innerItemWidgetConfig, property, config ) {
 		var config = JSON.parse( JSON.stringify( config ) ) || {};
-
 		config.value = Array.isArray( config.value ) ?
 			config.value.map( ( x ) => x.value ) :
 			config.value.value;
@@ -554,7 +553,6 @@ const PageProperties = function (
 	var InnerItemWidget = function ( config ) {
 		config = config || {};
 		InnerItemWidget.super.call( this, config );
-
 		this.parentWidget = config.parentWidget;
 		this.index = config.index;
 		var property = this.parentWidget.config.property;
@@ -584,7 +582,7 @@ const PageProperties = function (
 		// @TODO default and "default-result"
 		// should support multiselect inputs
 		if (
-			'default' in field &&
+			'default-result' in field &&
 			isEmpty( config.value ) &&
 			( Config.isNewPage || required || isNewForm( field.form ) )
 		) {
@@ -608,6 +606,7 @@ const PageProperties = function (
 		// create shallow copy, otherwise changes are
 		// copied to Forms[ form ].fields[ property ][ 'input-config' ]
 		var inputConfig = $.extend(
+			{},	// *** important !! cast to object
 			JSON.parse( JSON.stringify( field[ 'input-config' ] ) ),
 			{ value: config.value, required: required }
 		);
@@ -909,12 +908,12 @@ const PageProperties = function (
 			self.required = required;
 
 			var inputConfig = $.extend(
+				{ multiple: multiple },
 				JSON.parse(
 					JSON.stringify( 'input-config' in field ? field[ 'input-config' ] : {} )
 				),
 				{
 					required: required && optionsList.items.length === 0,
-					multiple: multiple,
 					value: { value: '' }
 				}
 			);
@@ -988,6 +987,8 @@ const PageProperties = function (
 				align: fieldAlign,
 				classes: [ ' pageproperties-form-button-addoption' ]
 			} );
+
+			// @TODO hide input after first upload is multiple is false
 
 			items.push( fieldUploadInput );
 		} else if ( multiple ) {
