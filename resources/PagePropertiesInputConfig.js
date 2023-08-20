@@ -940,6 +940,7 @@ const PagePropertiesInputConfig = function ( windowManager ) {
 			for ( var key in SelectedItems ) {
 				if ( !inArray( key, dialog.selectedItems ) ) {
 					delete SelectedItems[ key ];
+					delete Model[ key ];
 				}
 			}
 
