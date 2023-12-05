@@ -18,8 +18,8 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 class PagePropertiesEditAction extends Action {

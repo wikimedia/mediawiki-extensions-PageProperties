@@ -21,133 +21,54 @@
  * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
-use MediaWiki\Extension\PageProperties\ReplaceText as ReplaceText;
+use MediaWiki\Extension\PageProperties\DatabaseManager as DatabaseManager;
+use MediaWiki\Extension\PageProperties\QueryProcessor as QueryProcessor;
+use MediaWiki\Extension\PageProperties\SchemaProcessor as SchemaProcessor;
+use MediaWiki\Extension\PageProperties\SemanticMediawiki as SemanticMediawiki;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
-use SMW\MediaWiki\MediaWikiNsContentReader;
 
 if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
-const ALL_FORMS = 0b0001;
-const ALL_PROPERTIES = 0b0010;
-
 class PageProperties {
+	/** @var cachedJsonData */
+	protected static $cachedJsonData = [];
 
-	protected static $cached_page_properties = [];
-	protected static $SMWOptions = null;
-	protected static $SMWApplicationFactory = null;
-	/** @var SMW\Store */
-	public static $SMWStore = null;
-	/** @var SMW\DataValueFactory */
-	public static $SMWDataValueFactory = null;
 	/** @var User */
 	public static $User;
+
 	/** @var UserGroupManager */
 	private static $userGroupManager;
+
 	/** @var array */
 	private static $slotsCache = [];
+
 	/** @var array */
-	public static $semanticProperties = [];
-	// public static $semanticForms = [];
-	/** @var array */
-	public static $forms = [];
+	public static $schemas = [];
+
 	/** @var array */
 	public static $pageForms = [];
+
 	/** @var int */
 	public static $formIndex = 0;
-	/** @var int */
-	public static $queryLimit = 500;
+
 	/** @var Logger */
 	private static $Logger;
 
-	/**
-	 * @see extensions/SemanticMediaWiki/import/groups/predefined.properties.json
-	 * @var string[]
-	 */
-	public static $exclude = [
-		// content_group
-		"_SOBJ",
-		"_ASK",
-		"_MEDIA",
-		"_MIME",
-		"_ATTCH_LINK",
-		"_FILE_ATTCH",
-		"_CONT_TYPE",
-		"_CONT_AUTHOR",
-		"_CONT_LEN",
-		"_CONT_LANG",
-		"_CONT_TITLE",
-		"_CONT_DATE",
-		"_CONT_KEYW",
-		"_TRANS",
-		"_TRANS_SOURCE",
-		"_TRANS_GROUP",
+	/** @var int */
+	public static $queryLimit = 500;
 
-		// declarative
-		"_TYPE",
-		"_UNIT",
-		// imported from
-		"_IMPO",
-		"_CONV",
-		"_SERV",
-		"_PVAL",
-		"_LIST",
-		"_PREC",
-		"_PDESC",
-		"_PPLB",
-		"_PVAP",
-		"_PVALI",
-		"_PVUC",
-		// "_PEID",
-		"_PEFU",
+	/** @var SMW */
+	public static $SMW;
 
-		// schema
-		"_SCHEMA_TYPE",
-		"_SCHEMA_DEF",
-		"_SCHEMA_DESC",
-		"_SCHEMA_TAG",
-		"_SCHEMA_LINK",
-		"_FORMAT_SCHEMA",
-		"_CONSTRAINT_SCHEMA",
-		"_PROFILE_SCHEMA",
+	/** @var schemaProcessor */
+	public static $schemaProcessor;
 
-		// classification_group
-		"_INST",
-		"_PPGR",
-		"_SUBP",
-		"_SUBC",
-
-		"__pageproperties_preferred_input",
-		"__pageproperties_allows_multiple_values",
-	];
-
-	/**
-	 * *** special properties related to property definitions
-	 * @see https://www.semantic-mediawiki.org/wiki/Help:Special_properties
-	 * @var string[]
-	 */
-	public static $specialPropertyDefinitions = [
-		'_PVAL',
-		'_CONV',
-		'_UNIT',
-		'_URI',
-		'_SERV',
-		'_SUBP',
-		'_LIST',
-		'_PVAP',
-		'_PREC',
-		'_PDESC',
-		'_PVUC',
-		'_PVALI',
-		'_PEFU',
-		'_PEID',
-		'_PPLB',
-		'__pageproperties_preferred_input',
-		'__pageproperties_allows_multiple_values'
-	];
+	/** @var templateMap */
+	public static $templateMap = [];
 
 	/**
 	 * @return void
@@ -156,96 +77,27 @@ class PageProperties {
 		self::$Logger = LoggerFactory::getInstance( 'PageProperties' );
 		self::$User = RequestContext::getMain()->getUser();
 		self::$userGroupManager = MediaWikiServices::getInstance()->getUserGroupManager();
-		self::initSMW();
+		self::$schemaProcessor = new SchemaProcessor();
 
-		if ( !array_key_exists( 'wgPagePropertiesShowSlotsNavigation', $GLOBALS ) ) {
-			$GLOBALS['wgPagePropertiesShowSlotsNavigation'] = self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' );
+		// @FIXME	// defined( 'SMW_VERSION' );
+		self::$SMW = false;
+		if ( self::$SMW ) {
+			SemanticMediawiki::initSMW();
 		}
-	}
-
-	/**
-	 * @param Parser $parser
-	 * @param string $template
-	 * @param array $argv
-	 * @return string
-	 */
-	private static function templateRender( $parser, $template, $argv ) {
-		$templateRenderer = new SMW\MediaWiki\Renderer\HtmlTemplateRenderer(
-			( new SMW\MediaWiki\Renderer\WikitextTemplateRenderer() ),
-			$parser
-		);
-
-		foreach ( $argv as $key => $value ) {
-			$templateRenderer->addField( $key, $value );
+		if ( !array_key_exists( 'wgPagePropertiesShowSlotsNavigation', $GLOBALS )
+			&& self::$User->isAllowed( 'pageproperties-canmanageschemas' ) ) {
+			$GLOBALS['wgPagePropertiesShowSlotsNavigation'] = true;
 		}
 
-		$templateRenderer->packFieldsForTemplate( $template );
-
-		return $templateRenderer->render();
-	}
-
-	/**
-	 * @param Parser $parser
-	 * @param mixed ...$argv
-	 * @return array
-	 */
-	public static function parserFunctionPagepropertiesFormButton( Parser $parser, ...$argv ) {
-		$out = $parser->getOutput();
-
-/*
-{{#pagepropertiesformbutton: text
-|Form a
-|Form b
-|Form c
-|button-type=
-|class=
-}}
-*/
-		$defaultParameters = [
-			'button-type',
-			'class',
-		];
-
-		$buttonText = array_shift( $argv );
-
-		list( $forms, $options ) = self::parseParameters( $argv, $defaultParameters );
-
-		if ( empty( $options['button-type'] ) ) {
-			$options['button-type'] = 'button';
-		}
-
-		if ( empty( $options['class'] ) ) {
-			$options['class'] = 'pageproperties-form-button';
-		}
-
-		$options['class'] = explode( " ", $options['class'] );
-
-		if ( $options['button-type'] === 'button' ) {
-			$options['class'][] = 'mw-ui-button';
-			$options['class'][] = 'mw-ui-progressive';
-		}
-
-		$specialpage_title = SpecialPage::getTitleFor( 'EditSemantic' );
-
-		$html = '';
-		// $html .= '<form action="' . $specialpage_title . '" method="POST"';
-		// $html .= '<input type="hidden" name="form" value="'. implode( '|', $forms ) . '" />';
-		// $html .= '<button>' . $buttonText . '</button>';
-		// $html .= '</form>';
-
-		$url = wfAppendQuery( $specialpage_title->getLocalURL(), 'form=' . urlencode( implode( '|', $forms ) ) );
-		$html .= '<a class="' . implode( " ", $options['class'] ) . '" href="' . $url . '">';
-		$html .= $buttonText;
-		$html .= '</a>';
-
-		if ( $options['button-type'] === 'button' ) {
-			$out->addModules( [ 'mediawiki.ui.button' ] );
-		}
-
-		return [
-			$html,
-			'noparse' => true,
-			'isHTML' => true
+		$GLOBALS['wgPagePropertiesResultPrinterClasses'] = [
+			'table' => 'TableResultPrinter',
+			'datatable' => 'DatatableResultPrinter',
+			'datatables' => 'DatatableResultPrinter',
+			// 'list' => 'ListResultPrinter',
+			'json' => 'JsonResultPrinter',
+			'template' => 'TemplateResultPrinter',
+			'templates' => 'TemplateResultPrinter',
+			'query' => 'QueryResultPrinter',
 		];
 	}
 
@@ -261,41 +113,264 @@ class PageProperties {
 
 /*
 {{#pagepropertiesform: Form a
-|Form b
-|Form c
+|title =
+|action = create / edit
+|return-page =
+|edit-page = [page to edit]
+|view = inline / popup
+|popup-size = medium / larger
 |css-class =
-|redirect-page =
-|submit-text =
-|paging = [ sections, steps ] (multiple-forms-display-strategy)
+|pagename=formula =
+|edit-freetext = true / false
+|edit-categories = true / false
+|edit-content-model = true / false
+|default-categories =
+|default-content-model = wikitext / ...
+|layout-align = top / left / right / inline
+|popup-help = true / false
+|submit-button-text =
+|layout = stacked / booklet / tabs / steps
 |email-to =
 |navigation-next =
 |navigation-back =
+|show-progress =
 }}
-
 */
+
 		$defaultParameters = [
-			'css-class',
-			'redirect-page',
-			'submit-text',
-			'paging',
-			'email-to',
-			'navigation-next',
-			'navigation-back',
+			'action' => [ 'create', 'string' ],
+			'edit-page' => [ '', 'string' ],
+			'return-page' => [ '', 'string' ],
+			'title' => [ '', 'string' ],
+			'view' => [ 'inline', 'string' ],
+			'popup-size' => [ 'medium', 'string' ],
+			'css-class' => [ '', 'string' ],
+			'pagename-formula' => [ '', 'string' ],
+			'edit-freetext' => [ 'false', 'bool' ],
+			'edit-categories' => [ 'false', 'bool' ],
+			'edit-content-model' => [ 'false', 'bool' ],
+			'default-categories' => [ '', 'array' ],
+			'default-content-model' => [ 'wikitext', 'string' ],
+			'layout-align' => [ 'top', 'string' ],
+			'popup-help' => [ 'false', 'bool' ],
+			'submit-button-text' => [ '', 'string' ],
+			'validate-button-text' => [ '', 'string' ],
+			'layout' => [ 'tabs', 'string' ],
+			'email-to' => [ '', 'array' ],
+			'navigation-next' => [ '', 'string' ],
+			'navigation-back' => [ '', 'string' ],
+			'show-progress' => [ '', 'bool' ],
 		];
 
-		list( $forms, $options ) = self::parseParameters( $argv, $defaultParameters );
+		list( $schemas, $options ) = self::parseParameters( $argv, array_keys( $defaultParameters ) );
 
-		$formID = self::formID( $title, $forms, ++self::$formIndex );
+		$params = self::applyDefaultParams( $defaultParameters, $options );
 
-		self::$pageForms[$formID] = [ 'forms' => $forms, 'options' => $options ];
+		$databaseManager = new DatabaseManager();
+
+		$schemas = array_filter( $schemas, static function ( $val ) use( $databaseManager ) {
+			return $databaseManager->schemaExists( $val );
+		} );
+
+		$formID = self::formID( $title, $schemas, ++self::$formIndex );
+
+		self::$pageForms[$formID] = [
+			'data' => [
+				'schemas' => $schemas,
+			],
+			'options' => $params
+		];
 
 		$out->setExtensionData( 'pagepropertiesforms', self::$pageForms );
 
 		return [
-			'<div class="pagepropertiesform-wrapper" id="pagepropertiesform-wrapper-' . $formID . '"></div>',
+			'<div class="PagePropertiesFormWrapper" id="pagepropertiesform-wrapper-' . $formID . '"></div>',
 			'noparse' => true,
 			'isHTML' => true
 		];
+	}
+
+	/**
+	 * @param array $defaultParams
+	 * @param array $params
+	 * @return array
+	 */
+	public static function applyDefaultParams( $defaultParams, $params ) {
+		$ret = [];
+		foreach ( $defaultParams as $key => $value ) {
+			list( $defaultValue, $type ) = $value;
+			$val = $defaultValue;
+			if ( array_key_exists( $key, $params ) ) {
+				$val = $params[$key];
+			}
+
+			switch ( $type ) {
+				case 'bool':
+					$val = filter_var( $val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+					if ( $val === null ) {
+						$val = filter_var( $defaultValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+					}
+					settype( $val, "bool" );
+					break;
+
+				case 'array':
+					$val = array_filter(
+						preg_split( '/\s*,\s*/', $val, -1, PREG_SPLIT_NO_EMPTY ) );
+					break;
+
+				case 'number':
+					$val = filter_var( $val, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE );
+					settype( $val, "float" );
+					break;
+
+				case 'int':
+				case 'integer':
+					$val = filter_var( $val, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE );
+					settype( $val, "integer" );
+					break;
+
+				default:
+			}
+
+			$ret[$key] = $val;
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param mixed ...$argv
+	 * @return array
+	 */
+	public static function parserFunctionPagepropertiesPrint( Parser $parser, ...$argv ) {
+		$title = $parser->getTitle();
+/*
+{{#pagepropertiesprint: {{FULLPAGENAME}}
+|?File
+|?Caption
+|template=DisplayPictures
+|template?File=DisplayPicture
+|values-separator=,<nowiki> </nowiki>
+|separator=<br>
+}}
+*/
+		$title_ = Title::newFromText( array_shift( $argv ) );
+		if ( !$title_ || !$title_->isKnown() ) {
+			$title_ = $title;
+		}
+
+		$query = '[[' . $title_->getFullText() . ']]';
+		// array_unshift( $argv, $query );
+
+		return self::parserFunctionPagepropertiesQuery( $parser, ...[ $query, ...$argv ] );
+		// return forward_static_call_array(
+		// 	[\PageProperties::class, 'parserFunctionPagepropertiesQuery'],
+		// 	[ $parser, ...$argv ]
+		// );
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param mixed ...$argv
+	 * @return array
+	 */
+	public static function parserFunctionPagepropertiesQuery( Parser $parser, ...$argv ) {
+		$out = $parser->getOutput();
+		$title = $parser->getTitle();
+		$out->setExtensionData( 'pagepropertiesquery', true );
+
+		$out->addModules( [ 'ext.PageProperties.PrintResults' ] );
+/*
+{{#pagepropertiesquery: [[approved::true]][[display_date::{{#time: Y-m-d }}]]
+|?display_date
+|?blurb
+|?display_order
+|schema=Curated page
+|limit=
+|sort=
+|template=Curated page
+|template?subitem=Curated page Sub
+}}
+*/
+		$query = array_shift( $argv );
+
+		$defaultParameters = [
+			'schema' => [ '', 'string' ],
+			'separator' => [ '', 'string' ],
+			'values-separator' => [ ', ', 'string' ],
+			'template' => [ '', 'string' ],
+			'limit' => [ 100, 'integer' ],
+			'offset' => [ 0, 'integer' ],
+			'order' => [ '', 'string' ],
+			'format' => [ 'json', 'string' ],
+			'pagetitle-name' => [ 'pagetitle', 'string' ],
+			'hierarchical-conditions' => [ true, 'bool' ],
+ ];
+
+		list( $values, $params ) = self::parseParameters( $argv, array_keys( $defaultParameters ) );
+
+		$params = self::applyDefaultParams( $defaultParameters, $params );
+
+		$printouts = [];
+
+		// root template
+		$templates = [ '' => $params['template'] ];
+
+		foreach ( $values as $val ) {
+			// $templates
+			if ( preg_match( '/^template(\?(.+))?=(.+)/', $val, $match ) ) {
+				$templates[$match[2]] = $match[3];
+				continue;
+			}
+
+			if ( strpos( $val, '?' ) === 0 ) {
+				$printouts[substr( $val, 1 )] = null;
+				continue;
+			}
+		}
+
+		$returnError = static function ( $error ) {
+			return [ $error,
+				'isHTML' => false
+			];
+		};
+
+		if ( empty( $params['schema'] ) ) {
+			return $returnError( 'schema not set' );
+		}
+
+		if ( !self::$schemaProcessor ) {
+			self::initialize();
+		}
+
+		if ( !array_key_exists( $params['format'], $GLOBALS['wgPagePropertiesResultPrinterClasses'] ) ) {
+			return 'format not supported';
+		}
+
+		$databaseManager = new DatabaseManager();
+
+		$out->setExtensionData( 'pagepropertiesquerydata', $params );
+
+		if ( !$databaseManager->schemaExists( $params['schema'] ) ) {
+			return $returnError( 'schema does not exist' );
+		}
+
+		$printouts = array_keys( $printouts );
+
+		$output = RequestContext::getMain()->getOutput();
+		$schema = self::getSchema( $output, $params['schema'] );
+
+		$className = "MediaWiki\Extension\PageProperties\ResultPrinters\\{$GLOBALS['wgPagePropertiesResultPrinterClasses'][$params['format']]}";
+
+		$queryProcessor = new QueryProcessor( $query, $printouts, $params );
+
+		$resultsPrinter = new $className( $parser, $out, $queryProcessor, $schema, $templates, $params, $printouts );
+
+		$ret = $resultsPrinter->getResults();
+		$isHtml = $resultsPrinter->isHtml();
+
+		return [ $ret, 'isHTML' => $isHtml ];
 	}
 
 	/**
@@ -320,111 +395,6 @@ class PageProperties {
 		}
 
 		return [ $ret, $options ];
-	}
-
-	/**
-	 * @param Parser $parser
-	 * @param mixed ...$argv
-	 * @return array
-	 */
-	public static function parserFunctionPageproperties( Parser $parser, ...$argv ) {
-		$parser->getOutput()->setExtensionData( 'pageproperties', true );
-
-/*
-
-{{#pageproperties: {{FULLPAGENAME}}
-|?File
-|?Caption
-|template=DisplayPictures
-|template?File=DisplayPicture
-|values-separator=,<nowiki> </nowiki>
-|separator=<br>
-}}
-
-*/
-		$title = Title::newFromText( array_shift( $argv ) );
-
-		if ( !$title || !$title->isKnown() ) {
-			$title = $parser->getTitle();
-		}
-
-		$page_properties = self::getPageProperties( $title );
-
-		if ( empty( $page_properties ) || empty( $page_properties['semantic-properties'] ) ) {
-			return "";
-		}
-
-		$page_properties = $page_properties['semantic-properties'];
-
-		// $templateParser = new TemplateParser();
-		// $templateParser->processTemplate()
-		$mainTemplate = null;
-		$props = [];
-		$propsTemplate = [];
-		$separator = '';
-		$valuesSeparator = '';
-		foreach ( $argv as $val ) {
-
-			if ( strpos( $val, 'separator=' ) === 0 ) {
-				$separator = substr( $val, strlen( 'separator=' ) );
-				continue;
-			}
-
-			if ( strpos( $val, 'values-separator=' ) === 0 ) {
-				$valuesSeparator = substr( $val, strlen( 'values-separator=' ) );
-				continue;
-			}
-
-			if ( strpos( $val, '?' ) === 0 ) {
-				$props[substr( $val, 1 )] = null;
-				continue;
-			}
-
-			if ( strpos( $val, 'template=' ) === 0 ) {
-				$mainTemplate = substr( $val, strlen( 'template=' ) );
-				continue;
-			}
-
-			if ( strpos( $val, 'template?' ) === 0 ) {
-				list( $prop,  $template ) = explode( '=', substr( $val, strlen( 'template?' ) ), 2 ) + [ null, null ];
-				$propsTemplate[$prop] = $template;
-			}
-		}
-
-		$props = array_merge( $props, $propsTemplate );
-
-		$IDs = [];
-		foreach ( $props as $prop => $value ) {
-			if ( $prop && !empty( $page_properties[$prop] ) ) {
-				$props[$prop] = $page_properties[$prop];
-
-				if ( !is_array( $props[$prop] ) ) {
-					$props[$prop] = [ $props[$prop] ];
-				}
-
-				if ( array_key_exists( $prop, $propsTemplate ) ) {
-					foreach ( $props[$prop] as $k => $v ) {
-						$unique_id = uniqid();
-						$IDs[$unique_id] = self::templateRender( $parser, $propsTemplate[$prop], [ $prop => $v ] );
-						$props[$prop][$k] = $unique_id;
-					}
-				}
-
-				// https://www.semantic-mediawiki.org/wiki/Help:Setting_values/Working_with_the_separator_parameter
-				// $sep = '|+sep';
-				$props[$prop] = implode( $valuesSeparator, $props[$prop] );
-			}
-		}
-
-		$ret = ( $mainTemplate ? self::templateRender( $parser, $mainTemplate, $props ) : implode( $separator, $props ) );
-
-		foreach ( $IDs as $key => $value ) {
-			$ret = str_replace( $key, $value, $ret );
-		}
-
-		// 'noparse' => true,
-		// 'isHTML' => true
-		return [ $ret ];
 	}
 
 	/**
@@ -482,12 +452,7 @@ class PageProperties {
 			return self::$slotsCache[$key];
 		}
 
-		$wikiPage = self::getWikiPage( $title );
-
-		if ( !$wikiPage ) {
-			return;
-		}
-		$revision = $wikiPage->getRevisionRecord();
+		$revision = self::revisionRecordFromTitle( $title );
 
 		if ( !$revision ) {
 			return;
@@ -602,20 +567,20 @@ class PageProperties {
 	 * @return false|array
 	 */
 	public static function getPageProperties( $title, $entire_site = false ) {
-		// ***attention!
+		// @ATTENTION!
 		// $page_id is 0 for newly created pages
 		// $title->getArticleID();
 		$key = $title->getFullText();
 
 		// read from cache
-		if ( array_key_exists( $key, self::$cached_page_properties ) ) {
-			return self::$cached_page_properties[ $key ];
+		if ( array_key_exists( $key, self::$cachedJsonData ) ) {
+			return self::$cachedJsonData[ $key ];
 		}
 
 		if ( !$title->canExist() ) {
 			return false;
 		}
-		self::$cached_page_properties[ $key ] = false;
+		self::$cachedJsonData[ $key ] = false;
 
 		$wikiPage = self::getWikiPage( $title );
 
@@ -643,126 +608,33 @@ class PageProperties {
 			return false;
 		}
 
-		// back-compatibility
-		self::convertOldDataStructure( $ret );
-
-		self::$cached_page_properties[ $key ] = $ret;
+		self::$cachedJsonData[ $key ] = $ret;
 		return $ret;
 	}
 
 	/**
-	 * @param array &$ret
+	 * @param Output $output
+	 * @param string $name
+	 * @return array|null
 	 */
-	public static function convertOldDataStructure( &$ret ) {
-		if ( !empty( $ret['semantic_properties'] ) ) {
-			$properties = [];
-			foreach ( $ret['semantic_properties'] as $value ) {
-				list( $label, $value ) = $value;
-				$properties[$label][] = $value;
-			}
-			foreach ( $properties as $key => $value ) {
-				if ( count( $value ) === 1 ) {
-					$properties[$key][$label] = $value;
-				}
-			}
-			$ret['semantic_properties'] = $properties;
+	public static function getSchema( $output, $name ) {
+		self::setSchemas( $output, [ $name ] );
+		if ( array_key_exists( $name, self::$schemas )
+			&& !empty( self::$schemas[$name] ) ) {
+			return self::$schemas[$name];
 		}
-
-		$keys = [ 'page_properties' => [ 'display_title' ], 'semantic_properties' => [], 'SEO' => [ 'entire-site' ] ];
-
-		foreach ( $keys as $key => $value ) {
-			if ( !array_key_exists( $key, $ret ) ) {
-				continue;
-			}
-
-			foreach ( $value as $k => $v ) {
-				if ( array_key_exists( $k, $ret[$key] ) && strpos( $k, '_' ) !== false ) {
-					$ret[$key][ str_replace( '_', '-', $k ) ] = $ret[ $key ][ $k];
-					unset( $ret[$key][ $k ] );
-				}
-			}
-
-			if ( array_key_exists( $key, $ret ) && strpos( $key, '_' ) !== false ) {
-				$ret[ str_replace( '_', '-', $key ) ] = $ret[ $key ];
-				unset( $ret[ $key ] );
-			}
-		}
+		return null;
 	}
 
 	/**
-	 * @param SemanticData &$semanticData
-	 * @param string $caller
-	 * @return void
+	 * @param Output $output
+	 * @param array $schemas
+	 * @param bool $loadData
+	 * @return array
 	 */
-	public static function updateSemanticData( &$semanticData, $caller ) {
-		$subject = $semanticData->getSubject();
-		$title = $subject->getTitle();
-
-		$page_properties = self::getPageProperties( $title );
-
-		if ( $page_properties === false ) {
-			return;
-		}
-
-		// do not retrieve from the onBeforeInitialize hook!
-		$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
-		$valueCaption = false;
-
-		if ( !empty( $page_properties['page-properties']['categories'] ) ) {
-			$namespace = $subject->getNamespace();
-			foreach ( $page_properties['page-properties']['categories'] as $category ) {
-				if ( !empty( $category ) ) {
-					$cat = new SMW\DIWikiPage( $category, NS_CATEGORY );
-					$property = new SMW\DIProperty( $namespace !== NS_CATEGORY ? SMW\DIProperty::TYPE_CATEGORY : SMW\DIProperty::TYPE_SUBCATEGORY );
-					$dataValue = $SMWDataValueFactory->newDataValueByItem( $cat, $property, $valueCaption, $subject );
-					$semanticData->addDataValue( $dataValue );
-				}
-			}
-		}
-
-		if ( !empty( $page_properties['semantic-forms'] ) ) {
-			$property = new SMW\DIProperty( '__pageproperties_semantic_form' );
-			$semanticData->removeProperty( $property );
-			foreach ( $page_properties['semantic-forms'] as $form ) {
-				if ( !empty( $form ) ) {
-					$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$form, $valueCaption, $subject );
-					$semanticData->addDataValue( $dataValue );
-				}
-			}
-		}
-
-		if ( !empty( $page_properties['semantic-properties'] ) ) {
-			$semantic_properties = $page_properties['semantic-properties'];
-
-			// override annotated properties in property page
-			if ( $title->getNamespace() === SMW_NS_PROPERTY ) {
-				foreach ( $semanticData->getProperties() as $property ) {
-					if ( array_key_exists( $property->getLabel(), $semantic_properties ) ) {
-						$semanticData->removeProperty( $property );
-					}
-				}
-			}
-
-			// see extensions/SemanticMediawiki/src/Parser/InTextAnnotationParser.php
-			foreach ( $semantic_properties as $label => $values ) {
-
-				if ( $label === "" ) {
-					continue;
-				}
-
-				if ( !is_array( $values ) ) {
-					$values = [ $values ];
-				}
-
-				foreach ( $values as $value ) {
-					if ( $value !== "" ) {
-						$property = SMW\DIProperty::newFromUserLabel( $label );
-						$dataValue = $SMWDataValueFactory->newDataValueByProperty( $property, (string)$value, $valueCaption, $subject );
-						$semanticData->addDataValue( $dataValue );
-					}
-				}
-			}
-		}
+	public static function getSchemas( $output, $schemas, $loadData = true ) {
+		self::setSchemas( $output, $schemas, $loadData );
+		return self::$schemas;
 	}
 
 	/**
@@ -808,38 +680,14 @@ class PageProperties {
 	 * @param array &$errors
 	 * @param null|string $mainSlotContent
 	 * @param null|string $mainSlotContentModel
-	 * @return null|bool
+	 * @param bool $doNullEdit
+	 * @return bool
 	 */
-	public static function setPageProperties( $user, $title, &$obj, &$errors, $mainSlotContent = null, $mainSlotContentModel = null ) {
+	public static function setPageProperties( $user, $title, &$obj, &$errors, $mainSlotContent = null, $mainSlotContentModel = null, $doNullEdit = false ) {
 		$canWrite = self::checkWritePermissions( $user, $title, $errors );
 
 		if ( !$canWrite ) {
 			return false;
-		}
-
-		// remove empty values and implode arrays with
-		// single values
-		$semanticProperties = [];
-		if ( !empty( $obj['semantic-properties'] ) ) {
-			foreach ( $obj['semantic-properties'] as $key => $val ) {
-				$semanticProperties[$key] = $val;
-
-				if ( !is_array( $semanticProperties[$key] ) ) {
-					$semanticProperties[$key] = [ $semanticProperties[$key] ];
-				}
-
-				$semanticProperties[$key] = array_filter( array_values( $semanticProperties[$key] ) );
-
-				if ( count( $semanticProperties[$key] ) === 1 ) {
-					$semanticProperties[$key] = $semanticProperties[$key][0];
-				}
-
-				if ( empty( $semanticProperties[$key] ) ) {
-					unset( $semanticProperties[$key] );
-				}
-			}
-
-			$obj['semantic-properties'] = $semanticProperties;
 		}
 
 		if ( !empty( $obj['SEO'] ) ) {
@@ -848,12 +696,9 @@ class PageProperties {
 			}
 		}
 
-		if ( !empty( $obj['page-properties'] ) && array_key_exists( 'categories', $obj['page-properties'] )
-			&& empty( implode( $obj['page-properties']['categories'] ) ) ) {
-			unset( $obj['page-properties']['categories'] );
-		}
-
-		$keys = [ 'page-properties', 'SEO', 'semantic-properties', 'semantic-forms' ];
+		// @TODO remove 'page-properties' and 'SEO'
+		// once they will be handled through the database (not slots)
+		$keys = [ 'page-properties', 'SEO', 'schemas', 'categories', 'schemas-data' ];
 
 		// if $obj is empty the related slot will be removed
 		foreach ( $keys as $key ) {
@@ -869,30 +714,59 @@ class PageProperties {
 
 		// update cache (optimistic update)
 		$key = $title->getFullText();
-		self::$cached_page_properties[ $key ] = $obj;
+		self::$cachedJsonData[ $key ] = $obj;
 
 		$slots[SLOT_ROLE_PAGEPROPERTIES] = ( !empty( $obj ) ? json_encode( $obj ) : '' );
 
-		$ret = self::recordSlots( $user, $title, $slots, $mainSlotContentModel );
-
-		// the slot cache was preventively populated with the planned revision
-		// (see WSSlotsPageProperties.php)
-		if ( !$ret || !method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
-			self::emptySlotsCache( $title );
-		}
-
-		return $ret;
+		return self::recordSlots( $user, $title, $slots, $mainSlotContentModel, $doNullEdit );
 	}
 
 	/**
-	 * ***credits WSSlots MediaWiki extension - Wikibase Solutions
+	 * @param Title $title
+	 * @param Content $content
+	 * @param array &$errors
+	 */
+	public static function rebuildArticleDataFromSlot( $title, $content, &$errors ) {
+		if ( empty( $content ) ) {
+			return;
+		}
+
+		$contents = $content->getNativeData();
+
+		$data = json_decode( $contents, true );
+
+		if ( empty( $data['schemas'] ) ) {
+			return;
+		}
+
+		$schemas = array_keys( $data['schemas'] );
+		$context = RequestContext::getMain();
+
+		$output = $context->getOutput();
+
+		// @FIXME this will also process schamas, but it
+		// is not required since we need only type and format
+		$schemas = self::getSchemas( $output, $schemas, true );
+
+		$databaseManager = new DatabaseManager();
+		$flatten = [];
+		foreach ( $data['schemas'] as $schemaName => $value ) {
+			$flatten = array_merge( $flatten, $databaseManager->prepareData( $schemas[$schemaName], $value ) );
+		}
+		$databaseManager->recordProperties( 'rebuildArticleDataFromSlot', $title, $flatten, $errors );
+	}
+
+	/**
+	 * // phpcs:ignore MediaWiki.Commenting.FunctionAnnotations.UnrecognizedAnnotation
+	 * @credits WSSlots MediaWiki extension - Wikibase Solutions
 	 * @param User $user
 	 * @param Title $title
 	 * @param array $slots
 	 * @param string $mainSlotContentModel
+	 * @param bool $doNullEdit
 	 * @return bool
 	 */
-	private static function recordSlots( $user, $title, $slots, $mainSlotContentModel ) {
+	private static function recordSlots( $user, $title, $slots, $mainSlotContentModel, $doNullEdit = true ) {
 		$wikiPage = self::getWikiPage( $title );
 		$pageUpdater = $wikiPage->newPageUpdater( $user );
 		$oldRevisionRecord = $wikiPage->getRevisionRecord();
@@ -902,8 +776,6 @@ class PageProperties {
 		// The 'main' content slot MUST be set when creating a new page
 		if ( $oldRevisionRecord === null && !array_key_exists( MediaWiki\Revision\SlotRecord::MAIN, $slots ) ) {
 			$newMainSlot = true;
-			// *** attention !! with a null content *sometimes* the properties
-			// don't show immediately in the factbox !
 			$main_content = ContentHandler::makeContent( "", $title );
 			$pageUpdater->setContent( SlotRecord::MAIN, $main_content );
 		}
@@ -911,17 +783,22 @@ class PageProperties {
 		$oldModel = false;
 		foreach ( $slots as $slotName => $text ) {
 
+			// remove slot if content is empty
+			// and isn't main slot
 			if ( $text === "" && $slotName !== SlotRecord::MAIN ) {
 				$pageUpdater->removeSlot( $slotName );
 				continue;
 			}
 
+			// get modelId
 			if ( $slotName === SlotRecord::MAIN && $mainSlotContentModel ) {
 				$modelId = $mainSlotContentModel;
 
 			} elseif ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
 				$modelId = $oldRevisionRecord->getSlot( $slotName )->getContent()->getContentHandler()->getModelID();
 
+				// @TODO remove once standard pageproperties
+				// are handled through the database only
 				// *** old content model
 				if ( $slotName === SLOT_ROLE_PAGEPROPERTIES && $modelId === 'json' ) {
 					$pageUpdater->removeSlot( $slotName );
@@ -939,30 +816,35 @@ class PageProperties {
 
 		// *** this ensures that onContentAlterParserOutput relies
 		// on updated data
-		if ( !$oldModel && method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
-			$derivedDataUpdater = $pageUpdater->prepareUpdate();
-			$slots = $derivedDataUpdater->getSlots()->getSlots();
-			self::setSlots( $title, $slots );
+		if ( !$oldModel ) {
+			if ( method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
+				$derivedDataUpdater = $pageUpdater->prepareUpdate();
+				$slots = $derivedDataUpdater->getSlots()->getSlots();
+				self::setSlots( $title, $slots );
+			} else {
+				self::emptySlotsCache( $title );
+			}
 		}
 
 		$summary = "PageProperties update";
 		$flags = EDIT_INTERNAL;
 		$comment = CommentStoreComment::newUnsavedComment( $summary );
+		$RevisionRecord = $pageUpdater->saveRevision( $comment, $flags );
 
-		$ret = $pageUpdater->saveRevision( $comment, $flags );
-
+		// back-compatibility
 		if ( $oldModel ) {
 			return self::recordSlots( $user, $title, $slots, $mainSlotContentModel );
 		}
 
 		// Perform an additional null-edit to make sure all page properties are up-to-date
-		if ( $newMainSlot || ( !$pageUpdater->isUnchanged() && !array_key_exists( SlotRecord::MAIN, $slots ) ) ) {
+		if ( $doNullEdit &&
+			( $newMainSlot || ( !$pageUpdater->isUnchanged() && !array_key_exists( SlotRecord::MAIN, $slots ) ) ) ) {
 			$comment = CommentStoreComment::newUnsavedComment( "" );
-			$ret_ = $pageUpdater = $wikiPage->newPageUpdater( $user );
+			$pageUpdater = $wikiPage->newPageUpdater( $user );
 			$pageUpdater->saveRevision( $comment, EDIT_SUPPRESS_RC | EDIT_AUTOSUMMARY );
 		}
 
-		return ( $ret !== null );
+		return $RevisionRecord !== null;
 	}
 
 	/**
@@ -972,6 +854,8 @@ class PageProperties {
 	private static function getMergedMetas( $title ) {
 		$page_ancestors = self::page_ancestors( $title, false );
 
+		// @TODO restore pageproperties db
+		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
 		$output = [];
 		foreach ( $page_ancestors as $title_ ) {
 			$page_properties_ = self::getPageProperties( $title_ );
@@ -1032,25 +916,13 @@ class PageProperties {
 	}
 
 	/**
-	 * @return void
-	 */
-	public static function initSMW() {
-		if ( !defined( 'SMW_VERSION' ) ) {
-			return;
-		}
-		self::$SMWOptions = new \SMWRequestOptions();
-		self::$SMWOptions->limit = self::$queryLimit;
-		self::$SMWStore = SMW\StoreFactory::getStore();
-		// self::$SMWStore = $applicationFactory->getStore( '\SMW\SQLStore\SQLStore' );
-		self::$SMWDataValueFactory = SMW\DataValueFactory::getInstance();
-		self::$SMWApplicationFactory = SMW\Services\ServicesFactory::getInstance();
-	}
-
-	/**
 	 * @param Title $title
-	 * @return void
+	 * @return WikiPage|null
 	 */
 	public static function getWikiPage( $title ) {
+		if ( !$title || !$title->canExist() ) {
+			return null;
+		}
 		// MW 1.36+
 		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
 			return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
@@ -1067,94 +939,57 @@ class PageProperties {
 		$loadedData = [];
 
 		if ( isset( $obj['pageForms'] ) ) {
-
-			// this will populate self::$semanticProperties with properties
-			// taken from forms fields
+			// this will populate self::$schemas with data
 			foreach ( $obj['pageForms'] as $value ) {
-				self::setForms( $out, $value['forms'] );
-			}
-
-			if (
-				// *** uncomment to retrieve all forms and all semantic properties
-				// only if there aren't forms on the page (and the user has the related rights)
-
-				/* !count( self::$forms ) && */
-
-				$obj['config']['context'] === 'EditSemantic' ) {
-				$flags = self::setAllFormsAndSemanticProperties( $out );
-
-				if ( $flags & ALL_FORMS ) {
-					$loadedData[] = 'forms';
-				}
-
-				if ( $flags & ALL_PROPERTIES ) {
-					$loadedData[] = 'semantic-properties';
-				}
-			}
-
-			$semanticProperties = self::getSemanticProperties( self::$semanticProperties );
-
-			// remove fields in form related to non-existing properties
-			foreach ( self::$forms as $key => $value ) {
-				self::$forms[$key]['fields'] = array_intersect_key( $value['fields'], $semanticProperties );
-			}
-
-			$obj['forms'] = self::$forms;
-			$obj['semanticProperties'] = $semanticProperties;
-
-			// @TODO use standard Mediawiki's sessions interface
-			if ( isset( $_SESSION ) ) {
-				foreach ( $obj['pageForms'] as $formID => $value_ ) {
-					if ( array_key_exists( 'pagepropertiesform-submissiondata-' . $formID, $_SESSION ) ) {
-						$obj['sessionData'] = $_SESSION['pagepropertiesform-submissiondata-' . $formID];
-						$obj['sessionData']['formID'] = $formID;
-						unset( $_SESSION['pagepropertiesform-submissiondata-' . $formID] );
-						break;
-					}
-				}
-			}
-
-			// remove undeclared properties
-			// this is applicable if the form data has been cached
-			// and following one or more properties have been deleted
-			// from the form descriptor
-			if ( !empty( $obj['sessionData'] ) && isset( $obj['sessionData']['properties'] ) ) {
-				$obj['sessionData']['properties'] = array_intersect_key( $obj['sessionData']['properties'], $semanticProperties );
+				self::setSchemas( $out, $value['data']['schemas'] );
 			}
 		}
 
-		// @TODO only with 'OO.ui.SelectFileWidget'
-		$allowedMimeTypes = self::getAllowedMimeTypes();
+		if ( self::$User->isAllowed( 'pageproperties-caneditschemas' )
+			|| self::$User->isAllowed( 'pageproperties-canmanageschemas' ) ) {
+			$loadedData[] = 'schemas';
+			// this will retrieve all schema pages without contents
+			// without content @TODO set a limit
+			$schemasArr = self::getAllSchemas();
+			self::setSchemas( $out, $schemasArr, false );
+		}
+
+		$obj['schemas'] = self::$schemas;
 
 		$title = $out->getTitle();
 
+		$schemaUrl = self::getFullUrlOfNamespace( NS_PAGEPROPERTIESSCHEMA );
+
+		// this is required as long as a 'OO.ui.SelectFileWidget'
+		// is added to a schema
+		$allowedMimeTypes = [];
+		if ( self::$schemaProcessor ) {
+			$allowedMimeTypes = self::$schemaProcessor->getAllowedMimeTypes();
+		}
+
 		$default = [
-			'semanticProperties' => [],
-			'forms' => [],
+			'schemas' => [],
 			'pageForms' => [],
 			'categories' => [],
-			'properties' => [],
-			'sessionData' => [],
 			'config' => [
+				'PagePropertiesSchemaUrl' => $schemaUrl,
 				'actionUrl' => SpecialPage::getTitleFor( 'PagePropertiesSubmit', $title->getPrefixedDBkey() )->getLocalURL(),
-				'returnUrl' => 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? "s" : "" ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]",
-				'allowedMimeTypes' => $allowedMimeTypes,
-				// *** keep commented to prevent array_merge_recursive
-				// creating an array instead of a single value
-				// 'targetPage' => null,
-				'isNewPage' => $title->getArticleId() === 0 || !$title->isKnown() || $obj['config']['context'] === 'parserfunction',
+				'isNewPage' => $title->getArticleId() === 0 || !$title->isKnown(),
+
 				// *** keep commented to prevent array_merge_recursive
 				// creating an array instead of a single value
 				// 'context' => null,
+
 				'loadedData' => $loadedData,
-				'canManageSemanticProperties' => self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ),
-				'canComposeForms' => self::$User->isAllowed( 'pageproperties-cancomposeforms' ),
-				'canAddSingleProperties' => self::$User->isAllowed( 'pageproperties-canaddsingleproperties' ),
+				'allowedMimeTypes' => $allowedMimeTypes,
+				'caneditschemas' => self::$User->isAllowed( 'pageproperties-caneditschemas' ),
+				'canmanagesemanticproperties' => self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ),
+				'canmanageschemas' => self::$User->isAllowed( 'pageproperties-canmanageschemas' ),
+				// 'canmanageforms' => self::$User->isAllowed( 'pageproperties-canmanageforms' ),
 
-				// this is always true
-				// 'canEditSemanticProperties' => self::$User->isAllowed( 'pageproperties-caneditsemanticproperties' ),
-
-				'contentModels' => self::getContentModels(),
+				'contentModels' => array_flip( self::getContentModels() ),
+				'contentModel' => $title->getContentModel(),
+				'SMW' => self::$SMW,
 			],
 		];
 
@@ -1163,15 +998,26 @@ class PageProperties {
 		$obj['config'] = array_merge_recursive( $default['config'], $config );
 
 		$out->addJsConfigVars( [
-			'pageproperties-semanticProperties' => json_encode( $obj['semanticProperties'], true ),
-			'pageproperties-forms' => json_encode( $obj['forms'], true ),
-			'pageproperties-categories' => json_encode( $obj['categories'], true ),
-			'pageproperties-pageForms' => json_encode( $obj['pageForms'], true ),
-			'pageproperties-properties' => json_encode( $obj['properties'], true ),
-			'pageproperties-sessionData' => json_encode( $obj['sessionData'], true ),
+			'pageproperties-schemas' => json_encode( $obj['schemas'], true ),
+			'pageproperties-pageforms' => json_encode( $obj['pageForms'], true ),
 			'pageproperties-config' => json_encode( $obj['config'], true ),
 			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
 		] );
+	}
+
+	/**
+	 * @param int $ns
+	 * @return string
+	 */
+	public static function getFullUrlOfNamespace( $ns ) {
+		global $wgArticlePath;
+
+		$formattedNamespaces = MediaWikiServices::getInstance()
+			->getContentLanguage()->getFormattedNamespaces();
+		$namespace = $formattedNamespaces[$ns];
+
+		$schemaUrl = str_replace( '$1', "$namespace:", $wgArticlePath );
+		return wfExpandUrl( $schemaUrl );
 	}
 
 	/**
@@ -1187,127 +1033,37 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Output $output
-	 * @return int
-	 */
-	public static function setAllFormsAndSemanticProperties( $output ) {
-		$ret = 0;
-
-		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' )
-			|| self::$User->isAllowed( 'pageproperties-cancomposeforms' ) ) {
-
-			$allForms = self::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
-
-			self::setForms( $output, array_map( static function ( $title ) {
-				return $title->getText();
-			}, $allForms ) );
-
-			$ret += ALL_FORMS;
-		}
-
-		if ( self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' )
-			|| self::$User->isAllowed( 'pageproperties-canaddsingleproperties' ) ) {
-
-			self::$semanticProperties = array_map( static function ( $value ) {
-				// label
-				return $value[2];
-			}, self::getAllProperties() );
-
-			$ret += ALL_PROPERTIES;
-		}
-
-		return $ret;
-	}
-
-	/**
 	 * @param Title $title
-	 * @param array $forms
+	 * @param array $schemas
 	 * @param int $index
 	 * @return string
 	 */
-	public static function formID( $title, $forms, $index ) {
+	public static function formID( $title, $schemas, $index ) {
 		// *** must be deterministic, to handle session data
-		return hash( 'md5', $title->getFullText() . implode( $forms ) . $index );
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getAllowedMimeTypes() {
-		include_once __DIR__ . '/MimeTypes.php';
-
-		// phpcs:ignore MediaWiki.NamingConventions.ValidGlobalName.allowedPrefix, MediaWiki.Usage.ExtendClassUsage.FunctionConfigUsage
-		global $MimeTypes;
-		$ret = [];
-		foreach ( $GLOBALS['wgFileExtensions'] as $ext ) {
-			$value = $MimeTypes[$ext];
-			if ( !is_array( $value ) ) {
-				$value = [ $value ];
-			}
-			foreach ( $value as $val ) {
-				$ret[] = $val;
-			}
-		}
-
-		return $ret;
-	}
-
-	/**
-	 * *** currently unused
-	 * @param Title $title
-	 * @return array
-	 */
-	public static function getSemanticData( Title $title ) {
-		// $subject = new SMW\DIWikiPage( $title, NS_MAIN );
-		$subject = SMW\DIWikiPage::newFromTitle( $title );
-		$semanticData = self::$SMWStore->getSemanticData( $subject );
-		$ret = [];
-
-		foreach ( $semanticData->getProperties() as $property ) {
-			$key = $property->getKey();
-			if ( in_array( $key, self::$exclude ) ) {
-				continue;
-			}
-			$propertyDv = self::$SMWDataValueFactory->newDataValueByItem( $property, null, false, $subject );
-
-			if ( !$property->isUserAnnotable() || !$propertyDv->isVisible() ) {
-				continue;
-			}
-
-			foreach ( $semanticData->getPropertyValues( $property ) as $dataItem ) {
-				$dataValue = self::$SMWDataValueFactory->newDataValueByItem( $dataItem, $property, false, $subject );
-
-				if ( $dataValue->isValid() ) {
-					$label = $property->getLabel();
-
-					// @TODO, get appropriate methods of other dataValues
-					if ( $dataValue instanceof \SMWTimeValue ) {
-						$ret[ $label ][] = $dataValue->getISO8601Date();
-					} else {
-						$dataValue->setOption( 'no.text.transformation', true );
-						$dataValue->setOption( 'form/short', true );
-						$ret[ $label ][] = $dataValue->getWikiValue();
-					}
-				}
-			}
-		}
-
-		return $ret;
+		return hash( 'md5', $title->getFullText() . implode( $schemas ) . $index );
 	}
 
 	/**
 	 * @param Output $output
-	 * @param array $semanticForms
+	 * @param array $schemas
+	 * @param bool $loadSchemas
 	 * @return array
 	 */
-	public static function setForms( $output, $semanticForms ) {
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
-		$pDescProp = new SMW\DIProperty( '_PDESC' );
-		$langCode = RequestContext::getMain()->getLanguage()->getCode();
+	public static function setSchemas( $output, $schemas, $loadSchemas = true ) {
+		// @FIXME this seems required with
+		// visual editor $wgVisualEditorEnableWikitext
+		if ( !self::$schemaProcessor ) {
+			self::initialize();
+		}
 
+		if ( !$output->getTitle() ) {
+			$output->setTitle( Title::newFromText( 'Main Page' ) );
+		}
+
+		self::$schemaProcessor->setOutput( $output );
 		$ret = [];
-		foreach ( $semanticForms as $value ) {
-			$title = Title::newFromText( $value, NS_PAGEPROPERTIESFORM );
+		foreach ( $schemas as $value ) {
+			$title = Title::newFromText( $value, NS_PAGEPROPERTIESSCHEMA );
 
 			if ( !$title || !$title->isKnown() ) {
 				continue;
@@ -1315,741 +1071,60 @@ class PageProperties {
 
 			$titleText = $title->getText();
 
-			if ( array_key_exists( $titleText, self::$forms ) ) {
+			if ( array_key_exists( $titleText, self::$schemas )
+				&& !empty( self::$schemas[$titleText] ) ) {
+				continue;
+			}
+
+			// load only schemas actually in the page
+			if ( $loadSchemas === false ) {
+				self::$schemas[$titleText] = [];
 				continue;
 			}
 
 			$text = self::getWikipageContent( $title );
 			if ( !empty( $text ) ) {
-				$obj = json_decode( $text, true );
-				$obj['fields'] = self::processFieldsContent( $output, $dataValueFactory, $pDescProp, $langCode, $obj['fields'] );
-				self::$forms[$titleText] = $obj;
+				$json = json_decode( $text, true );
+				if ( $json ) {
+					self::$schemas[$titleText] = self::$schemaProcessor->processSchema( $json, $titleText );
+				}
 			}
 		}
 	}
 
 	/**
-	 * @param Output $output
-	 * @param SMW\DataValueFactory $dataValueFactory
-	 * @param SMW\DIProperty $pDescProp
-	 * @param string $langCode
-	 * @param array $fields
+	 * @see https://github.com/SemanticMediaWiki/SemanticResultFormats/blob/master/formats/datatables/DataTables.php#L695
+	 * @param array $items
+	 * @param string $token
 	 * @return array
 	 */
-	public static function processFieldsContent( $output, $dataValueFactory, $pDescProp, $langCode, $fields ) {
-		$replaceFormula = static function ( $data, $formula ) {
-			preg_match_all( '/<\s*([^<>]+)\s*>/', $formula, $matches, PREG_PATTERN_ORDER );
-
-			foreach ( $data as $property => $values ) {
-				if ( in_array( $property, $matches[1] ) ) {
-					$formula = preg_replace( '/\<\s*' . $property . '\s*\>/', self::array_last( $values ), $formula );
-				}
-			}
-
-			return $formula;
-		};
-
-		foreach ( $fields as $label => $field ) {
-
-			if ( !in_array( $label, self::$semanticProperties ) ) {
-				self::$semanticProperties[] = $label;
-			}
-
-			if ( !empty( $field['default'] ) ) {
-				// @TODO or use recursiveTagParseFully
-				$fields[ $label ][ 'default-result'] = Parser::stripOuterParagraph( $output->parseAsContent( $fields[ $label ][ 'default'] ) );
-			}
-
-			if ( !empty( $field['help-message'] ) ) {
-				$helpMessages = $field['help-message'];
-				if ( !is_array( $helpMessages ) ) {
-					$helpMessages = [ $helpMessages ];
-				}
-				$dataValues = [];
-				foreach ( $helpMessages as $value_ ) {
-					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
-				}
-				$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
-				$fields[ $label ][ 'help-message-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $helpMessages[0] ) );
-			}
-
-			if ( !empty( $field['label'] ) ) {
-				$labelText = $field['label'];
-				if ( !is_array( $labelText ) ) {
-					$labelText = [ $labelText ];
-				}
-				$dataValues = [];
-				foreach ( $labelText as $value_ ) {
-					$dataValues[] = $dataValueFactory->newDataValueByProperty( $pDescProp, $value_ );
-				}
-				$monolingualTextResult = self::getMonolingualText( $langCode, $dataValues );
-				$fields[ $label ][ 'label-result' ] = Parser::stripOuterParagraph( $output->parseAsContent( $monolingualTextResult ?? $labelText[0] ) );
-			}
-
-			$optionsValues = [];
-			if ( !empty( $field['options-values'] ) ) {
-				$optionsValues = $field['options-values'];
-
-			} elseif ( !empty( $field['options-wikilist'] ) ) {
-				$title_ = Title::newFromText( $field['options-wikilist'] );
-
-				if ( $title_ && $title_->isKnown() ) {
-					$text_ = self::getWikipageContent( $title_ );
-					$optionsValues = self::parseWikilist( explode( "\n", $text_ ) );
-				}
-
-			} elseif ( !empty( $field['options-askquery'] ) ) {
-				$parser = MediaWikiServices::getInstance()->getParserFactory()->getInstance();
-				$title = RequestContext::getMain()->getTitle();
-				$poptions = $output->parserOptions();
-				$parsedAsk = $parser->preprocess( $field['options-askquery'], $title, $poptions );
-				$results = self::getQueryResults(
-					$parsedAsk,
-					!empty( $field['askquery-printouts'] ) ? $field['askquery-printouts'] : [],
-					[ 'limit' => !empty( $field['options-limit'] ) && is_int( $field['options-limit'] ) ? $field['options-limit'] : 100 ],
-					!empty( $field['askquery-subject'] )
-				);
-
-				$arr_ = $results->serializeToArray();
-
-				foreach ( $arr_['results'] as $titleText => $page ) {
-					$title_ = Title::newFromText( $titleText );
-
-					if ( !empty( $field['options-formula'] ) ) {
-						$data_ = array_merge( [ 'subject' => [ $title_->getText() ] ], $page['printouts'] );
-						$value_ = $replaceFormula( $data_, $field['options-formula'] );
-						$optionsValues[] = Parser::stripOuterParagraph( $output->parseAsContent( $value_ ) );
-						continue;
-					}
-
-					if ( !empty( $field['askquery-subject'] ) ) {
-						$optionsValues[] = $title_->getText();
-						continue;
-					}
-
-					// retrieve only the first requested property
-					foreach ( $page['printouts'] as $property => $values ) {
-						if ( $field['askquery-printouts'][0] !== $property ) {
-							continue;
-						}
-						foreach ( $values as $value ) {
-							$optionsValues[] = $value;
-						}
-					}
-				}
-			}
-
-			// @credits: WikiTeq
-			if ( count( $optionsValues ) ) {
-				$fields[ $label ][ 'options-values-result' ] = [];
-				foreach ( $optionsValues as $val ) {
-					if ( !empty( $field['mapping-formula'] ) ) {
-						$value_ = $replaceFormula( [ 'value' => [ $val ] ], $field['mapping-formula'] );
-						$valueParsed = Parser::stripOuterParagraph( $output->parseAsContent( $value_ ) );
-						$fields[ $label ][ 'options-values-result' ][ $val ] = $valueParsed;
-					} else {
-						$fields[ $label ][ 'options-values-result' ][ $val ] = $val;
-					}
-				}
-			}
-		}
-
-		return $fields;
-	}
-
-	/**
-	 * @param string $content
-	 * @return array
-	 */
-	public static function parseWikilist( $content ) {
-		$list = [];
-		foreach ( $content as $value ) {
-			if ( empty( $value ) ) {
-				continue;
-			}
-
-			preg_match( '/^\s*(\*+)\s*(.+)\s*$/', $value, $match );
-
-			$depth = strlen( $match[1] );
-			$list[] = [ $depth, $match[2] ];
-		}
-
+	public static function plainToNested( $items, $token = '/' ) {
 		$ret = [];
-
-		// Link to first level
-		$t = &$ret;
-		$previousDepth = 1;
-
-		foreach ( $list as $value ) {
-			list( $depth, $txt ) = $value;
-
-			if ( $previousDepth < $depth ) {
-				$parentLevel = &$t;
-				$t[array_key_last( $t )] = [];
-
-				// Link to deepest level
-				$t = &$t[array_key_last( $t )];
-
-			} elseif ( $depth < $previousDepth ) {
-				$t = &$parentLevel;
+		// @see https://stackoverflow.com/questions/49563864/how-to-convert-a-string-to-a-multidimensional-recursive-array-in-php
+		foreach ( $items as $key => $value ) {
+			$ref = &$ret;
+			$parts = explode( $token, $key );
+			$last = array_pop( $parts );
+			foreach ( $parts as $part ) {
+				$ref[$part][''] = null;
+				$ref = &$ref[$part];
+				unset( $ref[''] );
 			}
-
-			$t[$txt] = $txt;
-			$previousDepth = $depth;
+			$ref[$last] = $value;
 		}
-
-		return $ret;
-	}
-
-	/**
-	 * @param array $semanticProperties
-	 * @return array
-	 */
-	public static function getAllForms( $semanticProperties ) {
-		$arr = self::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
-		$ret = [];
-
-		foreach ( $arr as $title ) {
-			$text = self::getWikipageContent( $title );
-			if ( !empty( $text ) ) {
-				$obj = json_decode( $text, true );
-				$obj['fields'] = array_intersect_key( $obj['fields'], $semanticProperties );
-
-				$ret[$title->getText()] = $obj;
-			}
-		}
-		return $ret;
-	}
-
-	/**
-	 * @param array $properties
-	 * @return array
-	 */
-	public static function getSemanticProperties( $properties ) {
-		$ret = [];
-		foreach ( $properties as $label ) {
-			if ( !$label ) {
-				continue;
-			}
-			$prop = SMW\DIProperty::newFromUserLabel( $label );
-			$ret[$label] = [ $prop, $prop->getKey(), $prop->getLabel(), $prop->isUserDefined() ];
-		}
-
-		return self::formatSemanticProperties( $ret );
-	}
-
-	/**
-	 * @param array $properties
-	 * @param array|null $pageproperties
-	 * @return array
-	 */
-	public static function formatSemanticProperties( $properties, $pageproperties = null ) {
-		$dataTypeRegistry = SMW\DataTypeRegistry::getInstance();
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
-		$langCode = RequestContext::getMain()->getLanguage()->getCode();
-		$propertyRegistry = SMW\PropertyRegistry::getInstance();
-
-		if ( !$pageproperties ) {
-			$specialPropertyDefinitions = array_merge( self::$specialPropertyDefinitions, [ '_TYPE', '_IMPO' ] );
-
-		} else {
-			$typeLabels = $dataTypeRegistry->getKnownTypeLabels();
-
-			array_walk( $pageproperties, static function ( &$value ) {
-				if ( !is_array( $value ) ) {
-					 $value = [ $value ];
-				}
-			} );
-		}
-
-		$ret = [];
-		foreach ( $properties as $value ) {
-			list( $property, $property_key, $label, $userDefined ) = $value;
-
-			if ( $userDefined ) {
-				$title_ = Title::makeTitleSafe( SMW_NS_PROPERTY,  $label );
-				if ( !$title_ || !$title_->isKnown() ) {
-					// see src/Factbox/Factbox.php => createRows()
-					$propertyDv = $dataValueFactory->newDataValueByItem( $property, null );
-
-					if ( !self::propertyUsage( $propertyDv ) ) {
-						continue;
-					}
-				}
-			}
-
-			$canonicalLabel = $property->getCanonicalLabel();
-			$preferredLabel = $property->getPreferredLabel();
-
-			if ( !$pageproperties || !array_key_exists( '_TYPE', $pageproperties ) ) {
-				$typeID = $property->findPropertyTypeID();
-				// $typeID = $propertyDv->getTypeID();
-			} else {
-				$typeID = array_search( $pageproperties[ '_TYPE' ][0], $typeLabels );
-			}
-
-			$description = $propertyRegistry->findPropertyDescriptionMsgKeyById( $property_key );
-
-			if ( $description ) {
-				$description = wfMessage( $description )->text();
-			}
-
-			$typeLabel = $dataTypeRegistry->findTypeLabel( $typeID );
-
-			if ( empty( $typeLabel ) ) {
-				$typeId_ = $dataTypeRegistry->getFieldType( $typeID );
-				$typeLabel = $dataTypeRegistry->findTypeLabel( $typeId_ );
-			}
-
-			// *** the key should be $label unless
-			// the wiki forces the use of canonical names
-			// for namespaces and property names, see
-			// the following https://github.com/SemanticMediaWiki/SemanticMediaWiki/pull/2358
-
-			$ret[ $label ] = [
-				'key' => $property_key,
-				'userDefined' => $userDefined,
-				'canonicalLabel' => $canonicalLabel,
-				'preferredLabel' => $preferredLabel,
-				'type' => $typeID,
-				'typeLabel' => $typeLabel,
-				'description' => $description,
-				'properties' => [],
-			];
-
-			if ( $pageproperties && !$description ) {
-				$ret[ $label ][ 'properties' ] = $pageproperties;
-
-				// @TODO do the same for _PPLB
-				// @see https://www.semantic-mediawiki.org/wiki/Help:Special_property_Has_preferred_property_label
-				if ( !empty( $pageproperties['_PDESC'] ) ) {
-					$property_ = new SMW\DIProperty( '_PDESC' );
-					$dataValues = array_map( static function ( $value ) use ( $dataValueFactory, $property_ ) {
-						return $dataValueFactory->newDataValueByProperty( $property_, $value );
-					}, $pageproperties['_PDESC'] );
-
-					$ret[ $label ][ 'description' ] = self::getMonolingualText( $langCode, $dataValues );
-				}
-
-				continue;
-			}
-
-			// *** solution 1, this seems faster
-			$semanticData = self::$SMWStore->getSemanticData( $property->getDiWikiPage() );
-
-			// foreach ( $semanticData->getProperties() as $property_ ) {
-			// 	$key_ = $property_->getKey();
-			// 	if ( !in_array( $key_, $specialPropertyDefinitions ) ) {
-			// 		continue;
-			// 	}
-
-			foreach ( $specialPropertyDefinitions as $key_ ) {
-				$property_ = new SMW\DIProperty( $key_ );
-
-				// *** solution 2
-				// $values = self::$SMWStore->getPropertyValues( $property->getDiWikiPage(), $property_ );
-
-				$values = $semanticData->getPropertyValues( $property_ );
-
-				if ( !$values ) {
-					continue;
-				}
-
-				$dataValues = array_map( static function ( $value ) use ( $dataValueFactory, $property_ ) {
-					return $dataValueFactory->newDataValueByItem( $value, $property_ );
-				}, $values );
-
-				foreach ( $dataValues as $dataItem ) {
-					$ret[ $label ][ 'properties' ][ $key_ ][] = $dataItem->getWikiValue();
-				}
-
-				// @TODO retrieve options described by the property _PVALI
-				// @see https://www.semantic-mediawiki.org/wiki/Help:Special_property_Allows_value_list
-
-				// @TODO do the same for _PPLB
-				if ( $key_ === '_PDESC' && !$description ) {
-					$ret[ $label ][ 'description' ] = self::getMonolingualText( $langCode, $dataValues );
-				}
-			}
-		}
-
-		return $ret;
-	}
-
-	/**
-	 * @see SemanticMediaWiki/src/DataValues/MonolingualTextValue.php
-	 * @param string $langCode
-	 * @param array $dataValues
-	 * @return string|null
-	 */
-	public static function getMonolingualText( $langCode, $dataValues ) {
-		foreach ( $dataValues as $value ) {
-			$desc = $value->getTextValueByLanguageCode( $langCode );
-			if ( !empty( $desc ) ) {
-				$list = $value->toArray();
-				return current( $list );
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getAllProperties() {
-		$predefinedProperties = self::getPredefinedProperties();
-		$properties = self::$SMWStore->getPropertiesSpecial( self::$SMWOptions );
-
-		if ( $properties instanceof SMW\SQLStore\PropertiesCollector ) {
-			// SMW 1.9+
-			$properties = array_map( static function ( $value ) {
-				return $value[0];
-			}, $properties->runCollector() );
-		}
-
-		$properties = array_merge( $properties, $predefinedProperties );
-
-		$ret = [];
-		foreach ( $properties as $property ) {
-			if ( !method_exists( $property, 'getKey' ) ) {
-				continue;
-			}
-
-			$property_key = $property->getKey();
-
-			if ( empty( $property_key ) ) {
-				continue;
-			}
-
-			$label = $property->getLabel();
-
-			if ( empty( $label ) ) {
-				continue;
-			}
-
-			if ( in_array( $property_key, self::$exclude ) ) {
-				continue;
-			}
-
-			if ( !$property->isUserAnnotable() || !$property->isShown() ) {
-				continue;
-			}
-
-			$ret[] = [ $property, $property_key, $label, $property->isUserDefined() ];
-		}
-
-		return $ret;
-	}
-
-	/**
-	 * @see SemanticMediawiki/src/Mediawiki/page/PropertyPage.php -> getCount
-	 * @param SMW\SMWDataValue $propertyDv
-	 * @return array
-	 */
-	public static function propertyUsage( $propertyDv ) {
-		$requestOptions = self::$SMWOptions;
-		$requestOptions->setLimit( 1 );
-
-		$searchLabel = $propertyDv->getSearchLabel();
-		$requestOptions->addStringCondition( $searchLabel, SMW\StringCondition::COND_EQ );
-
-		$cachedLookupList = self::$SMWStore->getPropertiesSpecial( $requestOptions );
-		$usageList = $cachedLookupList->fetchList();
-
-		if ( !$usageList || $usageList === [] ) {
-			return 0;
-		}
-
-		$usage = end( $usageList );
-		$usageCount = $usage[1];
-		return $usageCount;
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function getPredefinedProperties() {
-		$ret = [];
-		$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
-
-		// built-in data types
-		$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
-
-		foreach ( $propertyList as $key => $value ) {
-			if ( array_key_exists( $key, $typeLabels ) ) {
-				continue;
-			}
-
-			$ret[] = new SMW\DIProperty( $key );
-		}
-
 		return $ret;
 	}
 
 	/**
 	 * @return array
 	 */
-	public static function getImportedVocabularies() {
+	public static function getAllSchemas() {
+		$arr = self::getPagesWithPrefix( null, NS_PAGEPROPERTIESSCHEMA );
 		$ret = [];
-		$IMPORT_PREFIX = SMW\DataValues\ImportValue::IMPORT_PREFIX;
-		$imported_vocabularies = self::getPagesWithPrefix( $IMPORT_PREFIX, NS_MEDIAWIKI );
-
-		// see SemanticMediawiki/src/DataValues/ValueParsers/ImportValueParser.php
-		$mediaWikiNsContentReader = new MediaWikiNsContentReader;
-		foreach ( $imported_vocabularies as $title ) {
-			$controlledVocabulary = $mediaWikiNsContentReader->read(
-				$title->getText()
-			);
-
-			$namespace = substr( $title->getText(), strlen( $IMPORT_PREFIX ) );
-			list( $uri, $name, $typelist ) = self::doParse( $controlledVocabulary );
-
-			preg_match( '/\[([^\[\]]+)\]/', $name, $match );
-			$vocabulary_label = preg_replace( '/^[^\s]+\s/', '', $match[1] );
-
-			$ret[ $vocabulary_label ] = [];
-			foreach ( $typelist as $key => $value ) {
-				// if ( $value !== 'Category' && $value !== 'Type:Category' ) {
-					$label_value = $namespace . ':' . $key;
-					$ret[ $vocabulary_label ][ $label_value ] = str_replace( 'Type:', '', $value );
-				// }
-			}
+		foreach ( $arr as $title_ ) {
+			$ret[] = $title_->getText();
 		}
-
 		return $ret;
-	}
-
-	/**
-	 * @see extensions/SemanticMediaWiki/src/DataValues/ValueParsers/ImportValueParser.php (the method is private)
-	 * @param array $controlledVocabulary
-	 * @return array
-	 */
-	private static function doParse( $controlledVocabulary ) {
-		$list = [];
-		$importDefintions = array_map( 'trim', preg_split( "([\n][\s]?)", $controlledVocabulary ) );
-
-		// Get definition from first line
-		$fristLine = array_shift( $importDefintions );
-
-		if ( strpos( $fristLine, '|' ) === false ) {
-			return;
-		}
-
-		list( $uri, $name ) = explode( '|', $fristLine, 2 );
-
-		foreach ( $importDefintions as $importDefintion ) {
-			if ( strpos( $importDefintion, '|' ) === false ) {
-				continue;
-			}
-
-			list( $secname, $typestring ) = explode( '|', $importDefintion, 2 );
-			$list[trim( $secname )] = $typestring;
-		}
-
-		return [ $uri, $name, $list ];
-	}
-
-	/**
-	 * @param SMW\DIProperty $property
-	 * @return array
-	 */
-	public static function getPropertySubjects( $property ) {
-		$options = new SMW\RequestOptions();
-		$dataItems = self::$SMWStore->getAllPropertySubjects( $property, $options );
-
-		if ( $dataItems instanceof \Traversable ) {
-			$dataItems = iterator_to_array( $dataItems );
-		}
-
-		return array_map( static function ( $value ) {
-			return $value->getTitle();
-		}, $dataItems );
-	}
-
-	/**
-	 * @param array $array
-	 * @param string $property
-	 * @return null|string|bool|int
-	 */
-	public static function firstPropertyValue( $array, $property ) {
-		if ( !array_key_exists( $property, $array ) ) {
-			return null;
-		}
-
-		$value = $array[$property];
-
-		if ( !is_array( $value ) ) {
-			return $value;
-		}
-
-		if ( !count( $value ) ) {
-			return null;
-		}
-
-		return $value[0];
-	}
-
-	/**
-	 * @see SemanticTasks/src/Query.php
-	 * @param string $query_string
-	 * @param array(String) $properties_to_display
-	 * @param array|null $parameters
-	 * @param bool|null $display_title
-	 * @return \SMWQueryResult
-	 */
-	public static function getQueryResults( $query_string, $properties_to_display, $parameters = [], $display_title = true ) {
-		if ( self::$SMWDataValueFactory === null ) {
-			self::initSMW();
-		}
-
-		$printouts = [];
-		foreach ( $properties_to_display as $property ) {
-			// @see SemanticMediaWiki/src/Mediawiki/ApiRequestParameterFormatter.php -> formatPrintouts
-			$printouts[] = new \SMWPrintRequest(
-				\SMWPrintRequest::PRINT_PROP,
-				$property,
-				self::$SMWDataValueFactory->newPropertyValueByLabel( $property )
-			);
-		}
-
-		if ( $display_title ) {
-			\SMWQueryProcessor::addThisPrintout( $printouts, $parameters );
-		}
-
-		$params = \SMWQueryProcessor::getProcessedParams( $parameters, $printouts );
-
-		$inline = true;
-		$query = \SMWQueryProcessor::createQuery( $query_string, $params, $inline, null, $printouts );
-
-		return self::$SMWApplicationFactory->getStore()->getQueryResult( $query );
-	}
-
-	/**
-	 * @param string $query_string
-	 * @param array(String) $properties_to_display
-	 * @param array|null $parameters
-	 * @param bool $display_title
-	 * @return array
-	 */
-	public static function getQueryLatestPrintouts( $query_string, $properties_to_display, $parameters = [], $display_title = true ) {
-		$results = self::getQueryResults( $query_string, $properties_to_display, $parameters, $display_title );
-		$arr = $results->serializeToArray();
-
-		if ( !count( $arr['results'] ) ) {
-			return [];
-		}
-
-		end( $arr['results'] );
-		return $arr['results'][key( $arr['results'] )]['printouts'];
-	}
-
-	/**
-	 * @param User $user
-	 * @param array $arr
-	 * @return int
-	 */
-	public static function updatePagesFormsJobs( $user, $arr ) {
-		$property = new SMW\DIProperty( '__pageproperties_semantic_form' );
-
-		// find all pages having this property (as property)
-		$pages = self::getPropertySubjects( $property );
-
-		foreach ( $pages as $title_ ) {
-			$title_text = $title_->getFullText();
-			$titles_map[ $title_text ] = $title_;
-			$update_pages[ $title_text ][ $label ] = $newLabel;
-		}
-
-		// @TODO edit the semantic-forms array in the pageproperties-semantic
-		// slot, implement as PagePropertiesJob
-
-		// @TODO find the occurence in the parserFunctionPagepropertiesForm
-		// as well
-	}
-
-	/**
-	 * @param User $user
-	 * @param array $arr
-	 * @param string $scope
-	 * @param bool|null $evaluate
-	 * @return int|int
-	 */
-	public static function updateFormsJobs( $user, $arr, $scope, $evaluate = false ) {
-		$replaceTextClass = new ReplaceText\ReplaceText();
-
-		$selected_namespaces = [ NS_PAGEPROPERTIESFORM ];
-		$category = null;
-		$prefix = null;
-		$use_regex = false;
-		$user_id = $user->getId();
-		$jobNum = 0;
-
-		foreach ( $arr as $label => $newLabel ) {
-			$property = SMW\DIProperty::newFromUserLabel( $label );
-
-			// find all forms holding this property (as text)
-			$res_ = $replaceTextClass->getTitlesForEditingWithContext( $label, $selected_namespaces, $category, $prefix, $use_regex );
-
-			if ( $evaluate ) {
-				$jobNum += count( $res_ );
-				continue;
-			}
-
-			foreach ( $res_ as $value_ ) {
-				list( $title_ ) = $value_;
-				$edit_summary = wfMessage( 'replacetext_editsummary', $label, $newLabel )->inContentLanguage()->plain();
-				$jobs[] = new PagePropertiesJobReplaceText( $title_,
-					 [
-						'user_id' => $user_id,
-						'target_str' => $label,
-						'replacement_str' => $newLabel,
-						'edit_summary' => $edit_summary,
-						'scope' => $scope
-					]
-				);
-			}
-		}
-
-		return ( !$evaluate ? $jobs : $jobNum );
-	}
-
-	/**
-	 * @param User $user
-	 * @param array $arr
-	 * @param bool|null $evaluate
-	 * @return array|int
-	 */
-	public static function updatePropertiesJobs( $user, $arr, $evaluate = false ) {
-		$update_pages = [];
-		$titles_map = [];
-		$jobs = [];
-		$user_id = $user->getId();
-
-		foreach ( $arr as $label => $newLabel ) {
-			$property = SMW\DIProperty::newFromUserLabel( $label );
-
-			// find all pages holding this property (as property)
-			$pages = self::getPropertySubjects( $property );
-
-			foreach ( $pages as $title_ ) {
-				$title_text = $title_->getFullText();
-				$titles_map[ $title_text ] = $title_;
-				$update_pages[ $title_text ][ $label ] = $newLabel;
-			}
-		}
-
-		$count = count( $update_pages );
-
-		if ( $evaluate ) {
-			return $count;
-		}
-
-		foreach ( $update_pages as $title_text => $values ) {
-			$title_ = $titles_map[ $title_text ];
-			$jobs[] = new PagePropertiesJob( $title_, [ 'user_id' => $user_id, 'values' => $values ] );
-		}
-
-		return $jobs;
 	}
 
 	/**
@@ -2098,9 +1173,26 @@ class PageProperties {
 	}
 
 	/**
+	 * @param Title $title
 	 * @return array
 	 */
-	public static function getCategories() {
+	public static function getCategories( $title ) {
+		if ( !$title || !$title->isKnown() ) {
+			return [];
+		}
+		$wikiPage = self::getWikiPage( $title );
+		$ret = [];
+		$arr = $wikiPage->getCategories();
+		foreach ( $arr as $title ) {
+			$ret[] = $title->getText();
+		}
+		return $ret;
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function getAllCategories() {
 		$dbr = wfGetDB( DB_REPLICA );
 
 		$res = $dbr->select(
@@ -2131,51 +1223,13 @@ class PageProperties {
 	}
 
 	/**
-	 * @return array
-	 */
-	public static function getCategoriesSemantic() {
-		$categories = self::getCategories();
-
-		$dataValueFactory = SMW\DataValueFactory::getInstance();
-
-		$ret = [];
-		foreach ( $categories as $title_ ) {
-			// $title = new TitleValue( NS_CATEGORY, $row->cat_title );
-			$label = $title_->getText();
-
-			$ret[$label] = [
-				'label' => $label,
-				'properties' => [],
-			];
-
-			$subject = new SMW\DIWikiPage( $title_->getText(), NS_CATEGORY );
-
-			$semanticData = self::$SMWStore->getSemanticData( $subject );
-
-			$prop = new SMW\DIProperty( '_IMPO' );
-
-			$values = $semanticData->getPropertyValues( $prop );
-
-			foreach ( $values as $value ) {
-				$dataValue = $dataValueFactory->newDataValueByItem( $value, $prop );
-
-				if ( $dataValue instanceof SMW\DataValues\ImportValue ) {
-					$ret[$label]['properties']['_IMPO'][] = $dataValue->getWikiValue();
-				}
-			}
-		}
-
-		return $ret;
-	}
-
-	/**
 	 * @return Importer|Importer1_35
 	 */
 	public static function getImporter() {
 		$services = MediaWikiServices::getInstance();
 
 		if ( version_compare( MW_VERSION, '1.36', '>' ) ) {
-			include_once __DIR__ . '/Importer/PagePropertiesImporter.php';
+			include_once __DIR__ . '/importer/PagePropertiesImporter.php';
 
 			// @see ServiceWiring.php -> WikiImporterFactory
 			return new PagePropertiesImporter(
@@ -2246,11 +1300,56 @@ class PageProperties {
 	}
 
 	/**
-	 * @param array $array
-	 * @return string|null
+	 * @param string $titleText
+	 * @return string
 	 */
-	public static function array_last( $array ) {
-		return ( count( $array ) ? $array[ array_key_last( $array ) ] : null );
+	public static function currentSubpage( $titleText ) {
+		// @see skins/skin.php -> subPageSubtitle()
+		$arr = explode( '/', $titleText );
+		$ret = '';
+		$growinglink = '';
+		$display = '';
+		foreach ( $arr as $text ) {
+			$growinglink .= $text;
+			$display .= $text;
+			$title_ = Title::newFromText( $growinglink );
+			if ( is_object( $title_ ) && $title_->isKnown() ) {
+				$ret = $display;
+				$display = '';
+			} else {
+				$display .= '/';
+			}
+			$growinglink .= '/';
+		}
+		return $ret;
+	}
+
+	/**
+	 * @todo use to invalidate cache holding parserFunctionPagepropertiesPrint
+	 * or parserFunctionPagepropertiesQuery and pages containing those as templates
+	 * *** invalidate cache of all pages in which this page has been transcluded
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageOwnership/+/refs/heads/master/includes/PageOwnership.php
+	 * @param Title $title
+	 * @return void
+	 */
+	public static function invalidateCacheOfPagesWithTemplateLinksTo( $title ) {
+		$context = RequestContext::getMain();
+		$config = $context->getConfig();
+		$options = [ 'LIMIT' => $config->get( 'PageInfoTransclusionLimit' ) ];
+
+		if ( version_compare( MW_VERSION, '1.39', '<' ) ) {
+			$transcludedTargets = self::getLinksTo( $title, $options, 'templatelinks', 'tl' );
+		} else {
+			$transcludedTargets = $title->getTemplateLinksTo( $options );
+		}
+
+		foreach ( $transcludedTargets as $title_ ) {
+			// $title_->invalidateCache();
+			$wikiPage_ = self::getWikiPage( $title_ );
+			if ( $wikiPage_ ) {
+				$wikiPage_->doPurge();
+			}
+		}
 	}
 
 	/**
@@ -2279,7 +1378,7 @@ class PageProperties {
 			[
 				'LIMIT' => self::$queryLimit,
 				'ORDER BY' => 'page_title',
-				// see here https://doc.wikimedia.org/mediawiki-core/
+				// @see here https://doc.wikimedia.org/mediawiki-core/
 				'USE INDEX' => ( version_compare( MW_VERSION, '1.36', '<' ) ? 'name_title' : 'page_name_title' ),
 			]
 		);
@@ -2343,9 +1442,9 @@ class PageProperties {
 		if ( $status->isOK() ) {
 			// update cache
 			$from_text = $from->getFullText();
-			if ( array_key_exists( $from_text, self::$cached_page_properties ) ) {
-				self::$cached_page_properties[ $to->getFullText() ] = self::$cached_page_properties[ $from_text ];
-				unset( self::$cached_page_properties[ $from_text ] );
+			if ( array_key_exists( $from_text, self::$cachedJsonData ) ) {
+				self::$cachedJsonData[ $to->getFullText() ] = self::$cachedJsonData[ $from_text ];
+				unset( self::$cachedJsonData[ $from_text ] );
 			}
 		}
 
@@ -2368,27 +1467,142 @@ class PageProperties {
 	}
 
 	/**
+	 * @param User $user
 	 * @param Title $title
-	 * @return string
+	 * @param string $text
+	 * @return bool
+	 */
+	public static function saveRevision( $user, $title, $text ) {
+		$wikiPage = self::getWikiPage( $title );
+		$pageUpdater = $wikiPage->newPageUpdater( $user );
+		$slotRoleRegistry = MediaWikiServices::getInstance()->getSlotRoleRegistry();
+		$modelId = $slotRoleRegistry->getRoleHandler( SlotRecord::MAIN )->getDefaultModel( $title );
+
+		$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
+		$pageUpdater->setContent( MediaWiki\Revision\SlotRecord::MAIN, $slotContent );
+
+		$summary = '';
+		$flags = EDIT_INTERNAL;
+		$comment = CommentStoreComment::newUnsavedComment( $summary );
+		$newRevision = $pageUpdater->saveRevision( $comment, $flags );
+		$status = $pageUpdater->getStatus();
+
+		return $status->isOK();
+	}
+
+	/**
+	 * @param Title $title
+	 * @return string|null
 	 */
 	public static function getWikipageContent( $title ) {
 		$wikiPage = self::getWikiPage( $title );
-		return $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
+		if ( !$wikiPage ) {
+			return null;
+		}
+		$content = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW );
+		if ( !$content ) {
+			return null;
+		}
+		return $content->getNativeData();
+	}
+
+	/**
+	 * @param Title $title
+	 * @return MediaWiki\Revision\RevisionRecord|null
+	 */
+	public static function revisionRecordFromTitle( $title ) {
+		$wikiPage = self::getWikiPage( $title );
+
+		if ( $wikiPage ) {
+			return $wikiPage->getRevisionRecord();
+		}
+		return null;
 	}
 
 	/**
 	 * @param array $arr
-	 * @param string $oldkey
-	 * @param string $newkey
-	 * @return string
+	 * @see https://stackoverflow.com/questions/173400/how-to-check-if-php-array-is-associative-or-sequential
+	 * @return bool
 	 */
-	public static function replaceArrayKey( $arr, $oldkey, $newkey ) {
-		if ( array_key_exists( $oldkey, $arr ) ) {
-			$keys = array_keys( $arr );
-			$keys[ array_search( $oldkey, $keys ) ] = $newkey;
-
-			return array_combine( $keys, $arr );
+	public static function isList( $arr ) {
+		if ( function_exists( 'array_is_list' ) ) {
+			return array_is_list( $arr );
 		}
-		return $arr;
+		if ( $arr === [] ) {
+			return true;
+		}
+		return array_keys( $arr ) === range( 0, count( $arr ) - 1 );
 	}
+
+	/**
+	 * @param string &$html
+	 * @param string $className
+	 */
+	public static function moveTableHeaders( &$html, $className ) {
+		if ( empty( $html ) ) {
+			return;
+		}
+
+		libxml_use_internal_errors( true );
+		$dom = new DOMDocument;
+		$dom->loadHTML( mb_convert_encoding( $html, 'HTML-ENTITIES', 'UTF-8' ) );
+
+		$tables = $dom->getElementsByTagName( 'table' );
+
+		if ( !count( $tables ) ) {
+			return;
+		}
+
+		$childNodesWithTag = static function ( $el, $tagName ) {
+			$ret = [];
+			$childNodes = $el->childNodes;
+			foreach ( $childNodes as $childNode ) {
+				if ( $childNode->nodeType === XML_ELEMENT_NODE
+					&& $childNode->tagName === $tagName ) {
+					$ret[] = $childNode;
+				}
+			}
+			return $ret;
+		};
+
+		foreach ( $tables as $table ) {
+			$tableClass = $table->getAttribute( 'class' );
+			$classes = preg_split( '/\s+/', $tableClass, -1, PREG_SPLIT_NO_EMPTY );
+
+			if ( !in_array( $className, $classes ) ) {
+				continue;
+			}
+
+			$existingThead = $table->getElementsByTagName( 'thead' )->item( 0 );
+			$thead = !$existingThead ? $dom->createElement( 'thead' )
+				: $existingThead;
+
+			$tbody = $table->getElementsByTagName( 'tbody' )->item( 0 );
+			$rows = $childNodesWithTag( $tbody, 'tr' );
+			foreach ( $rows as $row ) {
+				$headings = $childNodesWithTag( $row, 'th' );
+
+				if ( !count( $headings ) ) {
+					continue;
+				}
+				$theadRow = $dom->createElement( 'tr' );
+				$thead->appendChild( $theadRow );
+				foreach ( $headings as $th ) {
+					$theadRow->appendChild( $th->cloneNode( true ) );
+				}
+				$tbody->removeChild( $row );
+			}
+
+			if ( !$existingThead ) {
+				$table->insertBefore( $thead, $tbody );
+			}
+
+			if ( !$thead->hasChildNodes() ) {
+				$table->removeChild( $thead );
+			}
+		}
+
+		$html = $dom->saveHTML();
+	}
+
 }

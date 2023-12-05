@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -95,15 +95,14 @@
 
 		this.upload.upload().then(
 			function ( res ) {
-				// console.log("Done!", res);
 				deferred.resolve();
 				layout.parentWidget.emit( 'fileUploadComplete', file, res );
 			},
 			function () {
-				// console.log("state");
 				// These errors will be thrown while the user is on the info page.
 				layout.getErrorMessageForStateDetails().then( function ( errorMessage ) {
-					// console.log( "errorMessage", errorMessage );
+					// eslint-disable-next-line no-console
+					console.error( 'errorMessage', errorMessage );
 					deferred.reject( errorMessage );
 					layout.parentWidget.emit( 'fileUploadErrorMessage', file, errorMessage );
 				} );
@@ -129,7 +128,6 @@
 		deferred.fail( function ( res ) {
 			// layout.setPage( 'upload' );
 			layout.parentWidget.emit( 'fileUploadFail', file, res );
-			// console.log("fail", res);
 		} );
 
 		return deferred;

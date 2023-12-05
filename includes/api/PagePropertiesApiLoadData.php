@@ -18,9 +18,11 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
+
+use MediaWiki\Extension\PageProperties\SemanticMediawiki as SemanticMediawiki;
 
 class PagePropertiesApiLoadData extends ApiBase {
 
@@ -43,9 +45,8 @@ class PagePropertiesApiLoadData extends ApiBase {
 	 */
 	public function execute() {
 		$user = $this->getUser();
-		if ( !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
-			&& !$user->isAllowed( 'pageproperties-caneditsemanticproperties' ) ) {
-
+		if ( !$user->isAllowed( 'pageproperties-canmanageschemas' )
+			&& !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 		\PageProperties::initialize();
@@ -54,94 +55,55 @@ class PagePropertiesApiLoadData extends ApiBase {
 		$output = $this->getContext()->getOutput();
 
 		$dataSet = explode( '|', $params['dataset'] );
-		$self = $this;
 
-		// allow properties that begin with an underscore
-		// @see https://www.mediawiki.org/wiki/API:JSON_version_2
-		$setPreserveKeysList = static function ( &$arr ) use ( $self, $result ) {
-			if ( method_exists( $self->getResult(), 'setPreserveKeysList' ) ) {
-				$result->setPreserveKeysList( $arr, array_keys( $arr ) );
-			}
-		};
-
+		$smwRequired = [
+			'semantic-properties',
+			// 'categories',
+			'imported-vocabularies',
+			'type-labels',
+			'property-labels'
+		];
 		$ret = [];
 		foreach ( $dataSet as $value ) {
-
-			if ( $value === 'semantic-properties' ) {
-				$allProperties = \PageProperties::getAllProperties();
-				$semanticProperties = \PageProperties::formatSemanticProperties( $allProperties );
-
-				if ( method_exists( $this->getResult(), 'setPreserveKeysList' ) ) {
-					foreach ( $semanticProperties as $key => $value ) {
-						$result->setPreserveKeysList( $semanticProperties[$key]['properties'], array_keys( $semanticProperties[$key]['properties'] ) );
-					}
-				}
-
-				$ret['semanticProperties'] = $semanticProperties;
-
-			} elseif ( $value === 'forms' ) {
-
-				// @TODO do not retrieve forms already loaed
-				$allForms = \PageProperties::getPagesWithPrefix( null, NS_PAGEPROPERTIESFORM );
-
-				\PageProperties::setForms( $output, array_map( static function ( $title ) {
-					return $title->getText();
-				}, $allForms ) );
-
-				$ret['forms'] = \PageProperties::$forms;
-
-			} elseif ( $value === 'categories' ) {
-				$categories = \PageProperties::getCategoriesSemantic();
-
-				if ( method_exists( $this->getResult(), 'setPreserveKeysList' ) ) {
-					foreach ( $categories as $key => $value ) {
-						$result->setPreserveKeysList( $categories[$key]['properties'], array_keys( $categories[$key]['properties'] ) );
-					}
-				}
-
-				$ret['categories'] = $categories;
-
-			} elseif ( $value === 'importedVocabularies' ) {
-				$ret['importedVocabularies'] = \PageProperties::getImportedVocabularies();
-
-			} elseif ( $value === 'typeLabels' ) {
-				$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
-
-				$setPreserveKeysList( $typeLabels );
-				$ret['typeLabels'] = $typeLabels;
-
-			} elseif ( $value === 'propertyLabels' ) {
-				$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
-
-				$propertyLabels = [];
-				foreach ( $propertyList as $key => $value ) {
-					if ( !in_array( $key, \PageProperties::$specialPropertyDefinitions ) ) {
-						continue;
-					}
-
-					$property = new SMW\DIProperty( $key );
-					$propertyLabels[$key] = $property->getLabel();
-				}
-
-				asort( $propertyLabels );
-				$setPreserveKeysList( $propertyLabels );
-
-				$ret['propertyLabels'] = $propertyLabels;
+			if ( !\PageProperties::$SMW && in_array( $value, $smwRequired ) ) {
+				continue;
 			}
 
+			switch ( $value ) {
+				case 'schemas':
+					$schemasArr = \PageProperties::getAllSchemas();
+					$schemas = \PageProperties::getSchemas( $output, $schemasArr, false );
+					$ret['schemas'] = $schemas;
+					break;
+
+				case 'type-labels':
+					$typeLabels = SMW\DataTypeRegistry::getInstance()->getKnownTypeLabels();
+					$ret['type-labels'] = $typeLabels;
+					break;
+
+				case 'property-labels':
+					$propertyList = SMW\PropertyRegistry::getInstance()->getPropertyList();
+
+					$propertyLabels = [];
+					foreach ( $propertyList as $key => $value ) {
+						if ( !in_array( $key, SemanticMediawiki::$specialPropertyDefinitions ) ) {
+							continue;
+						}
+
+						$property = new SMW\DIProperty( $key );
+						$propertyLabels[$key] = $property->getLabel();
+					}
+
+					asort( $propertyLabels );
+					$ret['property-labels'] = $propertyLabels;
+					break;
+			}
 		}
 
-		// @see include/api/ApiResult.php -> getResultData
-		// "- Boolean-valued items are changed to '' if true or removed if false"
-		$convertBoolean = static function ( &$value ) {
-			if ( is_bool( $value ) ) {
-				$value = (int)$value;
-			}
-		};
-
+		// @ATTENTION json_encode avoid internal mediawiki
+		// transformations @see include/api/ApiResult.php -> getResultData
 		foreach ( $ret as $key => $value ) {
-			array_walk_recursive( $value, $convertBoolean );
-			$result->addValue( [ $this->getModuleName() ], $key, $value );
+			$result->addValue( [ $this->getModuleName() ], $key, json_encode( $value ) );
 		}
 	}
 
@@ -167,10 +129,8 @@ class PagePropertiesApiLoadData extends ApiBase {
 	/**
 	 * @inheritDoc
 	 */
-	protected function getExamplesMessages() {
-		return [
-			'action=pageproperties-manageproperties-load-data'
-			=> 'apihelp-pageproperties-manageproperties-load-data-example-1'
-		];
+	protected function getExamples() {
+		return false;
 	}
+
 }

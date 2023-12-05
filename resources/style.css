@@ -1,23 +1,26 @@
-/* stylelint-disable selector-max-id, no-descending-specificity, color-named */
+/**
+ * This file is part of the MediaWiki extension PageProperties.
+ *
+ * PageProperties is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * PageProperties is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with PageProperties.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @file
+ * @ingroup extensions
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
+ */
 
-.ItemWidget {
-	padding: 12px 0;
-	display: block;
-}
-
-.oo-ui-fieldLayout.oo-ui-labelElement.ItemWidget {
-	margin-top: 0;
-	margin-bottom: 0;
-}
-
-.InnerItemWidget {
-	padding-bottom: 8px;
-	display: block;
-}
-
-.mw-prefs-buttons {
-	z-index: 10;
-}
+/* stylelint-disable block-no-empty */
 
 .pageproperties_dynamictable {
 	width: 100%;
@@ -67,263 +70,152 @@
 	float: right;
 }
 
-.pagepropertiesform-wrapper {
-	scroll-margin: 12px;
-}
-
-.pagepropertiesform-wrapper .oo-ui-panelLayout-expanded {
+.PagePropertiesForm .oo-ui-panelLayout-expanded {
 	position: relative;
 }
 
-.pagepropertiesform-wrapper .oo-ui-actionFieldLayout-button,
-.pageproperties-ooui-window .oo-ui-actionFieldLayout-button {
-	vertical-align: top;
+.PagePropertiesForm .oo-ui-menuLayout-expanded {
+	position: relative;
 }
 
-.pagepropertiesform-wrapper [ class*='inputName-mw.widgets.DateInputWidget' ] {
-	max-width: 24em;
+.PagePropertiesForm .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-menu {
+	position: relative;
 }
 
-.pagepropertiesform-wrapper .PanelProperties {
-	/* min-height: 160px; */
-	overflow-x: hidden;
+.PagePropertiesForm .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-content {
+	position: relative;
+}
+
+.PagePropertiesForm {
+	max-width: 600px;
+}
+
+.PagePropertiesForm.PagePropertiesFormContext-EditSemantic {
+	max-width: none;
+	background: #f8f9fa;
+}
+
+.pageproperties-datatable {
+}
+
+.PagePropertiesEditSemanticOuterStackPanel.oo-ui-panelLayout-padded.oo-ui-panelLayout-framed {
+	margin: 0;
+}
+
+.PanelPropertiesStackPanelSingle {
+	padding: 12px;
+}
+
+.PanelPropertiesStackPanelTabs {
+
+}
+
+.PanelPropertiesStackPanelBooklets {
+	padding: 12px;
+}
+
+.PanelPropertiesStackPanelFieldset {
+	padding: 12px;
+}
+
+.PanelPropertiesStack {
+	border: 1px solid #ccc;
 	margin-bottom: 16px;
 }
 
-.pagepropertiesform-wrapper .PanelProperties.PanelProperties-empty {
+.PagePropertiesFormWrapper .oo-ui-toolbar-position-top > .oo-ui-toolbar-bar {
+	border-bottom: medium;
+}
+
+.PanelPropertiesStack-empty {
 	min-height: 0;
 	margin-bottom: 0;
-}
-
-.oo-ui-messageWidget.oo-ui-messageWidget-block.oo-ui-messageWidget-showClose {
-	padding-right: 56px;
-}
-
-.oo-ui-messageWidget.oo-ui-messageWidget-block > .oo-ui-messageWidget-close {
-	position: absolute;
-	top: 8px;
-	right: 8px;
-}
-
-.pageproperties-ooui-window {
-	z-index: 10000;
-}
-
-.pagepropertiesform-wrapper .oo-ui-labelElement-label {
-	display: inline;
-}
-
-#import-wrapper .oo-ui-panelLayout-expanded {
-	position: relative;
-}
-
-#import-wrapper .oo-ui-layout {
-	display: block;
-}
-
-#import-wrapper .oo-ui-menuLayout-content {
-	display: block;
-	position: relative;
-}
-
-.pageproperties-import-dialog .oo-ui-selectWidget {
-	display: table;
-	width: 100%;
-}
-
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget {
-	display: table-row;
-}
-
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label {
-	display: table-cell;
-	padding: 8px;
-}
-
-.pageproperties-import-dialog .oo-ui-selectWidget .oo-ui-menuOptionWidget .oo-ui-labelElement-label.right {
-	text-align: right;
-	color: gray;
-}
-
-.pageproperties-import-toolbar-action-button {
-	margin-right: 0;
-}
-
-.pageproperties-import-toolbar-action-button .oo-ui-buttonElement-button {
-	border: 0;
-	/* stylelint-disable-next-line declaration-no-important */
-	border-width: 0 !important;
-}
-
-.pageproperties-import-dialog .oo-ui-pageLayout {
-	font-family: monospace;
-	white-space: pre-wrap;
-	background: #f7f7f7;
-	padding: 8px;
-	font-size: 1.1em;
-}
-
-.pageproperties-import-saved-content {
-	height: 280px;
-	overflow-y: auto;
-	background: #f7f7f7;
-	padding: 8px;
 }
 
 .oo-ui-bookletLayout-stackLayout > .oo-ui-panelLayout.pageproperties-forms-fields-panel {
 	padding: 0;
 }
 
-.pageproperties-forms-fields-actionwidget {
-	background-color: #f5f5f5;
-	border-bottom: 1px dotted #aaa;
-	margin-top: 0;
+.oo-ui-bookletLayout-stackLayout > .oo-ui-panelLayout.pageproperties-schemas-panel-properties {
 	padding: 0;
 }
 
-.pageproperties-ooui-window .pageproperties-forms-fields-actionwidget .oo-ui-actionFieldLayout-button {
-	vertical-align: middle;
-}
-
-.pageproperties-forms-fields-contentframe {
+.pageproperties-schemas-properties-contentframe {
 	padding: 16px 18px 18px;
 }
 
-#import-datatable td {
-	vertical-align: top;
-}
-
-#pageproperties-forms-datatable-dialog .buttons-wrapper {
-	white-space: nowrap;
-}
-
-#form-section-properties .oo-ui-menuLayout-expanded {
-	position: static;
-}
-
-#form-section-properties .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-menu {
-	position: static;
-}
-
-#form-section-properties .oo-ui-menuLayout-expanded > .oo-ui-menuLayout-content {
-	position: static;
-}
-
-#form-section-properties #pageproperties-import-search-widget {
-	height: 280px;
-}
-
-.PanelProperties-panel-section {
-	border: 1px solid #ccc;
-	border-top: 0;
-	border-bottom: 1px dotted #ccc;
-	background: #f8f9fa;
-}
-
-.PanelProperties-panel-section:first-child {
-	border-top: 1px solid #ccc;
-}
-
-.PanelProperties-panel-section:last-child {
-	border-bottom: 1px solid #ccc;
-}
-
-.pagepropertiesform-wrapper .oo-ui-toolbar-position-top > .oo-ui-toolbar-bar {
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
-	border-bottom: none;
-}
-
-.iti__country-list {
-	z-index: 1000;
-}
-
-.InnerItemWidgetFile {
-	padding-bottom: 8px;
+.PagePropertiesItemWidget {
+	padding: 10px 0;
 	display: block;
-	/* font-size: smaller; */
 }
 
-.InnerItemWidgetFile .oo-ui-inputWidget-input {
-	background: #f5f5f5;
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
-	border: none;
-	font-weight: bold;
-	color: #15c;
+.mw-widget-dateInputWidget-calendar {
+	z-index: 10;
 }
 
-.InnerItemWidgetFile .oo-ui-actionFieldLayout .oo-ui-actionFieldLayout-input .oo-ui-widget:not( .oo-ui-textInputWidget ) {
-	margin-right: 1px;
+.iti {
+	width: 100%;
 }
 
-.InnerItemWidgetFile .oo-ui-buttonElement-framed > .oo-ui-buttonElement-button {
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
-	border: none;
+.pageproperties-form-table-multiple-fields {
+	width: 100%;
 }
 
-.mw-prefs-buttons-nosticky {
-	padding-top: 14px;
+.pageproperties-form-table-multiple-fields > div:first-child {
+	padding-right: 12px;
 }
 
-.pageproperties-upload-messagewidget > div {
-	margin-left: 28px;
+.pageproperties-horizontal-section-remove-row {
+	width: 1%;
+	vertical-align: middle;
 }
 
-.pagepropertiesform .radio_for_required_checkboxes {
-	position: absolute;
-	margin: 0;
+.PagePropertiesGroupWidgetPanel .oo-ui-horizontalLayout .oo-ui-numberInputWidget-field,
+.PagePropertiesGroupWidgetPanel-border .oo-ui-horizontalLayout .oo-ui-numberInputWidget-field {
+	table-layout: auto;
+}
+
+.PagePropertiesGroupWidgetMessageWidget {
+	margin-bottom: 12px;
+}
+
+.PanelPropertiesStackPanelSingle,
+.PanelPropertiesStack {
+	position: static;
+}
+
+/* example custom class */
+.PagePropertiesForm.myclass .PanelPropertiesStack {
+	background: #d9ffe3;
+}
+
+.PagePropertiesFormSubmitButton {
+	margin-bottom: 12px;
+}
+
+.PagePropertiesFormFieldMessage {
+	margin: 12px 0;
+}
+
+.PagePropertiesForm .PanelPropertiesStackPanelTabs .oo-ui-indexLayout.oo-ui-menuLayout.oo-ui-menuLayout-expanded > .oo-ui-menuLayout-menu {
+	white-space: normal;
+	height: auto;
+}
+
+.PagePropertiesForm .PanelPropertiesStackPanelTabs .oo-ui-indexLayout.oo-ui-menuLayout.oo-ui-menuLayout-expanded > .oo-ui-menuLayout-content {
 	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	-webkit-appearance: none;
-	pointer-events: none;
-	/* stylelint-disable-next-line declaration-property-value-disallowed-list */
-	border: none;
-	background: none;
-	user-select: none;
-	-moz-user-select: none;
-	-khtml-user-select: none;
-	-webkit-user-select: none;
-	-o-user-select: none;
 }
 
-.pageproperties-button-multiselect-widget {
-	position: relative;
-	display: inline-block;
+/* required for Chameleon skin */
+.pageproperties-ooui-window {
+	z-index: 9999;
 }
 
-.pageproperties-rating-widget {
-	position: relative;
-	display: inline-block;
+.pageproperties-wikitable {
+
 }
 
-.pagepropertiesform .iti {
-	width: 100%;
-}
-
-.pageproperties-button-multiselect-widget .oo-ui-buttonElement-button {
-	margin-bottom: 4px;
-	margin-top: 4px;
-	font-size: smaller;
-	border-radius: 12px;
-	padding-top: 0;
-	padding-bottom: 0;
-	min-height: auto;
-}
-
-.pageproperties-button-multiselect-widget .oo-ui-buttonElement-framed.oo-ui-widget-enabled.oo-ui-buttonElement-active > .oo-ui-buttonElement-button {
-	border: 1px solid gray;
-	background: gray;
-}
-
-.pageproperties-button-multiselect-widget .oo-ui-buttonElement-framed.oo-ui-labelElement > .oo-ui-buttonElement-button {
-	padding: 4px 16px;
-}
-
-.pageproperties-SelectFileWidget-button {
-	padding-top: 0;
-}
-
-.pageproperties-dropdown-widget .oo-ui-dropdownInputWidget select {
-	display: block;
+.pageproperties-wikitable-inner th,
+.pageproperties-wikitable-inner tr td {
+	text-align: left;
 }

@@ -2,74 +2,13 @@
 	"@metadata": {
 		"authors": []
 	},
-	"pageproperties": "Manage Properties",
-	"pageproperties-section": "Page Properties",
-	"pageproperties-label": "Page properties",
-	"manageproperties-label": "Manage properties",
-	"specialpages-group-": "Page Properties",
-	"pageproperties-inner-section": "&#8203;",
-	"properties-navigation": "Properties",
 
-	"pageproperties-form-section-semantic-manage-properties-label": "Here you can create, edit, remove and rename properties without to deal with property pages. Renamed properties already annotated will be automatically updated in all the pages which make use of them. To use the [https://schema.org/docs/full.html schema.org] vocabulary in your wiki add in [[MediaWiki:Smw_import_schema|this page]] a subset of the [https://www.semantic-mediawiki.org/wiki/MediaWiki:Smw_import_schema following list]. [https://www.semantic-mediawiki.org/wiki/Help:Import_vocabulary Check here] to find out more.<br /><br />",
-
-	"pageproperties-form-section-semantic-properties-label": "Here you can set semantic properties without having to manually annotate them on the page. Same properties can be used multiple times. Attention: the values of properties both manually annotated on the page or set through forms, and set here, will be merged together. To create/edit properties definition [[Special:PageProperties|go here]].<br /><br />",
-
-	"pageproperties-js-alert-2": "Submitting the form will delete stored semantic properties, continue?",
-
-	"pageproperties-tracking-category": "Pages with PageProperties",
-
-	"pageproperties-extension-desc": "Page Properties (Seitenattribute) ermöglicht es, Anzeigetitel, Sprache und Inhaltsmodell einer Seite einfach zu verändern. Darüber hinaus können semantische Attribute hinzugefügt werden (soferne Semantic MediaWiki installiert ist) und es können Meta Tags für Suchmaschinen für das ganze Wiki oder einzelne Seiten gesetzt werden.",
-
-	"pageproperties-form-fieldset-language": "Sprache",
-	"pageproperties-form-fieldset-publishing": "publishing",
-
-	"pageproperties-form-language-label": "Sprache",
-	"pageproperties-form-language-help": "einen Buchstaben eingeben, um eine Auswahl anzuzeigen",
-
-	"pageproperties-form-meta_robots_noindex_nofollow-label": "noindex, nofollow",
-
-	"pageproperties-form-meta_googlebot_notranslate-label": "notranslate",
 	"pageproperties_dynamictable_addfield": "Feld hinzufügen",
-
-	"pageproperties-form-meta_entire_wiki-label": "auf das gesamte Wiki anwenden (die gesetzten Werte können von anderen Seiten überschrieben werden)",
-
-	"pageproperties-form-access-label": "access",
-	"pageproperties-form-publish_as-label": "veröffentlichen als",
-	"pageproperties-form-publish_as-help": "attribution used for links from external pages",
-
-	"pageproperties-form-published-label": "veröffentlicht",
-	"pageproperties-form-published-help": "Falls abgewählt, wird die Seite als Entwurf eingestuft, der für reguläre Besucher*innen nicht sichtbar ist.",
-	"pageproperties-form-meta_keywords-label": "Stichworte",
-	"pageproperties-form-meta_keywords-help": "Stichworte",
-
+	"pageproperties-form-seo_entire_wiki-label": "auf das gesamte Wiki anwenden (die gesetzten Werte können von anderen Seiten überschrieben werden)",
 	"pageproperties-form-meta_description-label": "Beschreibung",
-	"pageproperties-form-meta_description-help": "https://moz.com/learn/seo/meta-description<br /><br />",
+	"pageproperties-form-seo_subpages-label": "Unterseiten (auf Seiten anwenden, die in dieser inkludiert sind)",
 
-	"pageproperties-form-meta_copyright-label": "Copyright",
-	"pageproperties-form-meta_copyright-help": "Copyright-Angabe",
-
-	"pageproperties-form-meta_author-label": "Autor",
-	"pageproperties-form-meta_robots-label": "Robots-Meta-Tag",
-	"pageproperties-form-meta_robots-help": "https://moz.com/learn/seo/robots-meta-directives",
-
-	"pageproperties-form-meta_subpages-label": "Unterseiten (auf Seiten anwenden, die in dieser inkludiert sind)",
-	"pageproperties-form-meta_subpages-help_": "Auswählen, um diese Eigenschaften auf Unterseiten zu vererben.",
-	"pageproperties-return": "← [[$1|$2]]",
-
-	"pageproperties-form-section-main": "Seite",
-	"pageproperties-form-section-seo": "SEO",
-
-	"pageproperties-form-section-main-label": "&#8203;",
 	"pageproperties-form-section-seo-label": "Hier können beliebige Metadaten für die Seite und ihre Unterseiten angegeben werden. Wenn die Erweiterung [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen.<br /><br />",
-
-	"pageproperties-form-section-main-label-entire-wiki": "Hier können beliebige Metadaten für diese Seite, ihre Unterseiten und sogar das gesamte Wiki angegeben werden. Wenn die Erweiterung [https://www.mediawiki.org/wiki/Extension:WikiSEO WikiSEO] installiert ist, können die Parameter gesetzt werden, ohne diese händisch auf der Seite angeben zu müssen. <br /><br />",
-
 	"pageproperties-form-displaytitle-label": "Anzeigetitel",
-	"pageproperties-form-displaytitle-help": "kann leer bleiben",
-
-	"pageproperties-form-model-label": "Inhaltsmodell",
-
-	"pageproperties-form-section-semantic-properties-label_": "Hier können semantische Attribute gesetzt werden, ohne dass man diese händisch auf der Seite annotieren, oder über Formulare oder Vorlagen definieren muss. Achtung: Attribute, die hier gesetzt werden, überschreiben Werte derselben Attribute, die über Formulare oder Annotationen gesetzt wurden!",
-	"pageproperties-form-section-semantic-properties": "Semantische Attribute"
-
+	"pageproperties-form-model-label": "Inhaltsmodell"
 }

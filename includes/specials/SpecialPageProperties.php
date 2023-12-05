@@ -29,13 +29,24 @@ use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
 
+// @TODO handle properties through database
+// @see here https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
+
 class SpecialPageProperties extends FormSpecialPage {
 
 	/** @var WikiPageFactory */
 	private $wikiPageFactory;
+
+	/** @var title */
 	protected $title;
+
+	/** @var content_model_error */
 	protected $content_model_error;
+
+	/** @var pageProperties */
 	protected $pageProperties = [];
+
+	/** @var wikiPage */
 	protected $wikiPage;
 
 	/**
@@ -103,7 +114,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		if ( !$par ) {
-			// @todo show proper error
+			// @TODO show proper error
 			$this->displayRestrictionError();
 			return;
 		}
@@ -138,6 +149,8 @@ class SpecialPageProperties extends FormSpecialPage {
 		$out->addModuleStyles(
 			[
 				// 'mediawiki.special',
+				// *** this is required to render
+				// the sticky submit button
 				'mediawiki.special.preferences.styles.ooui',
 			]
 		);
@@ -168,7 +181,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 
-		$return_title = \PageProperties::array_last( explode( "/", $title->getFullText() ) );
+		$return_title = \PageProperties::currentSubpage( $title->getFullText() );
 
 		$out->addWikiMsg( 'pageproperties-return', $title->getFullText(), $return_title );
 		$out->addHTML( '<br>' );
@@ -245,10 +258,8 @@ class SpecialPageProperties extends FormSpecialPage {
 				// 'display_title' => null,
 				// 'language' => $page_language,
 				'model' => $this->title->getContentModel(),
-				// 'categories' => $this->getCategories(),
 			],
 			'semantic-properties' => [],
-			'semantic-forms' => [],
 			'SEO' => [
 				'meta' => [],
 				'subpages' => true,
@@ -263,6 +274,10 @@ class SpecialPageProperties extends FormSpecialPage {
 		// *** retrieve recorded properties also when posted,
 		// since the current page does not handle semantic properties
 		// and categories
+
+		// @TODO restore pageproperties db
+		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/mysql/page_properties.sql
+		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/specials/SpecialPageProperties.php
 		$page_properties = \PageProperties::getPageProperties( $this->title );
 		if ( $page_properties === false ) {
 			$page_properties = [];
@@ -301,7 +316,6 @@ class SpecialPageProperties extends FormSpecialPage {
 			if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
 				$page_properties['SEO']['entire-site'] = $request->getVal( 'SEO_entire_site' );
 			}
-
 		}
 
 		$this->pageProperties = $page_properties;
@@ -356,8 +370,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		$formDescriptor[ 'page_properties_language_select' ] = [
 			'label-message' => 'pagelang-language',
 			'name' => 'page_properties_language_select',
-			// 'help-message' => 'pageproperties-form-displaytitle-help',
-			"id" => "page_properties_language_select",
+			'id' => "page_properties_language_select",
 			'type' => 'select',
 			'options' => [
 				$this->msg( 'pageproperties_form-displaytitle-option-default' )->text() => 'default',
@@ -399,12 +412,12 @@ class SpecialPageProperties extends FormSpecialPage {
 			'options' => $options,
 			'validation-callback' => function () {
 				if ( $this->content_model_error ) {
-					// see includes/htmlform/OOUIHTMLForm.php
+					// @see includes/htmlform/OOUIHTMLForm.php
 					$errors = $this->content_model_error->getErrorsByType( 'error' );
+					// @FIXME this will show only the first error
 					foreach ( $errors as &$error ) {
-						$error = $this->getMessage( array_merge( [ $error['message'] ], $error['params'] ) )->parse();
+						return $this->getMessage( array_merge( [ $error['message'] ], $error['params'] ) )->parse();
 					}
-					return $error;
 				}
 				return true;
 			},
@@ -718,8 +731,11 @@ class SpecialPageProperties extends FormSpecialPage {
 			$logid = $entry->insert();
 			$entry->publish( $logid );
 		}
-		// Force re-render so that language-based content (parser functions etc.) gets updated
-		$title->invalidateCache();
+
+		// Force re-render so that language-based content (parser functions etc.)
+		// gets updated
+		$wikipage = \PageProperties::getWikiPage( $title );
+		$wikipage->doPurge();
 
 		return Status::newGood(
 			(object)[
@@ -732,14 +748,13 @@ class SpecialPageProperties extends FormSpecialPage {
 
 	/**
 	 * @see includes/specials/SpecialChangeContentModel.php
-	 * @param Title $title
+	 * @param WikiPage $page
 	 * @param string $model
 	 * @return Status
 	 */
-	protected function changeContentModel( $title, $model ) {
+	public function changeContentModel( $page, $model ) {
 		// ***edited
-		//$page = $this->wikiPageFactory->newFromTitle( $title );
-		$page = $this->wikiPage;
+		// $page = $this->wikiPageFactory->newFromTitle( $title );
 
 		// ***edited
 		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority() : $this->getUser() );
@@ -821,13 +836,13 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	public function onSubmit( $data ) {
 		$title = $this->title;
-		// $this->pageProperties['semantic-forms'] = explode( '|', $_POST['semantic_forms'] );
 		$pageProperties = $this->pageProperties['page-properties'];
 
 		if ( $title->getContentModel() != $pageProperties['model'] ) {
-			$status = self::changeContentModel( $title, $pageProperties['model'] );
+			$status = self::changeContentModel( $this->wikiPage, $pageProperties['model'] );
 			if ( !$status->isOK() ) {
 				$this->content_model_error = $status;
+				return Status::newFatal( 'formerror' );
 			}
 		}
 
@@ -854,7 +869,8 @@ class SpecialPageProperties extends FormSpecialPage {
 		$errors = [];
 		\PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors );
 
-		return true;
+		return !count( $errors ) ? true
+			: Status::newFatal( 'formerror' );
 	}
 
 	/**

@@ -15,7 +15,7 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <business@topway.it>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -36,6 +36,8 @@
 
 		// @see https://iamkate.com/code/star-rating-widget/
 		var $fieldset = $( ' <div class="rating">' );
+
+		this.$input = $fieldset;
 
 		var self = this;
 		this.isChecked = 0;
@@ -58,7 +60,6 @@
 			// alread selected, and check the previous one
 			input.on( 'click', function () {
 				var ii = $( this ).data( 'i' );
-
 				// eslint-disable-next-line eqeqeq
 				if ( self.isChecked == ii ) {
 					self.isChecked = ii - 1;
@@ -83,8 +84,6 @@
 		}
 
 		this.getValue = function () {
-			// var el = $(":input[name='" + config.name + "']:checked");
-			// return el.get(0) ? el.val() : "";
 			return this.isChecked ? String( this.isChecked ) : '';
 		};
 

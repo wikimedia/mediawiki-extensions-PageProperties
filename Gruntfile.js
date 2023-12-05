@@ -18,7 +18,8 @@ module.exports = function ( grunt ) {
 				'!resources/datatables/**',
 				'!resources/intl-tel-input/**',
 				'!resources/papaparse/**',
-				'!resources/promise-polyfill/**'
+				'!resources/promise-polyfill/**',
+				'!resources/ajv-validator/**'
 			]
 		},
 		stylelint: {
@@ -27,7 +28,10 @@ module.exports = function ( grunt ) {
 				'!node_modules/**',
 				'!vendor/**',
 				'!resources/datatables/**',
-				'!resources/intl-tel-input/**'
+				'!resources/intl-tel-input/**',
+				'!resources/papaparse/**',
+				'!resources/promise-polyfill/**',
+				'!resources/ajv-validator/**'
 			]
 		},
 		banana: conf.MessagesDirs

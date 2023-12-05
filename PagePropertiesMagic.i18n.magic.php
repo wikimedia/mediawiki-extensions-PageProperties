@@ -18,8 +18,8 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <business@topway.it>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 $magicWords = [];
@@ -29,7 +29,7 @@ $magicWords = [];
 // '0' stands for 'case insensitive'
 
 $magicWords['en'] = [
-	'pageproperties' => [ 0, 'pageproperties' ],
-	'pagepropertiesform' => [ 0, 'pagepropertiesform' ],
-	'pagepropertiesformbutton' => [ 0, 'pagepropertiesformbutton' ],
+	'pagepropertiesprint' => [ 0, 'pagepropertiesprint' ],
+	'pagepropertiesquery' => [ 0, 'pagepropertiesquery' ],
+	'pagepropertiesform' => [ 0, 'pagepropertiesform' ]
 ];

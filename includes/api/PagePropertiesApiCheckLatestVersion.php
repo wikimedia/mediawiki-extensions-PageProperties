@@ -47,8 +47,14 @@ class PagePropertiesApiCheckLatestVersion extends ApiBase {
 
 		// @see SpecialPageProperties -> addJsConfigVars
 		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
-		if ( !( $user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
-			|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) ) ) {
+
+		// execute if any of the condition below is true
+		if ( !$user->isAllowed( 'pageproperties-canmanageschemas' )
+			&& !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
+			&& !$user->isAllowed( 'pageproperties-canmanageforms' )
+
+			// execute if user is in the admin group
+			&& !count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
 		}
 
@@ -112,10 +118,7 @@ class PagePropertiesApiCheckLatestVersion extends ApiBase {
 	/**
 	 * @inheritDoc
 	 */
-	protected function getExamplesMessages() {
-		return [
-			'action=pageproperties-check-latest-version'
-			=> 'apihelp-pageproperties-check-latest-version-example-1'
-		];
+	protected function getExamples() {
+		return false;
 	}
 }

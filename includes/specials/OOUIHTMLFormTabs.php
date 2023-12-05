@@ -110,7 +110,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				'mw-prefsection-' . $key,
 				[
 					// ***edited
-					// see resources/src/mediawiki.htmlform/autoinfuse.js
+					// @see resources/src/mediawiki.htmlform/autoinfuse.js
 					// 'classes' => [ 'mw-htmlform-autoinfuse-lazy' ],
 					'label' => $label,
 					'content' => new OOUI\FieldsetLayout(
@@ -249,7 +249,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				if ( !empty( $retval ) ) {
 
 					// ***remove the annoying &nbsp; on OOUI / Mediawiki 1.39 (~v0.44.3)
-					// see vendor/oojs/oojs-ui/php/layouts/FieldsetLayout.php
+					// @see vendor/oojs/oojs-ui/php/layouts/FieldsetLayout.php
 					// $retval = str_replace( '>&nbsp;</label>','></label>', $retval );
 					$retval = preg_replace( '/<label [^>]+>&nbsp;<\/label>/', '', $retval );
 

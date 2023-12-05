@@ -22,6 +22,10 @@
 $( function () {
 	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
 
+	// @TODO the following manipulates the DOM which is
+	// a bad practice, convert to client-side only
+	// using object-oriented approach
+
 	var msg1 = mw.config.get( 'pageproperties-js-alert-1' );
 	// var msg2 = mw.config.get( 'pageproperties-js-alert-2' );
 	var propertiesTypes = JSON.parse( mw.config.get( 'pageproperties-propertiesTypes' ) );
@@ -67,7 +71,7 @@ $( function () {
 			$table = closest( this, '.pageproperties_dynamictable' );
 			if ( !$table.length ) {
 				// eslint-disable-next-line no-console
-				console.log( 'cannot find related pageproperties_dynamictable' );
+				console.error( 'cannot find related pageproperties_dynamictable' );
 				return;
 			}
 			var $tr_first = $table.find( 'tr:first' );

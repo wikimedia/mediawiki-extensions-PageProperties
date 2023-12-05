@@ -22,12 +22,18 @@
  * @copyright Copyright ©2021-2022, https://wikisphere.org
  */
 
+// @TODO implement as form
+
 class SpecialEditSemantic extends SpecialPage {
 
+	/** @var title */
 	protected $title;
+
+	/** @var wikiPage */
 	protected $wikiPage;
+
+	/** @var user */
 	protected $user;
-	protected $semanticForms = [];
 
 	/** @inheritDoc */
 	public function __construct() {
@@ -41,9 +47,11 @@ class SpecialEditSemantic extends SpecialPage {
 	 * @return string
 	 */
 	public function getDescription() {
-		// $this->msg( 'pageproperties' )->text()
-		return ( $this->title ? ( !$this->title->isKnown() ? $this->msg( "pageproperties-editsemantic-creating" )->text() : $this->msg( "pageproperties-editsemantic-editing" )->text() )
-			. ' ' . $this->title . ' ' . $this->msg( "pageproperties-editsemantic-semantic" )->text() : $this->msg( "pageproperties-editsemantic-newpageforms", implode( ', ', $this->semanticForms ) )->text() );
+		if ( !$this->title || !$this->title->isKnown() ) {
+			return $this->msg( "pageproperties-editsemantic-new-article" )->text();
+		}
+
+		return $this->msg( "pageproperties-editsemantic-edit", $this->title->getText() )->text();
 	}
 
 	/** @inheritDoc */
@@ -66,14 +74,9 @@ class SpecialEditSemantic extends SpecialPage {
 			return;
 		}
 
-		if ( !defined( 'SMW_VERSION' ) ) {
-			$this->displayRestrictionError();
-			return;
-		}
-
 		$this->addHelpLink( 'Extension:PageProperties' );
 
-		if ( !$user->isAllowed( 'pageproperties-caneditsemanticproperties' ) ) {
+		if ( !$user->isAllowed( 'pageproperties-caneditschemas' ) ) {
 			$this->displayRestrictionError();
 			return;
 		}
@@ -97,9 +100,9 @@ class SpecialEditSemantic extends SpecialPage {
 	 * @return array
 	 */
 	private function setData( $out ) {
-		$semanticForms = [];
-		$semanticData = [];
-		$pageCategories = [];
+		$schemas = [];
+		$categories = [];
+		$pageProperties = [];
 
 		if ( $this->title && $this->title->isKnown() ) {
 			$pageProperties = \PageProperties::getPageProperties( $this->title );
@@ -108,88 +111,55 @@ class SpecialEditSemantic extends SpecialPage {
 				$pageProperties = [];
 			}
 
-			$defaultValues = [
-				'semantic-properties' => [],
-				'semantic-forms' => [],
-			];
-
-			$pageProperties = array_replace_recursive( $defaultValues, $pageProperties );
-
-			$semanticData = self::getSemanticData( $this->title, $pageProperties );
-
-			if ( is_array( $pageProperties['semantic-forms'] ) ) {
-				$semanticForms = $pageProperties['semantic-forms'];
-			}
-
-			$pageCategories = $this->getPageCategories();
+			$categories = \PageProperties::getCategories( $this->title );
 		}
 
-		$formVal = $this->getRequest()->getVal( 'form' );
-
-		if ( $formVal ) {
-			// '|' in titles is forbidden, so we use it as a separator
-			$forms_ = array_reverse( explode( '|', $formVal ) );
-			foreach ( $forms_ as $title_text_ ) {
-				$title_ = Title::makeTitleSafe( NS_PAGEPROPERTIESFORM, $title_text_ );
-				if ( $title_ && $title_->isKnown() ) {
-					array_unshift( $semanticForms, $title_->getText() );
-				}
-			}
+		if ( !empty( $pageProperties['schemas'] ) ) {
+			$schemas = array_keys( $pageProperties['schemas'] );
 		}
 
-		$semanticForms = array_unique( $semanticForms );
-
-		\PageProperties::setForms( $out, $semanticForms );
-
-		foreach ( $semanticForms as $key => $value ) {
-			if ( empty( \PageProperties::$forms[$value] ) ) {
-				unset( $semanticForms[$key] );
-			}
+		if ( !empty( $_GET['schemas'] ) ) {
+			$schemas = array_merge( explode( '|', $_GET['schemas'] ) );
 		}
 
-		$this->semanticForms = $semanticForms;
+		$schemas = array_unique( $schemas );
+		\PageProperties::setSchemas( $out, $schemas, true );
 
+		$this->schemas = $schemas;
 		$freetext = null;
-		if ( $this->title && $this->title->isKnown() ) {
-			$wikiPage = \PageProperties::getWikiPage( $this->title );
-			foreach ( $semanticForms as $value ) {
-				if ( !empty( \PageProperties::$forms[$value]['freetext-input'] ) && \PageProperties::$forms[$value]['freetext-input'] === "show always" ) {
-					$freetext = $wikiPage->getContent( \MediaWiki\Revision\RevisionRecord::RAW )->getNativeData();
-					break;
-				}
-			}
-		}
+		$formID = \PageProperties::formID( $this->title ? $this->title : $out->getTitle(), $schemas, 1 );
 
-		// add single properties to semanticProperties list
-		foreach ( $semanticData as $label => $value ) {
-			 \PageProperties::$semanticProperties[] = $label;
-		}
+		$formData = [
+			'freetext' => $freetext,
+			'properties' => $pageProperties,
+			'categories' => $categories,
+			'schemas' => $schemas,
+			'errors' => [],
+		];
 
-		$formID = \PageProperties::formID( $this->title ? $this->title : $out->getTitle(), $semanticForms, 1 );
+		$options = [
+			// success submission
+			'return-url' => ( $this->title ? $this->title->getLocalURL() : '' ),
+
+			// edited page
+			'edit-page' => ( $this->title ? $this->title->getFullText() : '' ),
+
+			// show errors
+			'origin-url' => 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 's' : '' ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"
+		];
 
 		$pageForms = [
 			$formID => [
-				'forms' => $semanticForms,
-				'options' => [],
+				'options' => $options,
+				'data' => $formData,
 			]
-		];
-
-		$sessionData = [
-			'formID' => $formID,
-			'freetext' => $freetext,
-			'properties' => $semanticData,
-			'pageCategories' => $pageCategories,
-			'errors' => [],
 		];
 
 		\PageProperties::addJsConfigVars( $out, [
 			'pageForms' => $pageForms,
-			'sessionData' => $sessionData,
-
 			'config' => [
 				'context' => 'EditSemantic',
 				'loadedData' => [],
-				'targetPage' => ( $this->title ? $this->title->getText() : null ),
 			]
 		] );
 
@@ -209,51 +179,9 @@ class SpecialEditSemantic extends SpecialPage {
 
 		$out->addHTML( Html::rawElement( 'div', [
 				'id' => 'pagepropertiesform-wrapper-' . $formID,
-				'class' => 'pagepropertiesform-wrapper'
+				'class' => 'PagePropertiesFormWrapper'
 			], $loadingContainer )
 		);
 	}
 
-	/**
-	 * @return array
-	 */
-	private function getPageCategories() {
-		if ( !$this->title || !$this->title->isKnown() ) {
-			return [];
-		}
-
-		// $TitleArray = $this->wikiPage->getCategories();
-		// return array_map( static function ( $value ) {
-		// 	return $value->getText();
-		// }, $TitleArray ) ;
-
-		$ret = [];
-		$TitleArray = $this->wikiPage->getCategories();
-		foreach ( $TitleArray as $title ) {
-			$ret[] = $title->getText();
-		}
-		return $ret;
-	}
-
-	/**
-	 * @param Title $title
-	 * @param array $pageProperties
-	 * @return array
-	 */
-	private function getSemanticData( $title, $pageProperties ) {
-		// *** uncomment to include properties manually annotated on the page
-		// $semanticData = \PageProperties::getSemanticData( $title );
-		$semanticData = [];
-
-		$registeredPageProperties = [];
-		foreach ( $pageProperties['semantic-properties'] as $key => $value ) {
-			if ( !empty( $pageProperties['transformed-properties'][$key] ) ) {
-				$value = $pageProperties['transformed-properties'][$key];
-			}
-			$registeredPageProperties[$key] = ( is_array( $value ) ? $value : [ $value ] );
-		}
-
-		// merge with the recorded properties
-		return array_merge( $semanticData, $registeredPageProperties );
-	}
 }
