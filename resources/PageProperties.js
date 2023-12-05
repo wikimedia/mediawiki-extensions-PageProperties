@@ -494,7 +494,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					.postWithToken( 'csrf', payload )
 					.done( function ( thisRes ) {
 						if ( payload.action in thisRes ) {
-							var thisData = res[ payload.action ];
+							var thisData = thisRes[ payload.action ];
 							thisData = JSON.parse( thisData.result );
 							resolve( thisData );
 						}

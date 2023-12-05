@@ -192,8 +192,7 @@
 	"pageproperties-special-submit-contentsnotsaved": "contents not saved",
 	"pageproperties-special-submit-publishfilejoberror": "publish file error: $1 (file $2)",
 
-	"pageproperties-special-submit-titlenotset": "title not set",
-	"pageproperties-special-submit-title-exists": "title exists",
+	"pageproperties-special-submit-article-exists": "article exists",
 
 	"pageproperties-jsmodule-pageproperties-validate": "validate",
 	"pageproperties-jsmodule-pageproperties-goback": "go back",

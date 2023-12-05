@@ -27,7 +27,7 @@ const PagePropertiesFormField = function ( phpConfig, windowManager, schemas ) {
 	var WindowManager = windowManager;
 	var Schemas = schemas;
 	var PagePropertiesInputConfigInst = new PagePropertiesInputConfig(
-		config,
+		phpConfig,
 		windowManager
 	);
 

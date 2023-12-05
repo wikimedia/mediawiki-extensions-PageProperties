@@ -414,6 +414,8 @@ class SubmitForm {
 				if ( !count( $errors ) ) {
 					$this->createEmptyRevision( $targetTitle );
 				}
+			} elseif ( empty( $editTitle ) ) {
+				$errors[] = $this->context->msg( 'pageproperties-special-submit-article-exists' )->text();
 			}
 
 			$this->context->setTitle( $targetTitle );

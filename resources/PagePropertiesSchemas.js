@@ -351,7 +351,7 @@ const PagePropertiesSchemas = ( function () {
 			// array, with name of parent schema
 
 			// eslint-disable-next-line no-unused-vars
-			const { thisItem, thisIsArray } = getItem( currentItem[ propName ][ key ] );
+			const { item: thisItem, isArray: thisIsArray } = getItem( currentItem[ propName ][ key ] );
 
 			if ( !( 'type' in thisItem.wiki ) ) {
 				thisItem.wiki.type = 'property';
