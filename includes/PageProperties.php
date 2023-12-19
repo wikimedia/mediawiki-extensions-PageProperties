@@ -98,6 +98,7 @@ class PageProperties {
 			'template' => 'TemplateResultPrinter',
 			'templates' => 'TemplateResultPrinter',
 			'query' => 'QueryResultPrinter',
+			'json-raw' => 'JsonRawResultPrinter',
 		];
 	}
 

@@ -204,6 +204,7 @@ class QueryProcessor {
 			return [];
 		}
 
+		$options = [];
 		$optionsMap = [
 			'order' => 'ORDER BY',
 			'limit' => 'LIMIT',

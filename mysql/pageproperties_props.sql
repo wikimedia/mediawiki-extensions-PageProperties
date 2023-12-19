@@ -36,7 +36,9 @@ ALTER TABLE /*_*/pageproperties_props
 
 ALTER TABLE /*_*/pageproperties_props
 	ADD INDEX `index_2` (`path_no_index`(255), `path_parent`(255));
-
+	
+ALTER TABLE /*_*/pageproperties_props
+	ADD UNIQUE INDEX `index_3` (`schema_id`, `path`(255));
 
 --
 -- AUTO_INCREMENT

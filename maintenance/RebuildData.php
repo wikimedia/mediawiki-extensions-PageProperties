@@ -43,11 +43,20 @@ class RebuildData extends Maintenance {
 	/** @var User */
 	private $user;
 
-	/** @var limit */
+	/** @var int */
 	private $limit;
 
 	/** @var services */
 	private $services;
+
+	/** @var string */
+	private $excludePrefix;
+
+	/** @var array */
+	private $excludeSchemas;
+
+	/** @var array */
+	private $onlySchemas;
 
 	public function __construct() {
 		parent::__construct();
@@ -59,8 +68,9 @@ class RebuildData extends Maintenance {
 		//	$this->addOption( 'format', 'import format (csv or json)', true, true );
 
 		$this->addOption( 'limit', 'limit', false, true );
-		$this->addOption( 'prefix', 'prefix', false, true );
 		$this->addOption( 'exclude-prefix', 'exclude prefix', false, true );
+		$this->addOption( 'exclude-schemas', 'exclude schemas', false, true );
+		$this->addOption( 'only-schemas', 'only schemas', false, true );
 	}
 
 	/**
@@ -68,8 +78,13 @@ class RebuildData extends Maintenance {
 	 */
 	public function execute() {
 		$limit = $this->getOption( 'limit' ) ?? false;
-		$prefix = $this->getOption( 'prefix' ) ?? '';
-		$excludePrefix = $this->getOption( 'exclude-prefix' ) ?? '';
+		$this->excludePrefix = $this->getOption( 'exclude-prefix' ) ?? '';
+		$this->excludeSchemas = $this->getOption( 'exclude-schemas' ) ?? '';
+		$this->onlySchemas = $this->getOption( 'only-schemas' ) ?? '';
+
+		$this->excludePrefix = preg_split( '/\s*,\s*/', $this->excludePrefix, -1, PREG_SPLIT_NO_EMPTY );
+		$this->excludeSchemas = preg_split( '/\s*,\s*/', $this->excludeSchemas, -1, PREG_SPLIT_NO_EMPTY );
+		$this->onlySchemas = preg_split( '/\s*,\s*/', $this->onlySchemas, -1, PREG_SPLIT_NO_EMPTY );
 
 		$this->services = MediaWikiServices::getInstance();
 		$this->db = wfGetDB( DB_MASTER );
@@ -100,6 +115,12 @@ class RebuildData extends Maintenance {
 			$title = Title::makeTitleSafe( $row->page_namespace, $row->page_title );
 			if ( $title == null ) {
 				continue;
+			}
+
+			foreach ( $this->excludePrefix as $prefix ) {
+				if ( strpos( $title->getFullText(), $prefix ) === 0 ) {
+					continue 2;
+				}
 			}
 
 			$wikiPage = \PageProperties::getWikiPage( $title );
@@ -133,6 +154,13 @@ class RebuildData extends Maintenance {
 			if ( !$title || !$title->isKnown() ) {
 				continue;
 			}
+
+			foreach ( $this->excludePrefix as $prefix ) {
+				if ( strpos( $title->getFullText(), $prefix ) === 0 ) {
+					continue 2;
+				}
+			}
+
 			$wikiPage = \PageProperties::getWikiPage( $title );
 
 			if ( !$wikiPage ) {

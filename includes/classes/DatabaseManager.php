@@ -608,11 +608,7 @@ class DatabaseManager {
 			$props[$schemaName][$path]['schema'] = $value['schema'];
 			$props[$schemaName][$path]['pathNoIndex'] = $pathNoIndex;
 
-			if ( is_array( $value['value'] ) ) {
-				$props[$schemaName][$path]['value'] = $value['value'];
-			} else {
-				$props[$schemaName][$path]['value'][] = $value['value'];
-			}
+			$props[$schemaName][$path]['value'] = $value['value'];
 		}
 
 		foreach ( $props as $schemaName => $values ) {
@@ -643,6 +639,7 @@ class DatabaseManager {
 			$rows = [];
 			$mapPathNoIndexTableId = [];
 			$mapPathNoIndexPropType = [];
+
 			foreach ( $values as $path => $val ) {
 				$path_no_index = $val['pathNoIndex'];
 
@@ -658,16 +655,29 @@ class DatabaseManager {
 
 				$pathParent = substr( $path, 0, strrpos( $path, '/' ) );
 
-				$rows[] = [
-					'schema_id' => $schemaId,
-					'table_id' => $table_id,
-					'path' => $path,
-					'path_no_index' => $path_no_index,
-					'path_parent' => $pathParent,
-					'updated_at' => $this->dateTime,
-					'created_at' => $this->dateTime,
-				];
-
+				if ( !is_array( $val['value'] ) ) {
+					$rows[] = [
+						'schema_id' => $schemaId,
+						'table_id' => $table_id,
+						'path' => $path,
+						'path_no_index' => $path_no_index,
+						'path_parent' => $pathParent,
+						'updated_at' => $this->dateTime,
+						'created_at' => $this->dateTime,
+					];
+				} else {
+					foreach ( $val['value'] as $k => $v ) {
+						$rows[] = [
+							'schema_id' => $schemaId,
+							'table_id' => $table_id,
+							'path' => "$path/$k",
+							'path_no_index' => $path_no_index,
+							'path_parent' => $pathParent,
+							'updated_at' => $this->dateTime,
+							'created_at' => $this->dateTime,
+						];
+					}
+				}
 			}
 
 			$tableName = $this->dbr->tableName( 'pageproperties_props' );
@@ -759,19 +769,34 @@ class DatabaseManager {
 			$tables = [];
 			foreach ( $values as $path => $val ) {
 				$path_no_index = $val['pathNoIndex'];
-				if ( !array_key_exists( $path, $mapPathPropId ) ) {
-					echo 'ERROR no prop with path' . $path . PHP_EOL;
-					continue;
-				}
-				$propId = $mapPathPropId[$path];
+				$propType = $mapPathNoIndexPropType[$path_no_index];
 
-				foreach ( $val['value'] as $v ) {
+				if ( !is_array( $val['value'] ) ) {
+					if ( !array_key_exists( $path, $mapPathPropId ) ) {
+						echo 'ERROR no prop with path' . $path . PHP_EOL;
+						continue;
+					}
+					$propId = $mapPathPropId[$path];
 					$tables[$propType][] = [
 						'page_id' => $articleId,
 						'prop_id' => $propId,
-						'value' => $v,
+						'value' => $val['value'],
 						'created_at' => $this->dateTime,
 					];
+				} else {
+					foreach ( $val['value'] as $k => $v ) {
+						if ( !array_key_exists( "$path/$k", $mapPathPropId ) ) {
+							echo 'ERROR no prop with path' . "$path/$k" . PHP_EOL;
+							continue;
+						}
+						$propId = $mapPathPropId["$path/$k"];
+						$tables[$propType][] = [
+							'page_id' => $articleId,
+							'prop_id' => $propId,
+							'value' => $v,
+							'created_at' => $this->dateTime,
+						];
+					}
 				}
 			}
 
