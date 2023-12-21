@@ -51,6 +51,9 @@ class SpecialPagePropertiesBrowse extends SpecialPage {
 		parent::__construct( 'PagePropertiesBrowse', '', $listed );
 	}
 
+	/**
+	 * @return string
+	 */
 	public function getDescription() {
 		// if ( empty( $this->par ) ) {
 		// 	return $this->msg( strtolower( $this->mName ) )->text();

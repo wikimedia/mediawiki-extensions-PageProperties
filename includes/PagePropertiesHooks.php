@@ -522,7 +522,7 @@ class PagePropertiesHooks {
 
 		if ( $user->isAllowed( 'pageproperties-canmanageschemas' )
 			|| $user->isAllowed( 'pageproperties-caneditschema' )
- ) {
+		) {
 			$specialpage_title = SpecialPage::getTitleFor( 'ManageSchemas' );
 			$bar[ wfMessage( 'pageproperties' )->text() ][] = [
 				'text'   => wfMessage( 'manageschemas-label' )->text(),

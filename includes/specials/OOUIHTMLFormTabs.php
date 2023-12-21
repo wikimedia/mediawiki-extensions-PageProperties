@@ -23,7 +23,9 @@
  */
 
 class OOUIHTMLFormTabs extends OOUIHTMLForm {
+	/** @var array */
 	protected $html_fragments = [];
+	/** @var mixed */
 	protected $stickyFooter = false;
 
 	/**

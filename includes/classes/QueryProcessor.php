@@ -153,12 +153,12 @@ class QueryProcessor {
 		// https://www.semantic-mediawiki.org/wiki/Help:Search_operators
 		preg_replace_callback( '/\[\[([^\[\]]+)\]\]/',
 			function ( $matches ) {
-			if ( strpos( $matches[1], '::' ) !== false ) {
-				list( $prop, $value ) = explode( '::',  $matches[1] );
-				$this->conditionProperties[$prop] = $value;
-			} else {
-				$this->conditionSubjects[] = $matches[1];
-			}
+				if ( strpos( $matches[1], '::' ) !== false ) {
+					[ $prop, $value ] = explode( '::',  $matches[1] );
+					$this->conditionProperties[$prop] = $value;
+				} else {
+					$this->conditionSubjects[] = $matches[1];
+				}
 			}, $this->query );
 
 		// check if is a title

@@ -384,7 +384,7 @@ class SemanticMediawiki {
 
 		$ret = [];
 		foreach ( $properties as $value ) {
-			list( $property, $property_key, $label, $userDefined ) = $value;
+			[ $property, $property_key, $label, $userDefined ] = $value;
 
 			if ( $userDefined ) {
 				$title_ = \Title::makeTitleSafe( SMW_NS_PROPERTY,  $label );
@@ -622,7 +622,7 @@ class SemanticMediawiki {
 			);
 
 			$namespace = substr( $title->getText(), strlen( $IMPORT_PREFIX ) );
-			list( $uri, $name, $typelist ) = self::doParse( $controlledVocabulary );
+			[ $uri, $name, $typelist ] = self::doParse( $controlledVocabulary );
 
 			preg_match( '/\[([^\[\]]+)\]/', $name, $match );
 			$vocabulary_label = preg_replace( '/^[^\s]+\s/', '', $match[1] );
@@ -655,14 +655,14 @@ class SemanticMediawiki {
 			return;
 		}
 
-		list( $uri, $name ) = explode( '|', $fristLine, 2 );
+		[ $uri, $name ] = explode( '|', $fristLine, 2 );
 
 		foreach ( $importDefintions as $importDefintion ) {
 			if ( strpos( $importDefintion, '|' ) === false ) {
 				continue;
 			}
 
-			list( $secname, $typestring ) = explode( '|', $importDefintion, 2 );
+			[ $secname, $typestring ] = explode( '|', $importDefintion, 2 );
 			$list[trim( $secname )] = $typestring;
 		}
 

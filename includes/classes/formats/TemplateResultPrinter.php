@@ -55,7 +55,7 @@ class TemplateResultPrinter extends ResultPrinter {
 	public function processResults( $results, $schema ) {
 		$ret = [];
 		foreach ( $results as $value ) {
-			list( $title_, $row ) = $value;
+			[ $title_, $row ] = $value;
 			$ret[] = $this->processRowTree( $title_, $row );
 		}
 		return $this->processRoot( $ret );

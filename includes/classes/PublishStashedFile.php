@@ -156,6 +156,9 @@ class PublishStashedFile extends Job {
 		return true;
 	}
 
+	/**
+	 * @return array
+	 */
 	public function getDeduplicationInfo() {
 		$info = parent::getDeduplicationInfo();
 		if ( is_array( $info['params'] ) ) {

@@ -163,7 +163,7 @@ class PageProperties {
 			'show-progress' => [ '', 'bool' ],
 		];
 
-		list( $schemas, $options ) = self::parseParameters( $argv, array_keys( $defaultParameters ) );
+		[ $schemas, $options ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
 
 		$params = self::applyDefaultParams( $defaultParameters, $options );
 
@@ -199,7 +199,7 @@ class PageProperties {
 	public static function applyDefaultParams( $defaultParams, $params ) {
 		$ret = [];
 		foreach ( $defaultParams as $key => $value ) {
-			list( $defaultValue, $type ) = $value;
+			[ $defaultValue, $type ] = $value;
 			$val = $defaultValue;
 			if ( array_key_exists( $key, $params ) ) {
 				$val = $params[$key];
@@ -307,9 +307,9 @@ class PageProperties {
 			'format' => [ 'json', 'string' ],
 			'pagetitle-name' => [ 'pagetitle', 'string' ],
 			'hierarchical-conditions' => [ true, 'bool' ],
- ];
+		];
 
-		list( $values, $params ) = self::parseParameters( $argv, array_keys( $defaultParameters ) );
+		[ $values, $params ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
 
 		$params = self::applyDefaultParams( $defaultParameters, $params );
 
@@ -384,7 +384,7 @@ class PageProperties {
 		$options = [];
 		foreach ( $parameters as $value ) {
 			if ( strpos( $value, '=' ) !== false ) {
-				list( $k, $v ) = explode( '=', $value, 2 );
+				[ $k, $v ] = explode( '=', $value, 2 );
 				$k = str_replace( ' ', '-', trim( $k ) );
 
 				if ( in_array( $k, $defaultParameters ) ) {

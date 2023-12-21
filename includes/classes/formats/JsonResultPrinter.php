@@ -40,12 +40,17 @@ class JsonResultPrinter extends ResultPrinter {
 		return $this->processResults( $results, $this->schema );
 	}
 
+	/**
+	 * @param array $results
+	 * @param array $schema
+	 * @return string
+	 */
 	public function processResults( $results, $schema ) {
 		$this->output->addModuleStyles( [ 'mediawiki.content.json' ] );
 
 		$ret = [];
 		foreach ( $results as $value ) {
-			list( $title_, $row ) = $value;
+			[ $title_, $row ] = $value;
 			$ret[] = [
 				$this->params['pagetitle-name'] => $title_->getText(),
 				'data' => $row

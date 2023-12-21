@@ -643,7 +643,7 @@ class DatabaseManager {
 			foreach ( $values as $path => $val ) {
 				$path_no_index = $val['pathNoIndex'];
 
-				list( $table_id, $propType ) = $this->schemaFormatToTableId( $val['schema']['type'],
+				[ $table_id, $propType ] = $this->schemaFormatToTableId( $val['schema']['type'],
 					array_key_exists( 'format', $val['schema'] ) ? $val['schema']['format'] : null );
 
 				if ( !$table_id || !$propType ) {

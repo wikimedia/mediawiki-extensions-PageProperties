@@ -40,10 +40,15 @@ class JsonRawResultPrinter extends ResultPrinter {
 		return $this->processResults( $results, $this->schema );
 	}
 
+	/**
+	 * @param array $results
+	 * @param array $schema
+	 * @return array
+	 */
 	public function processResults( $results, $schema ) {
 		$ret = [];
 		foreach ( $results as $value ) {
-			list( $title_, $row ) = $value;
+			[ $title_, $row ] = $value;
 			$ret[] = [
 				$this->params['pagetitle-name'] => $title_->getText(),
 				'data' => $row

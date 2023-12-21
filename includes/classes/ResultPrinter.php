@@ -78,7 +78,7 @@ class ResultPrinter {
 			'values-separator' => [ ', ', 'string' ],
 			'template' => [ '', 'string' ],
 			'pagetitle-name' => [ 'pagetitle', 'string' ],
- ];
+		];
 
 		$params = \PageProperties::applyDefaultParams( $defaultParameters, $params );
 
@@ -137,7 +137,7 @@ class ResultPrinter {
 	public function processResults( $results, $schema ) {
 		$ret = [];
 		foreach ( $results as $value ) {
-			list( $title_, $row ) = $value;
+			[ $title_, $row ] = $value;
 			$ret[] = $this->processRow( $title_, $row );
 		}
 
@@ -196,7 +196,7 @@ class ResultPrinter {
 	 * @param string $pathNoIndex
 	 * @return string
 	 */
-	 protected function processSchemaRecTree( $schema, $arr, $path, $pathNoIndex ) {
+	protected function processSchemaRecTree( $schema, $arr, $path, $pathNoIndex ) {
 		$isArray = $schema['type'] === 'array';
 
 		if ( $path === '' ) {
@@ -239,7 +239,7 @@ class ResultPrinter {
 		}
 
 		return $this->processParent( $schema, $ret, $pathNoIndex );
-	 }
+	}
 
 	/**
 	 * @param array $schema
@@ -247,7 +247,7 @@ class ResultPrinter {
 	 * @param string $path
 	 * @return string
 	 */
-	 protected function processSchemaRec( $schema, $arr, $path ) {
+	protected function processSchemaRec( $schema, $arr, $path ) {
 		// $isArray = ( $schema['type'] === 'array' );
 
 		if ( $path === '' ) {
@@ -278,7 +278,7 @@ class ResultPrinter {
 		}
 
 		return $this->processParent( $schema, $ret, $path );
-	 }
+	}
 
 	/**
 	 * @param array $schema

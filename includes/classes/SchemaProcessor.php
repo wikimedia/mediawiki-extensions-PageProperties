@@ -425,7 +425,7 @@ class SchemaProcessor {
 				}
 				break;
 			case 'smw-property':
-				list( $type, $format ) = SemanticMediawiki::smwTypeToSchema( $properties['smw-property-type'] )
+				[ $type, $format ] = SemanticMediawiki::smwTypeToSchema( $properties['smw-property-type'] )
 					+ [ null, null ];
 				if ( !is_array( $type ) ) {
 					$ret['type'] = $type;
@@ -575,7 +575,7 @@ class SchemaProcessor {
 
 			// copy as standard json-schema
 			if ( array_key_exists( $property, $this->mapSchema ) ) {
-				list( $standardProp, $propType ) = $this->mapSchema[$property];
+				[ $standardProp, $propType ] = $this->mapSchema[$property];
 				settype( $value, $propType );
 
 				switch ( $property ) {
@@ -594,7 +594,7 @@ class SchemaProcessor {
 				if ( !array_key_exists( 'options', $ret ) ) {
 					$ret['options'] = [];
 				}
-				list( $standardProp, $propType ) = $this->mapSchemaOptions[$property];
+				[ $standardProp, $propType ] = $this->mapSchemaOptions[$property];
 
 				if ( $property === 'collapsible' ) {
 						$value = !$value;
@@ -828,7 +828,7 @@ class SchemaProcessor {
 			}
 
 			foreach ( $this->mapSchema as $mappedProp => $mappedValue ) {
-				list( $standardProp, $propType ) = $mappedValue;
+				[ $standardProp, $propType ] = $mappedValue;
 				if ( $standardProp === $property
 					&& !array_key_exists( $mappedProp, $schema['wiki'] ) ) {
 					$value_ = $value;
@@ -962,9 +962,9 @@ class SchemaProcessor {
 	 * @param array $options
 	 */
 	function handleOptionsFrom( &$ret, $options ) {
-		 if ( !is_array( $options ) ) {
+		if ( !is_array( $options ) ) {
 			return;
-		 }
+		}
 
 		if ( !empty( $options['hidden'] ) ) {
 			$ret['wiki']['visibility'] = 'hidden';
@@ -973,7 +973,7 @@ class SchemaProcessor {
 		// map options values
 		foreach ( $options as $key => $value ) {
 			foreach ( $this->mapSchemaOptions as $mappedProp => $mappedValue ) {
-				list( $standardProp, $propType ) = $mappedValue;
+				[ $standardProp, $propType ] = $mappedValue;
 				if ( $key === $standardProp ) {
 					// settype( $optionValue, $mappedType );
 					if ( $mappedProp === 'collapsible' ) {
