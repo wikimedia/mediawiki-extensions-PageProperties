@@ -86,7 +86,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		config.model.inputName = inputName;
 
 		if ( !( 'name' in config ) || config.name.trim() === '' ) {
-			inputConfig.name = `${FormID}-${config.model.path}`;
+			inputConfig.name = `${ FormID }-${ config.model.path }`;
 		}
 
 		if ( Array.isArray( inputConfig.value ) ) {
@@ -253,7 +253,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		function showError( thisSchemaName ) {
 			var el = window.document.querySelector(
-				`#PagePropertiesGroupWidgetPanel-${FormID}-${thisSchemaName}`.replace(
+				`#PagePropertiesGroupWidgetPanel-${ FormID }-${ thisSchemaName }`.replace(
 					/ /g,
 					'_'
 				)
@@ -306,7 +306,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			Fields[ thisSchemaName ].setLabel( 'there are errors' );
 
 			for ( var error of validateAjv.errors ) {
-				var path = `${thisSchemaName}${error.instancePath}`;
+				var path = `${ thisSchemaName }${ error.instancePath }`;
 
 				if ( path in Fields ) {
 					// eslint-disable-next-line no-console
@@ -487,7 +487,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			} )
 		};
 
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 			mw.loader.using( 'mediawiki.api', function () {
 				new mw.Api()
@@ -1251,7 +1250,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			classes: [
 				'PagePropertiesGroupWidgetPanel' + ( !showBorder ? '-border' : '' )
 			],
-			id: `PagePropertiesGroupWidgetPanel-${FormID}-${data.path}`.replace(
+			id: `PagePropertiesGroupWidgetPanel-${ FormID }-${ data.path }`.replace(
 				/ /g,
 				'_'
 			)
@@ -1445,7 +1444,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					Form.data.properties.schemas[ thisSchemaName ] = {};
 				}
 
-				var path = `${escapeJsonPtr( thisSchemaName )}`;
+				var path = `${ escapeJsonPtr( thisSchemaName ) }`;
 				var pathNoIndex = '';
 				var widget = new GroupWidget(
 					{},
@@ -1603,7 +1602,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					var inputName = 'mw.widgets.TitleInputWidget';
 
 					userDefinedInput = new mw.widgets.TitleInputWidget( {
-						name: `${FormID}-model-target-title`,
+						name: `${ FormID }-model-target-title`,
 						value: !( 'userDefined' in Form.data ) ? '' : Form.data.userDefined,
 						// @FIXME if the stack panel is hidden
 						// this will create a browser error
@@ -1627,7 +1626,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 					var inputName = 'OO.ui.MultilineTextInputWidget';
 					var inputWidget = new OO.ui.MultilineTextInputWidget( {
-						name: `${FormID}-model-freetext`,
+						name: `${ FormID }-model-freetext`,
 						autosize: true,
 						rows: 6,
 						value: Model.freetext ?
@@ -1660,7 +1659,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					var categories = data.categories;
 
 					var categoriesInput = new mw.widgets.CategoryMultiselectWidget( {
-						name: `${FormID}-model-categories`
+						name: `${ FormID }-model-categories`
 						// value: categories,
 					} );
 
@@ -1681,7 +1680,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 				if ( data.editContentModel ) {
 					var contentModelInput = new OO.ui.DropdownInputWidget( {
-						name: `${FormID}-model-content-model`,
+						name: `${ FormID }-model-content-model`,
 						options: PagePropertiesFunctions.createDropDownOptions(
 							Config.contentModels
 						),
@@ -1979,7 +1978,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				data[ i ] = {};
 				newItem = true;
 			}
-			var path_ = `${path}/${i}`;
+			var path_ = `${ path }/${ i }`;
 			applyUntransformed( data, i, path );
 
 			let widget_ = new GroupWidget( {}, { schema: item, path: path_ } );
@@ -2014,7 +2013,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 						.index + 1 :
 					0;
 
-				var thisPath_ = `${path}/${ii}`;
+				var thisPath_ = `${ path }/${ ii }`;
 				processSchema(
 					widget_,
 					item,
@@ -2069,10 +2068,10 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 						if ( typeof data !== 'object' || !( i in data ) ) {
 							data[ i ] = {};
 						}
-						var path_ = `${path}/${escapeJsonPtr( i )}`;
+						var path_ = `${ path }/${ escapeJsonPtr( i ) }`;
 						applyUntransformed( data, i, path_ );
 						var pathNoIndex_ = pathNoIndex ?
-							`${pathNoIndex}/${escapeJsonPtr( i )}` :
+							`${ pathNoIndex }/${ escapeJsonPtr( i ) }` :
 							escapeJsonPtr( i );
 						var item = schema.properties[ i ];
 						var widget_ = new GroupWidget( {}, { schema: item, path: path_ } );
@@ -2525,7 +2524,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 							action: 'pageproperties-submit-form'
 						};
 
-						// eslint-disable-next-line compat/compat
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								new mw.Api()

@@ -104,7 +104,6 @@ const PagePropertiesFunctions = ( function () {
 	}
 
 	function loadData( config, dataToLoad ) {
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 			var payload = {
 				action: 'pageproperties-load-data',

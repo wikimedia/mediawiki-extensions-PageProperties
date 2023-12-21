@@ -101,7 +101,7 @@ const PagePropertiesSchemas = ( function () {
 	}
 
 	function getDatatableId( panel ) {
-		return `pageproperties-schemas-datatable-dialog-${SelectedItems.length}-${panel}`;
+		return `pageproperties-schemas-datatable-dialog-${ SelectedItems.length }-${ panel }`;
 	}
 
 	function getCurrentItem() {
@@ -712,7 +712,6 @@ const PagePropertiesSchemas = ( function () {
 								} );
 						};
 
-						// eslint-disable-next-line compat/compat
 						return new Promise( ( resolve, reject ) => {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( payload, resolve, reject );
@@ -1059,7 +1058,7 @@ const PagePropertiesSchemas = ( function () {
 			label: new OO.ui.HtmlSnippet(
 				mw.msg(
 					'pageproperties-jsmodule-formfield-message-schemapage',
-					`${Config.PagePropertiesSchemaUrl}${getPropertyValue( 'name' )}`
+					`${ Config.PagePropertiesSchemaUrl }${ getPropertyValue( 'name' ) }`
 				)
 			),
 
@@ -1389,7 +1388,6 @@ const PagePropertiesSchemas = ( function () {
 			schemas: schemas.join( '|' )
 		};
 
-		// eslint-disable-next-line compat/compat
 		return new Promise( ( resolve, reject ) => {
 
 			new mw.Api()

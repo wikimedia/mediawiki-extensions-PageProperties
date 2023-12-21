@@ -112,7 +112,7 @@
 	"pageproperties-jsmodule-schemas-description-help": "will be parsed as wikitext",
 	"pageproperties-jsmodule-schemas-add-field": "add field",
 	"pageproperties-jsmodule-schemas-add-block-content": "Add content block",
-	"pageproperties-jsmodule-pageproperties-columns-schemas-dialog": "name, type, multiple, required, ",
+	"pageproperties-jsmodule-pageproperties-columns-schemas-dialog": "name, type, multiple, required,",
 	"pageproperties-jsmodule-schemas-add-subitem": "add subitem",
 	"pageproperties-jsmodule-schemas-subitem": "subitem",
 	"pageproperties-jsmodule-schemas-multiple": "multiple",

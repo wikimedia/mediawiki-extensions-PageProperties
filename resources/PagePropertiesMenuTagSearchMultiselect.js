@@ -23,7 +23,6 @@
 
 ( function () {
 	/**
-	 *
 	 * @class PagePropertiesMenuTagSearchMultiselect
 	 * @uses mw.Api
 	 * @extends OO.ui.MenuTagMultiselectWidget
