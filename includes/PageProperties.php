@@ -260,7 +260,7 @@ class PageProperties {
 			$title_ = $title;
 		}
 
-		$argv['function'] = 'print';
+		$argv[] = 'function=print';
 
 		$query = '[[' . $title_->getFullText() . ']]';
 		// array_unshift( $argv, $query );
