@@ -157,7 +157,7 @@ const PagePropertiesProcessModel = function (
 						n++;
 					}
 				}
-				// set to null only required items
+				/* set to null only required items */
 				for ( var ii in items ) {
 					if (
 						typeof items[ ii ] === 'string' &&
@@ -169,11 +169,7 @@ const PagePropertiesProcessModel = function (
 					}
 				}
 				return items;
-			// return items.filter(function (x) {
-			// 	return (
-			// 		PagePropertiesFunctions.isObject(x) || (x && x.trim() !== "")
-			// 	);
-			// 	});
+
 			case 'object':
 				var items = {};
 				for ( var ii in model.properties ) {
