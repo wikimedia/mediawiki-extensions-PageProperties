@@ -43,6 +43,9 @@ class DatabaseManager {
 	/** @var array */
 	private $mapSchemaPathPropId = [];
 
+	/** @var array */
+	private $errors = [];
+
 	/** @var dataTables */
 	public static $propTypes = [
 		'text',
@@ -376,10 +379,13 @@ class DatabaseManager {
 		$schemas = [];
 		foreach ( $deletedSchemas as $schemaName ) {
 			$tableName = 'pageproperties_schemas';
+			$conds_ = [
+				'name' => $schemaName
+			];
 			$schemaId = $this->dbr->selectField(
 				$tableName,
 				'id',
-				$conds,
+				$conds_,
 				__METHOD__,
 				[ 'ORDER BY' => 'id DESC' ]
 			);
@@ -401,7 +407,7 @@ class DatabaseManager {
 					// delVar
 					'prop_id',
 					// joinVar
-					'pageproperties_props.id',
+					$this->dbr->tableName( 'pageproperties_props' ) . '.id',
 					// conds
 					[ 'page_id' => $articleId, 'schema_id' => $schemaId ],
 					__METHOD__
@@ -629,7 +635,7 @@ class DatabaseManager {
 					// delVar
 					'prop_id',
 					// joinVar
-					'pageproperties_props.id',
+					$this->dbr->tableName( 'pageproperties_props' ) . '.id',
 					// conds
 					[ 'page_id' => $articleId, 'schema_id' => $schemaId ],
 					__METHOD__
@@ -680,7 +686,7 @@ class DatabaseManager {
 				}
 			}
 
-			$tableName = $this->dbr->tableName( 'pageproperties_props' );
+			$tableName = 'pageproperties_props';
 			$options = [ 'IGNORE' ];
 			$res = $this->dbw->insert(
 				$tableName,
@@ -724,7 +730,7 @@ class DatabaseManager {
 			}
 
 			$options = [ 'IGNORE' ];
-			$tableName = $this->dbr->tableName( 'pageproperties_prop_tables' );
+			$tableName = 'pageproperties_prop_tables';
 			$res = $this->dbw->insert(
 				$tableName,
 				$rows,
@@ -773,7 +779,7 @@ class DatabaseManager {
 
 				if ( !is_array( $val['value'] ) ) {
 					if ( !array_key_exists( $path, $mapPathPropId ) ) {
-						echo 'ERROR no prop with path' . $path . PHP_EOL;
+						$this->errors[] = 'ERROR no prop with path ' . $path;
 						continue;
 					}
 					$propId = $mapPathPropId[$path];
@@ -786,7 +792,7 @@ class DatabaseManager {
 				} else {
 					foreach ( $val['value'] as $k => $v ) {
 						if ( !array_key_exists( "$path/$k", $mapPathPropId ) ) {
-							echo 'ERROR no prop with path' . "$path/$k" . PHP_EOL;
+							$this->errors[] = 'ERROR no prop with path' . "$path/$k";
 							continue;
 						}
 						$propId = $mapPathPropId["$path/$k"];

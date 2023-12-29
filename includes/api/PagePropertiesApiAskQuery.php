@@ -112,6 +112,10 @@ class PagePropertiesApiAskQuery extends ApiBase {
 				$value = $this->parseWikitext( $value );
 			}
 
+			if ( empty( $value ) ) {
+				continue;
+			}
+
 			$label = $value;
 
 			// only available for MenuTagSearchMultiselect

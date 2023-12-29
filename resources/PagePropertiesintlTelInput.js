@@ -19,6 +19,8 @@
  * @copyright Copyright © 2021-2023, https://wikisphere.org
  */
 
+/* eslint-disable no-tabs */
+
 ( function () {
 	// eslint-disable-next-line no-implicit-globals
 	PagePropertiesIntlTelInput = function ( config ) {
@@ -26,6 +28,12 @@
 
 		var self = this;
 		this.config = config;
+
+		// https://github.com/jackocnr/intl-tel-input/tree/master?tab=readme-ov-file
+		if ( 'nationalMode' in this.config && this.config.nationalMode === true ) {
+			this.config.showFlags = false;
+			this.config.allowDropdown = false;
+		}
 
 		var input = $( '<input>' ).attr( {
 			type: 'tel',
@@ -39,9 +47,13 @@
 		// required when handled by OO.ui.TagMultiselectWidget -> inputWidget: inputWidget
 		this.$input = input;
 
-		input.on( 'input', function () {
-			self.config.value = self.getValue();
-			self.emit( 'change', self.config.value );
+		// input.on("input", function () {
+		// 	self.config.value = self.input.val();
+		// 	self.emit("change", self.config.value);
+		// });
+
+		input.on( 'blur', function () {
+			self.formatNumber();
 		} );
 
 		this.$element = $( '<div>' )
@@ -53,54 +65,114 @@
 
 		self.fixConfigCountries( config );
 
-		self.iti = window.intlTelInput( input.get( 0 ), $.extend( {
-			utilsScript:
-				'https://cdn.jsdelivr.net/npm/intl-tel-input@16.0.3/build/js/utils.js',
-			initialCountry: 'auto',
-			geoIpLookup: function ( callback ) {
-				$.get( 'https://ipinfo.io', function () {}, 'jsonp' ).always( function (
-					resp
-				) {
-					var countryCode = resp && resp.country ? resp.country : 'us';
-					callback( countryCode );
-				} );
-			}
-		}, config ) );
+		self.iti = window.intlTelInput(
+			input.get( 0 ),
+			$.extend(
+				{
+					utilsScript:
+						'https://cdn.jsdelivr.net/npm/intl-tel-input@18.3.3/build/js/utils.js',
+					initialCountry: 'auto',
+					geoIpLookup: function ( callback ) {
+						fetch( 'https://ipapi.co/json' )
+							.then( function ( res ) {
+								return res.json();
+							} )
+							.then( function ( data ) {
+								callback( data.country_code );
+							} )
+							.catch( function () {
+								callback( 'us' );
+							} );
+					}
+				},
+				config
+			)
+		);
 	};
 
 	OO.inheritClass( PagePropertiesIntlTelInput, OO.ui.Widget );
 	OO.mixinClass( PagePropertiesIntlTelInput, OO.EventEmitter );
 
-	PagePropertiesIntlTelInput.prototype.getValue = function () {
-		if ( typeof this.iti === 'object' && typeof intlTelInputUtils === 'object' ) {
-			// @TODO show a proper validation message
-			// @see here https://github.com/jackocnr/intl-tel-input/blob/master/src/js/utils.js
-			// isPossibleNumber, then add the pattern to the scheme
-			// https://github.com/leodido/i18n.phonenumbers.js?files=1
-			return this.iti.isValidNumber() ?
-				this.iti.getNumber( intlTelInputUtils.numberFormat.INTERNATIONAL ) :
-				'';
+	PagePropertiesIntlTelInput.prototype.formatNumber = function () {
+		// https://github.com/jackocnr/intl-tel-input/blob/master/src/js/utils.js#L109
+		var numberFormat = intlTelInputUtils.numberFormat.E164;
+		if ( 'nationalMode' in this.config && this.config.nationalMode === true ) {
+			numberFormat = intlTelInputUtils.numberFormat.NATIONAL;
 		}
-		return this.config.value;
+
+		if ( typeof this.iti === 'object' && typeof intlTelInputUtils === 'object' ) {
+			this.setValue(
+				this.iti.getNumber( numberFormat )
+			);
+		}
 	};
 
-	PagePropertiesIntlTelInput.prototype.setValue = function () {
-		this.input.val( '' );
+	PagePropertiesIntlTelInput.prototype.validateFunc = async function () {
+		if ( this.getValue().trim() === '' ) {
+			return true;
+		}
+
+		if ( !this.iti.isPossibleNumber() ) {
+			// https://github.com/jackocnr/intl-tel-input/blob/master/src/js/utils.js#L148
+			var error = this.iti.getValidationError();
+			var msg = '';
+			switch ( error ) {
+				case 1:
+					msg = 'invalid country code';
+					break;
+				case 2:
+					msg = 'too short';
+					break;
+				case 3:
+					msg = 'too long';
+					break;
+				case 4:
+					msg = 'is possible local only';
+					break;
+				case 5:
+					msg = 'invalid length';
+					break;
+			}
+
+			return 'wrong number' + ( msg ? `: ${ msg }` : '' );
+		}
+
+		return true;
+	};
+
+	PagePropertiesIntlTelInput.prototype.getValue = function () {
+		this.formatNumber();
+		// return this.config.value;
+		return this.input.val();
+	};
+
+	PagePropertiesIntlTelInput.prototype.setValue = function ( value ) {
+		// this.config.value = value;
+		this.input.val( value );
 	};
 
 	PagePropertiesIntlTelInput.prototype.fixConfigCountries = function ( config ) {
 		// excludeCountries, initialCountry, onlyCountries, preferredCountries
-		var configCountries = [ 'excludeCountries', 'initialCountry', 'onlyCountries', 'preferredCountries' ];
+		var configCountries = [
+			'excludeCountries',
+			'initialCountry',
+			'onlyCountries',
+			'preferredCountries'
+		];
 
-		if ( !Object.keys( config ).filter( ( x ) => configCountries.indexOf( x ) !== -1 ).length ) {
+		if (
+			!Object.keys( config ).filter( ( x ) => configCountries.indexOf( x ) !== -1 )
+				.length
+		) {
 			return;
 		}
 
 		// first get all countries to handle the error
 		// "No country data for ... "
 		// eslint-disable-next-line new-cap
-		var iso2 = ( new window.intlTelInput( this.input.get( 0 ) ) )
-			.countries.map( ( x ) => x.iso2 );
+		var iso2 = new window.intlTelInput( this.input.get( 0 ) ).countries.map(
+			( x ) => x.iso2
+		);
 
 		for ( var i of configCountries ) {
 			if ( i in config ) {
@@ -125,5 +197,4 @@
 			}
 		}
 	};
-
 }() );

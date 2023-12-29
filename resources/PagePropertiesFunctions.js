@@ -15,8 +15,8 @@
  * along with PageProperties. If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
- * @copyright Copyright © 2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright © 2021-2023, https://wikisphere.org
  */
 
 /* eslint-disable no-tabs */
@@ -46,7 +46,12 @@ const PagePropertiesFunctions = ( function () {
 		'OO.ui.MenuTagMultiselectWidget',
 		'intl-tel-input',
 		'RatingWidget',
-		MenuTagSearchMultiselect
+		MenuTagSearchMultiselect,
+		PagePropertiesVisualEditor
+
+		// @TODO add editor
+		// @see PageForms-5.5.1/includes/forminputs/PF_TextAreaInput.php
+		// libs/PF_wikieditor.js
 */
 
 	var labelFormulaInputs = [
@@ -84,7 +89,16 @@ const PagePropertiesFunctions = ( function () {
 		return dataToLoad.filter( ( x ) => !inArray( x, config.loadedData ) );
 	}
 
+	function isPromise( value ) {
+		return isObject( value ) && 'then' in value;
+	}
+
 	function castType( value, type ) {
+		// we cannot use this solution othwerwise
+		// we cannot validate data
+		// if ( isPromise( value ) ) {
+		// 	return value;
+		// }
 		switch ( type ) {
 			case 'string':
 				value = String( value || '' );
@@ -132,6 +146,10 @@ const PagePropertiesFunctions = ( function () {
 					} );
 			} );
 		} );
+		// *** catch is performed in the calling function
+		// .catch( ( err ) => {
+		// 	PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
+		// } );
 	}
 
 	function inputNameFromLabel( inputName ) {
@@ -144,7 +162,7 @@ const PagePropertiesFunctions = ( function () {
 		return ret;
 	}
 
-	function getAvailableInputs( type, format ) {
+	function getAvailableInputs( type, format, config ) {
 		var ret = [];
 		switch ( type ) {
 			case 'string':
@@ -205,6 +223,11 @@ const PagePropertiesFunctions = ( function () {
 						break;
 					case 'textarea':
 						ret = [ 'OO.ui.MultilineTextInputWidget' ];
+						// @TODO uncomment when ready to be used
+						// in form inputs
+						if ( config.VEForAll ) {
+							ret.push( 'VisualEditor' );
+						}
 						break;
 					case 'time':
 						ret = [ 'mw.widgets.datetime.DateTimeInputWidget' ];
@@ -301,6 +324,9 @@ const PagePropertiesFunctions = ( function () {
 				break;
 			case 'RatingWidget':
 				constructor = PagePropertiesRatingWidget;
+				break;
+			case 'VisualEditor':
+				constructor = PagePropertiesVisualEditor;
 				break;
 			case 'mw.widgets.CategoryMultiselectWidget':
 				// ***prevents error "Cannot read properties of undefined (reading 'apiUrl')"
@@ -603,6 +629,10 @@ const PagePropertiesFunctions = ( function () {
 		return path.reduce( ( xs, x ) => ( xs && xs[ x ] ? xs[ x ] : null ), obj );
 	}
 
+	function deepCopy( obj ) {
+		return JSON.parse( JSON.stringify( obj ) );
+	}
+
 	function isObject( obj ) {
 		return obj !== null && typeof obj === 'object' && !Array.isArray( obj );
 	}
@@ -640,7 +670,7 @@ const PagePropertiesFunctions = ( function () {
 	function decodeHTMLEntities( text ) {
 		var el = document.createElement( 'textarea' );
 		el.innerHTML = text;
-		return el.value;
+		return el.childNodes.length === 0 ? '' : el.childNodes[ 0 ].nodeValue;
 	}
 
 	function createNewKey( obj, msg ) {
@@ -702,6 +732,27 @@ const PagePropertiesFunctions = ( function () {
 		return ret;
 	}
 
+	function waitUntil( callbackCond, callback, callbackMaxAttempts, maxAttempts ) {
+		return new Promise( ( resolve, reject ) => {
+			function init( n ) {
+				if ( callbackCond() ) {
+					callback( resolve, reject );
+				} else {
+					if ( n <= maxAttempts ) {
+						setTimeout( function () {
+							init( ++n );
+						}, 50 );
+					} else if ( callbackMaxAttempts ) {
+						callbackMaxAttempts( resolve, reject );
+					} else {
+						reject();
+					}
+				}
+			}
+			init( 0 );
+		} );
+	}
+
 	return {
 		createToolGroup,
 		createDisabledToolGroup,
@@ -730,6 +781,9 @@ const PagePropertiesFunctions = ( function () {
 		lookupInputs,
 		labelFormulaInputs,
 		castType,
-		decodeHTMLEntities
+		decodeHTMLEntities,
+		deepCopy,
+		isPromise,
+		waitUntil
 	};
 }() );

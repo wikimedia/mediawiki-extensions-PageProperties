@@ -1149,11 +1149,12 @@ class SchemaProcessor {
 			}
 			return $val;
 		};
+		// *** html_entity_decode is required for the default value in input
 		if ( !is_array( $value ) ) {
-			return $parseWikitext( $value );
+			return html_entity_decode( $parseWikitext( $value ) );
 		}
 		return array_filter( array_map( static function ( $value ) use ( &$parseWikitext ) {
-			return $parseWikitext( $value );
+			return html_entity_decode( $parseWikitext( $value ) );
 		}, $value ) );
 	}
 

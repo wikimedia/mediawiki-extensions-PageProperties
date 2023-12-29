@@ -212,6 +212,7 @@
 	"pageproperties-jsmodule-forms-field-optionformula": "option value formula",
 	"pageproperties-jsmodule-forms-field-optionformula-help": "wikitext and parser functions allowed (use <name> to retrieve the value of the requested properties, where 'name' is the full path separated by slashes if a nested property)",
 	"pageproperties-jsmodule-forms-field-nullvalue": "can be empty",
+	"pageproperties-jsmodule-pageforms-form-error": "there are errors",
 
 	"pageproperties-jsmodule-pageproperties-delete": "delete",
 	"pageproperties-jsmodule-pageproperties-delete-data-confirm": "Are you sure you want to delete this form's data ?",

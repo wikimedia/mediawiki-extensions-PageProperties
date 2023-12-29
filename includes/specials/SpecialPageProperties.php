@@ -19,7 +19,7 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
@@ -163,7 +163,10 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$default_of_display_title = $default_of_language = null;
 
-		$form_descriptor = $this->formDescriptor( $hidden_inputs, $default_of_display_title, $default_of_language );
+		$form_descriptor = array_merge(
+			$this->formDescriptorTabMain( $default_of_display_title, $default_of_language ),
+			$this->formDescriptorTabSEO( $hidden_inputs )
+		);
 
 		$htmlForm = new \OOUIHTMLFormTabs( $form_descriptor, $context, 'pageproperties' );
 
@@ -173,10 +176,6 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		foreach ( $hidden_inputs as $key => $value ) {
 			$htmlForm->addHiddenField( $key, $value );
-		}
-
-		if ( !defined( 'SMW_VERSION' ) && !$request->wasPosted() && !empty( $this->pageProperties[ 'semantic-properties' ] ) ) {
-			$htmlForm->addHiddenField( 'confirm_delete_semantic_properties', 1 );
 		}
 
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
@@ -236,10 +235,13 @@ class SpecialPageProperties extends FormSpecialPage {
 	private function addJsConfigVars( $out ) {
 		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
 
+		$showOutdatedVersion = empty( $GLOBALS['wgPagePropertiesDisableVersionCheck'] )
+			&& (
+				$this->user->isAllowed( 'caneditpageproperties' )
+				|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) )
+			);
 		$out->addJsConfigVars( [
-			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
-			'pageproperties-show-notice-outdated-version' => ( $this->user->isAllowed( 'canmanagesemanticproperties' )
-				|| count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) )
+			'pageproperties-show-notice-outdated-version' => $showOutdatedVersion
 		] );
 	}
 
@@ -249,60 +251,41 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	private function getFormValues( $out ) {
 		$request = $this->getRequest();
-
-		// page properties
 		$mainPage = Title::newMainPage();
 
-		$default_values = [
-			'page-properties' => [
-				// 'display_title' => null,
-				// 'language' => $page_language,
-				'model' => $this->title->getContentModel(),
-			],
-			'semantic-properties' => [],
-			'SEO' => [
-				'meta' => [],
-				'subpages' => true,
-				// 'entire-site' => null,
-			]
-		];
+		$pageProperties = \PageProperties::getPageProperties( $this->title );
 
-		if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
-			$default_values['SEO']['entire-site'] = true;
+		if ( $pageProperties === false ) {
+			$pageProperties = [
+				'display_title' => null,
+				// $page_language
+				'language' => null,
+				'meta' => null,
+				'meta_subpages' => null,
+				'meta_entire_site' => $mainPage->getPrefixedText() == $this->title->getPrefixedText(),
+			];
 		}
 
-		// *** retrieve recorded properties also when posted,
-		// since the current page does not handle semantic properties
-		// and categories
-
-		// @TODO restore pageproperties db
-		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/mysql/page_properties.sql
-		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/specials/SpecialPageProperties.php
-		$page_properties = \PageProperties::getPageProperties( $this->title );
-		if ( $page_properties === false ) {
-			$page_properties = [];
-		}
-
-		$page_properties = array_replace_recursive( $default_values, $page_properties );
+		$pageProperties[ 'model' ] = $this->title->getContentModel();
 
 		if ( $request->wasPosted() ) {
 			$dynamic_values = $this->getDynamictableValues( $_POST );
 
 			if ( $request->getVal( 'page_properties_display_title_select' ) === 'override' ) {
-				$page_properties['page-properties']['display-title'] = $request->getVal( 'page_properties_display_title_input' );
+				$pageProperties['display_title'] = $request->getVal( 'page_properties_display_title_input' );
 
 			} else {
-				unset( $page_properties['page-properties']['display-title'] );
+				$pageProperties['display_title'] = null;
 			}
 
 			if ( $request->getVal( 'page_properties_language_select' ) === 'override' ) {
-				$page_properties['page-properties']['language'] = $request->getVal( 'page_properties_language_input' );
+				$pageProperties['language'] = $request->getVal( 'page_properties_language_input' );
 
 			} else {
-				unset( $page_properties['page-properties']['language'] );
+				$pageProperties['language'] = null;
 			}
 
-			$page_properties['page-properties']['model'] = $request->getVal( 'page_properties_model' );
+			$pageProperties['model'] = $request->getVal( 'page_properties_model' );
 
 			$meta = [];
 			if ( array_key_exists( 'SEO_meta', $dynamic_values ) ) {
@@ -310,35 +293,30 @@ class SpecialPageProperties extends FormSpecialPage {
 					$meta[ $value[0] ] = $value[1];
 				}
 			}
-			$page_properties['SEO']['meta'] = $meta;
 
-			$page_properties['SEO']['subpages'] = $request->getVal( 'SEO_subpages' );
+			$pageProperties['meta'] = $meta;
+
+			$pageProperties['meta_subpages'] = $request->getVal( 'SEO_subpages' );
 			if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
-				$page_properties['SEO']['entire-site'] = $request->getVal( 'SEO_entire_site' );
+				$pageProperties['meta_entire_site'] = $request->getVal( 'SEO_entire_site' );
 			}
 		}
 
-		$this->pageProperties = $page_properties;
+		$this->pageProperties = $pageProperties;
 	}
 
 	/**
-	 * @param array &$hidden_inputs
 	 * @param string &$default_of_display_title
 	 * @param string &$default_of_language
-	 * @return OOUI\ButtonWidget
+	 * @return array
 	 */
-	private function formDescriptor( &$hidden_inputs, &$default_of_display_title, &$default_of_language ) {
-		$pageProperties = $this->pageProperties[ 'page-properties' ];
-		$SEO = $this->pageProperties[ 'SEO' ];
+	private function formDescriptorTabMain( &$default_of_display_title, &$default_of_language ) {
+		$ret = [];
+		$pageProperties = $this->pageProperties;
+		$default_of_display_title = $default = ( $pageProperties['display_title'] === null ? 'default' : 'override' );
+		$display_title_default = ( $pageProperties['display_title'] !== null ? $pageProperties[ 'display_title' ] : '' );
 
-		$formDescriptor = [];
-
-		///////////////// main /////////////////
-
-		$default_of_display_title = $default = ( !array_key_exists( 'display-title', $pageProperties ) ? 'default' : 'override' );
-		$display_title_default = ( array_key_exists( 'display-title', $pageProperties ) ? $pageProperties[ 'display-title' ] : "" );
-
-		$formDescriptor[ 'page_properties_display_title_select' ] = [
+		$ret[ 'page_properties_display_title_select' ] = [
 			'label-message' => 'pageproperties-form-displaytitle-label',
 			// 'help-message' => 'pageproperties-form-displaytitle-help',
 			'name' => 'page_properties_display_title_select',
@@ -352,7 +330,7 @@ class SpecialPageProperties extends FormSpecialPage {
 			'section' => 'form-section-main',
 		];
 
-		$formDescriptor[ 'page_properties_display_title_input' ] = [
+		$ret[ 'page_properties_display_title_input' ] = [
 			// 'label-message' => 'pageproperties-form-displaytitle-label',
 			'help-message' => 'pageproperties-form-displaytitle-help',
 			'name' => 'page_properties_display_title_input',
@@ -365,12 +343,12 @@ class SpecialPageProperties extends FormSpecialPage {
 			'default' => $display_title_default,
 		];
 
-		$default_of_language = $default = ( !array_key_exists( 'language', $pageProperties ) ? 'default' : 'override' );
+		$default_of_language = $default = ( $pageProperties['language'] === null ? 'default' : 'override' );
 
-		$formDescriptor[ 'page_properties_language_select' ] = [
+		$ret[ 'page_properties_language_select' ] = [
 			'label-message' => 'pagelang-language',
 			'name' => 'page_properties_language_select',
-			'id' => "page_properties_language_select",
+			'id' => 'page_properties_language_select',
 			'type' => 'select',
 			'options' => [
 				$this->msg( 'pageproperties_form-displaytitle-option-default' )->text() => 'default',
@@ -383,13 +361,13 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$options = $this->getLanguageOptions();
 
-		$default = ( array_key_exists( 'language', $pageProperties ) ?
+		$default = ( $pageProperties['language'] !== null ?
 			$pageProperties[ 'language' ] :
 				$this->getRequest()->getCookie( 'pageproperties_latest_set_language' )
 					// $this->getLanguage()->getCode()
 					?? MediaWikiServices::getInstance()->getContentLanguage()->getCode() );
 
-		$formDescriptor['page_properties_language_input'] = [
+		$ret['page_properties_language_input'] = [
 			'id' => 'mw-pl-languageselector',
 			'name' => 'page_properties_language_input',
 			'section' => 'form-section-main',
@@ -403,7 +381,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$options = $this->getOptionsForTitle( $this->title );
 
-		$formDescriptor['page_properties_model'] = [
+		$ret['page_properties_model'] = [
 			'name' => 'page_properties_model',
 			'label-message' => 'pageproperties-form-model-label',
 			'help-message' => 'pageproperties-form-model-help',
@@ -424,7 +402,19 @@ class SpecialPageProperties extends FormSpecialPage {
 			'default' => $pageProperties['model'],
 		];
 
-		///////////////// SEO /////////////////
+		return $ret;
+	}
+
+	/**
+	 * @param string &$hidden_inputs
+	 * @return array
+	 */
+	private function formDescriptorTabSEO( &$hidden_inputs ) {
+		$ret = [];
+		$pageProperties = $this->pageProperties;
+		$SEO_meta = $pageProperties[ 'meta' ];
+		$SEO_subpages = $pageProperties[ 'meta_subpages' ];
+		$SEO_entire_site = $pageProperties[ 'meta_entire_site' ];
 
 		$options = [];
 		if ( class_exists( 'MediaWiki\Extension\WikiSEO\WikiSEO' ) ) {
@@ -436,7 +426,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		foreach ( $tags as $key => $input_type ) {
 			$hidden_inputs['dynamictable_SEO_meta_key_' . $n] = $key;
 
-			$formDescriptor['dynamictable_SEO_meta_value_' . $n] = [
+			$ret['dynamictable_SEO_meta_value_' . $n] = [
 				'name' => 'dynamictable_SEO_meta_value_' . $n,
 				'label-message' => 'pageproperties-form-meta_' . $key . '-label',
 				'help-message' => 'pageproperties-form-meta_' . $key . '-help',
@@ -446,21 +436,21 @@ class SpecialPageProperties extends FormSpecialPage {
 				// @todo, handle dynamic table with OOUI widgets
 				// 'append_html' => '<div id="pageproperties-form-meta-properties-wrapper"></div>',
 				'section' => 'form-section-seo',
-				'default' => ( $SEO['meta'][ $key ] ?? null ),
+				'default' => ( $SEO_meta[ $key ] ?? null ),
 			];
 
-			unset( $SEO['meta'][ $key ] );
+			unset( $SEO_meta[ $key ] );
 			$n++;
 		}
 
-		if ( empty( $SEO['meta'] ) ) {
-			$SEO['meta'] = [ array_key_first( $options ) => '' ];
+		if ( empty( $SEO_meta ) ) {
+			$SEO_meta = [ array_key_first( $options ) => '' ];
 		}
 
 		$meta_robots_noindex_nofollow = false;
 
 		// @todo, handle dynamic table with OOUI widgets
-		foreach ( $SEO['meta'] as $key => $value ) {
+		foreach ( $SEO_meta as $key => $value ) {
 			$prepend_html = '';
 
 			if ( $n == count( $tags ) ) {
@@ -469,7 +459,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 			$prepend_html .= '<tr class="pageproperties_dynamictable_row"><td style="padding-left:0" class="pageproperties_dynamictable_key_cell">';
 
-			$formDescriptor['dynamictable_SEO_meta_key_' . $n] = [
+			$ret['dynamictable_SEO_meta_key_' . $n] = [
 				'name' => 'dynamictable_SEO_meta_key_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => '</td>',
@@ -484,18 +474,18 @@ class SpecialPageProperties extends FormSpecialPage {
 
 			if ( count( $options ) ) {
 				// make optgroup, see includes/xml/Xml.php _> listDropDownOptionsOoui()
-				$formDescriptor['dynamictable_SEO_meta_key_' . $n]['options'] = $options;
+				$ret['dynamictable_SEO_meta_key_' . $n]['options'] = $options;
 			}
 
 			$prepend_html = '<td class="pageproperties_dynamictable_value_cell">';
 			$append_html = '</td><td style="padding-right:0" class="pageproperties_dynamictable_cancel_cell">' . $this->clearFieldButton() . '</td></tr>';
 
-			if ( $n == count( $SEO['meta'] ) - 1 + count( $tags ) ) {
+			if ( $n == count( $SEO_meta ) - 1 + count( $tags ) ) {
 				$append_html .= '</table>';
 				$append_html .= $this->addFieldButton();
 			}
 
-			$formDescriptor['dynamictable_SEO_meta_value_' . $n] = [
+			$ret['dynamictable_SEO_meta_value_' . $n] = [
 				'name' => 'dynamictable_SEO_meta_value_' . $n,
 				'prepend_html' => $prepend_html,
 				'append_html' => $append_html,
@@ -509,14 +499,14 @@ class SpecialPageProperties extends FormSpecialPage {
 
 			$n++;
 			if ( $key == 'robots' ) {
-				$arr = preg_split( "/\s*,\s*/", $value );
+				$arr = preg_split( '/\s*,\s*/', $value );
 				if ( in_array( 'noindex', $arr ) && in_array( 'nofollow', $arr ) ) {
 					$meta_robots_noindex_nofollow = true;
 				}
 			}
 		}
 
-		$formDescriptor['SEO_meta_robots_noindex_nofollow'] = [
+		$ret['SEO_meta_robots_noindex_nofollow'] = [
 			'type' => 'toggle',
 			'id' => 'SEO_meta_robots_noindex_nofollow',
 			'label-message' => 'pageproperties-form-meta_robots_noindex_nofollow-label',
@@ -525,29 +515,29 @@ class SpecialPageProperties extends FormSpecialPage {
 			'default' => $meta_robots_noindex_nofollow,
 		];
 
-		$formDescriptor['SEO_subpages'] = [
+		$ret['SEO_subpages'] = [
 			'type' => 'toggle',
 			'name' => 'SEO_subpages',
 			'label-message' => 'pageproperties-form-seo_subpages-label',
 			'help-message' => 'pageproperties-form-seo_subpages-help',
 			'section' => 'form-section-seo',
-			'default' => $SEO['subpages'],
+			'default' => $SEO_subpages,
 		];
 
 		$mainPage = Title::newMainPage();
 
 		if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
-			$formDescriptor['SEO_entire_site'] = [
+			$ret['SEO_entire_site'] = [
 				'type' => 'toggle',
 				'name' => 'SEO_entire_site',
 				'label-message' => 'pageproperties-form-seo_entire_wiki-label',
 				'help-message' => 'pageproperties-form-seo_entire_wiki-help',
 				'section' => 'form-section-seo',
-				'default' => $SEO['entire-site'],
+				'default' => $SEO_entire_site,
 			];
 		}
 
-		return $formDescriptor;
+		return $ret;
 	}
 
 	/**
@@ -794,7 +784,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 			// ***edited
 			// $data['reason'],
-			"",
+			'',
 			true
 		);
 
@@ -836,7 +826,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	 */
 	public function onSubmit( $data ) {
 		$title = $this->title;
-		$pageProperties = $this->pageProperties['page-properties'];
+		$pageProperties = $this->pageProperties;
 
 		if ( $title->getContentModel() != $pageProperties['model'] ) {
 			$status = self::changeContentModel( $this->wikiPage, $pageProperties['model'] );
@@ -860,14 +850,12 @@ class SpecialPageProperties extends FormSpecialPage {
 			$request->response()->setCookie( 'pageproperties_latest_set_language', $newLanguage );
 		}
 
-		unset( $this->pageProperties['page-properties']['model'] );
-
-		$update_obj = $this->pageProperties;
+		unset( $pageProperties['model'] );
 
 		// display title is added to the page_props table
 		// through the hook onMultiContentSave
 		$errors = [];
-		\PageProperties::setPageProperties( $this->user, $title, $update_obj, $errors );
+		\PageProperties::setPageProperties( $title, $pageProperties, $errors );
 
 		return !count( $errors ) ? true
 			: Status::newFatal( 'formerror' );

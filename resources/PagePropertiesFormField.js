@@ -78,7 +78,8 @@ const PagePropertiesFormField = function ( phpConfig, windowManager, schemas ) {
 		} else {
 			ret = PagePropertiesFunctions.getAvailableInputs(
 				JSONSchemaType,
-				stringFormat
+				stringFormat,
+				Config
 			);
 		}
 
@@ -928,7 +929,7 @@ const PagePropertiesFormField = function ( phpConfig, windowManager, schemas ) {
 			// );
 
 			var inputWidget = new OO.ui.TextInputWidget( {
-				value: getPropertyValue( 'default' ),
+				// value: getPropertyValue( 'default' ),
 				id: 'pageproperties-jsmodule-formfield-default-value-input'
 			} );
 

@@ -34,8 +34,11 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 }
 
 class PageProperties {
-	/** @var cachedJsonData */
+	/** @var array */
 	protected static $cachedJsonData = [];
+
+	/** @var array */
+	protected static $cachedPageProperties = [];
 
 	/** @var User */
 	public static $User;
@@ -66,9 +69,6 @@ class PageProperties {
 
 	/** @var schemaProcessor */
 	public static $schemaProcessor;
-
-	/** @var templateMap */
-	public static $templateMap = [];
 
 	/**
 	 * @return void
@@ -150,6 +150,7 @@ class PageProperties {
 			'edit-freetext' => [ 'false', 'bool' ],
 			'edit-categories' => [ 'false', 'bool' ],
 			'edit-content-model' => [ 'false', 'bool' ],
+			'target-slot' => [ 'pageproperties', 'string' ],
 			'default-categories' => [ '', 'array' ],
 			'default-content-model' => [ 'wikitext', 'string' ],
 			'layout-align' => [ 'top', 'string' ],
@@ -176,9 +177,7 @@ class PageProperties {
 		$formID = self::formID( $title, $schemas, ++self::$formIndex );
 
 		self::$pageForms[$formID] = [
-			'data' => [
-				'schemas' => $schemas,
-			],
+			'schemas' => $schemas,
 			'options' => $params
 		];
 
@@ -261,6 +260,8 @@ class PageProperties {
 			$title_ = $title;
 		}
 
+		$argv['function'] = 'print';
+
 		$query = '[[' . $title_->getFullText() . ']]';
 		// array_unshift( $argv, $query );
 
@@ -304,9 +305,10 @@ class PageProperties {
 			'limit' => [ 100, 'integer' ],
 			'offset' => [ 0, 'integer' ],
 			'order' => [ '', 'string' ],
-			'format' => [ 'json', 'string' ],
+			'format' => [ '', 'string' ],
 			'pagetitle-name' => [ 'pagetitle', 'string' ],
 			'hierarchical-conditions' => [ true, 'bool' ],
+			'function' => [ 'query', 'string' ],
 		];
 
 		[ $values, $params ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
@@ -317,6 +319,17 @@ class PageProperties {
 
 		// root template
 		$templates = [ '' => $params['template'] ];
+
+		// default printer format
+		if ( empty( $params['format'] ) ) {
+			if ( !empty( $params['template'] ) ) {
+				$params['format'] = 'template';
+			} elseif ( $params['function'] === 'print' || $params['limit'] === 1 ) {
+				$params['format'] = 'json';
+			} else {
+				$params['format'] = 'table';
+			}
+		}
 
 		foreach ( $values as $val ) {
 			// $templates
@@ -485,6 +498,83 @@ class PageProperties {
 
 	/**
 	 * @param Title $title
+	 * @param array $conds_ null
+	 * @return array|false
+	 */
+	public static function getPageProperties( $title, $conds_ = [] ) {
+		if ( !$title || !$title->canExist() ) {
+			return false;
+		}
+
+		$page_id = $title->getArticleId();
+		if ( !$title->isKnown() || empty( $page_id ) ) {
+			return false;
+		}
+
+		if ( array_key_exists( $page_id, self::$cachedPageProperties ) ) {
+			return self::$cachedPageProperties[ $page_id ];
+		}
+		$conds = [];
+		if ( !empty( $page_id ) ) {
+			$conds['page_id'] = $page_id;
+		}
+		$dbr = wfGetDB( DB_REPLICA );
+
+		$row = $dbr->selectRow(
+			'pageproperties_pageproperties',
+			'*',
+			array_merge( $conds, $conds_ ),
+			__METHOD__
+		);
+
+		if ( !$row ) {
+			// phpcs:ignore MediaWiki.Usage.AssignmentInReturn.AssignmentInReturn
+			return self::$cachedPageProperties[ $page_id ] = false;
+		}
+
+		$row = (array)$row;
+		$row['meta'] = ( empty( $row['meta'] ) ? []
+			: json_decode( $row['meta'], true ) );
+
+		// phpcs:ignore MediaWiki.Usage.AssignmentInReturn.AssignmentInReturn
+		return self::$cachedPageProperties[ $page_id ] = $row;
+	}
+
+	/**
+	 * @param Title $title
+	 * @param array $obj
+	 * @param array &$errors null
+	 * @return array|false
+	 */
+	public static function setPageProperties( $title, $obj, &$errors = [] ) {
+		$page_id = $title->getArticleID();
+		$date = date( 'Y-m-d H:i:s' );
+		$obj['updated_at'] = $date;
+		$obj['meta'] = ( !empty( $obj[ 'meta' ] ) ? json_encode( $obj[ 'meta' ] )
+			: null );
+
+		$dbr = wfGetDB( DB_MASTER );
+		if ( self::getPageProperties( $title ) === false ) {
+			$obj['page_id'] = $page_id;
+			$obj['created_at'] = $date;
+			$res = $dbr->insert(
+				'pageproperties_pageproperties',
+				$obj
+			);
+		} else {
+			$res = $dbr->update(
+				'pageproperties_pageproperties',
+				$obj,
+				[ 'page_id' => $page_id ],
+				__METHOD__
+			);
+		}
+		// always true
+		return $res;
+	}
+
+	/**
+	 * @param Title $title
 	 * @param OutputPage $outputPage
 	 * @return void
 	 */
@@ -495,11 +585,11 @@ class PageProperties {
 
 		// the current page is different than the main page
 		if ( $mainPage->getPrefixedDBkey() != $title->getPrefixedDBkey() ) {
-			// null, [ 'meta_entire_site' => 1 ]
-			$page_properties = self::getPageProperties( $mainPage, true );
+			$pageProperties = self::getPageProperties( $mainPage, [ 'meta_entire_site' => 1 ] );
 
-			if ( !empty( $page_properties['SEO']['entire_site'] ) && !empty( $page_properties['SEO']['meta'] ) ) {
-				$meta = $page_properties['SEO']['meta'];
+			if ( !empty( $pageProperties['meta_entire_site'] )
+				&& !empty( $pageProperties['meta'] ) ) {
+				$meta = $pageProperties['meta'];
 			}
 		}
 
@@ -567,7 +657,7 @@ class PageProperties {
 	 * @param bool $entire_site
 	 * @return false|array
 	 */
-	public static function getPageProperties( $title, $entire_site = false ) {
+	public static function getJsonData( $title, $entire_site = false ) {
 		// @ATTENTION!
 		// $page_id is 0 for newly created pages
 		// $title->getArticleID();
@@ -591,11 +681,19 @@ class PageProperties {
 
 		$slots = self::getSlots( $title );
 
-		if ( !$slots || !array_key_exists( SLOT_ROLE_PAGEPROPERTIES, $slots ) ) {
+		if ( !$slots ) {
 			return false;
 		}
 
-		$content = $slots[SLOT_ROLE_PAGEPROPERTIES]->getContent();
+		$content = null;
+		foreach ( $slots as $role => $slot ) {
+			$content = $slots[$role]->getContent();
+			$modelId = $content->getContentHandler()->getModelID();
+			if ( $role === SLOT_ROLE_PAGEPROPERTIES
+				|| $modelId === CONTENT_MODEL_PAGEPROPERTIES_JSONDATA ) {
+				break;
+			}
+		}
 
 		if ( empty( $content ) ) {
 			return false;
@@ -677,49 +775,173 @@ class PageProperties {
 	/**
 	 * @param User $user
 	 * @param Title $title
-	 * @param array &$obj
+	 * @param array $slotsData
 	 * @param array &$errors
-	 * @param null|string $mainSlotContent
-	 * @param null|string $mainSlotContentModel
-	 * @param bool $doNullEdit
 	 * @return bool
 	 */
-	public static function setPageProperties( $user, $title, &$obj, &$errors, $mainSlotContent = null, $mainSlotContentModel = null, $doNullEdit = false ) {
+	public static function setJsonData(
+		$user,
+		$title,
+		$slotsData,
+		&$errors = []
+	) {
 		$canWrite = self::checkWritePermissions( $user, $title, $errors );
 
 		if ( !$canWrite ) {
 			return false;
 		}
 
-		if ( !empty( $obj['SEO'] ) ) {
-			if ( empty( $obj['SEO']['meta'] ) ) {
-				unset( $obj['SEO'] );
+		$pageProperties = [];
+		foreach ( $slotsData as $slotName => $value ) {
+			if ( $value['model'] === CONTENT_MODEL_PAGEPROPERTIES_JSONDATA ) {
+				$keys = [ 'schemas', 'schemas-data', 'categories' ];
+				foreach ( $keys as $key ) {
+					if ( empty( $value['content'][$key] ) ) {
+						unset( $value['content'][$key] );
+					}
+				}
+
+				if ( empty( $value['content'] ) ) {
+					$slotsData[$slotName]['content'] = null;
+				} else {
+					$pageProperties = $value['content'];
+					$slotsData[$slotName]['content'] = json_encode( $value['content'] );
+				}
 			}
 		}
 
-		// @TODO remove 'page-properties' and 'SEO'
-		// once they will be handled through the database (not slots)
-		$keys = [ 'page-properties', 'SEO', 'schemas', 'categories', 'schemas-data' ];
-
-		// if $obj is empty the related slot will be removed
-		foreach ( $keys as $key ) {
-			if ( empty( $obj[$key] ) ) {
-				unset( $obj[$key] );
-			}
-		}
-
-		$slots = [];
-		if ( $mainSlotContent !== null ) {
-			$slots[SlotRecord::MAIN] = $mainSlotContent;
-		}
-
-		// update cache (optimistic update)
+		// *** this needs to be set before $pageUpdater->saveRevision
+		// to ensure onContentAlterParserOutput has updated data
 		$key = $title->getFullText();
-		self::$cachedJsonData[ $key ] = $obj;
+		self::$cachedJsonData[ $key ] = $pageProperties;
 
-		$slots[SLOT_ROLE_PAGEPROPERTIES] = ( !empty( $obj ) ? json_encode( $obj ) : '' );
+		return self::recordSlots( $user, $title, $slotsData );
+	}
 
-		return self::recordSlots( $user, $title, $slots, $mainSlotContentModel, $doNullEdit );
+	/**
+	 * // phpcs:ignore MediaWiki.Commenting.FunctionAnnotations.UnrecognizedAnnotation
+	 * @credits WSSlots MediaWiki extension - Wikibase Solutions
+	 * @param User $user
+	 * @param Title $title
+	 * @param array $slotsData
+	 * @param bool $doNullEdit false
+	 * @return bool
+	 */
+	private static function recordSlots( $user, $title, $slotsData, $doNullEdit = false ) {
+		$wikiPage = self::getWikiPage( $title );
+		$services = MediaWikiServices::getInstance();
+		$oldRevisionRecord = $wikiPage->getRevisionRecord();
+		$slotRoleRegistry = $services->getSlotRoleRegistry();
+		$contentHandlerFactory = $services->getContentHandlerFactory();
+		$contentModels = $contentHandlerFactory->getContentModels();
+		// $knownRoles = $slotRoleRegistry->getKnownRoles();
+
+		// delete article if the current slots are empty
+		// and there aren't more slots on the page
+		if ( $oldRevisionRecord ) {
+			$existingSlots = $oldRevisionRecord->getSlots()->getSlots();
+			$emptySlots = true;
+			foreach ( $slotsData as $slotName => $value ) {
+				if ( !empty( $value['content'] ) ) {
+					$emptySlots = false;
+					break;
+				}
+			}
+
+			if ( $emptySlots && !count( array_diff( array_keys( $existingSlots ),
+				array_keys( $slotsData ) ) ) ) {
+				$reason = '';
+				self::deletePage( $wikiPage, $user, $reason );
+				return;
+			}
+		}
+
+		$pageUpdater = $wikiPage->newPageUpdater( $user );
+
+		// The 'main' content slot MUST be set when creating a new page
+		if ( $oldRevisionRecord === null && !array_key_exists( MediaWiki\Revision\SlotRecord::MAIN, $slotsData ) ) {
+			$newMainSlot = true;
+			$main_content = ContentHandler::makeContent( '', $title );
+			$pageUpdater->setContent( SlotRecord::MAIN, $main_content );
+		}
+
+		foreach ( $slotsData as $slotName => $value ) {
+			$text = $value['content'];
+
+			if ( !isset( $value['model'] ) || !in_array( $value['model'], $contentModels ) ) {
+				if ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
+					$modelId = $oldRevisionRecord->getSlot( $slotName )->getContent()->getContentHandler()->getModelID();
+
+				} else {
+					$modelId = $slotRoleRegistry->getRoleHandler( $slotName )->getDefaultModel( $title );
+				}
+			} else {
+				$modelId = $value['model'];
+			}
+
+			// remove slot if content is empty
+			// and isn't main slot
+			if ( empty( $text ) && $slotName !== SlotRecord::MAIN ) {
+				$pageUpdater->removeSlot( $slotName );
+				continue;
+			}
+
+			// back-compatibility
+			if ( $slotName === SLOT_ROLE_PAGEPROPERTIES && $modelId === 'json' ) {
+				$pageUpdater->removeSlot( $slotName );
+				continue;
+			}
+			$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
+			$pageUpdater->setContent( $slotName, $slotContent );
+		}
+
+		// *** this ensures that onContentAlterParserOutput relies
+		// on updated data
+		if ( method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
+			$derivedDataUpdater = $pageUpdater->prepareUpdate();
+			$slots = $derivedDataUpdater->getSlots()->getSlots();
+			self::setSlots( $title, $slots );
+		}
+		$summary = "PageProperties update";
+		$flags = EDIT_INTERNAL;
+		$comment = CommentStoreComment::newUnsavedComment( $summary );
+		$RevisionRecord = $pageUpdater->saveRevision( $comment, $flags );
+
+		// Perform an additional null-edit if requested
+		if ( $doNullEdit && !$pageUpdater->isUnchanged() ) {
+			$comment = CommentStoreComment::newUnsavedComment( "" );
+			$pageUpdater = $wikiPage->newPageUpdater( $user );
+			$pageUpdater->saveRevision( $comment, EDIT_SUPPRESS_RC | EDIT_AUTOSUMMARY );
+		}
+
+		// or !$pageUpdater->isUnchanged()
+		return $RevisionRecord !== null;
+	}
+
+	/**
+	 * @param Title $title
+	 * @param string $targetSlot
+	 * @return string
+	 */
+	public static function getTargetSlot( $title, $targetSlot = 'pageproperties' ) {
+		if ( !$title || !$title->isKnown() ) {
+			return $targetSlot;
+		}
+		$slots = self::getSlots( $title );
+
+		if ( !$slots ) {
+			return $targetSlot;
+		}
+
+		foreach ( $slots as $role => $slot ) {
+			$content = $slots[$role]->getContent();
+			$modelId = $content->getContentHandler()->getModelID();
+			if ( $role === SLOT_ROLE_PAGEPROPERTIES
+				|| $modelId === CONTENT_MODEL_PAGEPROPERTIES_JSONDATA ) {
+					return $role;
+			}
+		}
+		return $targetSlot;
 	}
 
 	/**
@@ -758,113 +980,20 @@ class PageProperties {
 	}
 
 	/**
-	 * // phpcs:ignore MediaWiki.Commenting.FunctionAnnotations.UnrecognizedAnnotation
-	 * @credits WSSlots MediaWiki extension - Wikibase Solutions
-	 * @param User $user
-	 * @param Title $title
-	 * @param array $slots
-	 * @param string $mainSlotContentModel
-	 * @param bool $doNullEdit
-	 * @return bool
-	 */
-	private static function recordSlots( $user, $title, $slots, $mainSlotContentModel, $doNullEdit = true ) {
-		$wikiPage = self::getWikiPage( $title );
-		$pageUpdater = $wikiPage->newPageUpdater( $user );
-		$oldRevisionRecord = $wikiPage->getRevisionRecord();
-		$slotRoleRegistry = MediaWikiServices::getInstance()->getSlotRoleRegistry();
-		$newMainSlot = false;
-
-		// The 'main' content slot MUST be set when creating a new page
-		if ( $oldRevisionRecord === null && !array_key_exists( MediaWiki\Revision\SlotRecord::MAIN, $slots ) ) {
-			$newMainSlot = true;
-			$main_content = ContentHandler::makeContent( "", $title );
-			$pageUpdater->setContent( SlotRecord::MAIN, $main_content );
-		}
-
-		$oldModel = false;
-		foreach ( $slots as $slotName => $text ) {
-
-			// remove slot if content is empty
-			// and isn't main slot
-			if ( $text === "" && $slotName !== SlotRecord::MAIN ) {
-				$pageUpdater->removeSlot( $slotName );
-				continue;
-			}
-
-			// get modelId
-			if ( $slotName === SlotRecord::MAIN && $mainSlotContentModel ) {
-				$modelId = $mainSlotContentModel;
-
-			} elseif ( $oldRevisionRecord !== null && $oldRevisionRecord->hasSlot( $slotName ) ) {
-				$modelId = $oldRevisionRecord->getSlot( $slotName )->getContent()->getContentHandler()->getModelID();
-
-				// @TODO remove once standard pageproperties
-				// are handled through the database only
-				// *** old content model
-				if ( $slotName === SLOT_ROLE_PAGEPROPERTIES && $modelId === 'json' ) {
-					$pageUpdater->removeSlot( $slotName );
-					$oldModel = true;
-					continue;
-				}
-
-			} else {
-				$modelId = $slotRoleRegistry->getRoleHandler( $slotName )->getDefaultModel( $title );
-			}
-
-			$slotContent = ContentHandler::makeContent( $text, $title, $modelId );
-			$pageUpdater->setContent( $slotName, $slotContent );
-		}
-
-		// *** this ensures that onContentAlterParserOutput relies
-		// on updated data
-		if ( !$oldModel ) {
-			if ( method_exists( MediaWiki\Storage\PageUpdater::class, 'prepareUpdate' ) ) {
-				$derivedDataUpdater = $pageUpdater->prepareUpdate();
-				$slots = $derivedDataUpdater->getSlots()->getSlots();
-				self::setSlots( $title, $slots );
-			} else {
-				self::emptySlotsCache( $title );
-			}
-		}
-
-		$summary = "PageProperties update";
-		$flags = EDIT_INTERNAL;
-		$comment = CommentStoreComment::newUnsavedComment( $summary );
-		$RevisionRecord = $pageUpdater->saveRevision( $comment, $flags );
-
-		// back-compatibility
-		if ( $oldModel ) {
-			return self::recordSlots( $user, $title, $slots, $mainSlotContentModel );
-		}
-
-		// Perform an additional null-edit to make sure all page properties are up-to-date
-		if ( $doNullEdit &&
-			( $newMainSlot || ( !$pageUpdater->isUnchanged() && !array_key_exists( SlotRecord::MAIN, $slots ) ) ) ) {
-			$comment = CommentStoreComment::newUnsavedComment( "" );
-			$pageUpdater = $wikiPage->newPageUpdater( $user );
-			$pageUpdater->saveRevision( $comment, EDIT_SUPPRESS_RC | EDIT_AUTOSUMMARY );
-		}
-
-		return $RevisionRecord !== null;
-	}
-
-	/**
 	 * @param Title $title
 	 * @return array
 	 */
 	private static function getMergedMetas( $title ) {
 		$page_ancestors = self::page_ancestors( $title, false );
 
-		// @TODO restore pageproperties db
-		// @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
 		$output = [];
 		foreach ( $page_ancestors as $title_ ) {
-			$page_properties_ = self::getPageProperties( $title_ );
+			$pageProperties_ = self::getPageProperties( $title_ );
 
-			if ( !empty( $page_properties_ )
-				 && ( !empty( $page_properties_['SEO']['subpages'] ) || $title_->getArticleID() == $title->getArticleID() )
-				 && !empty( $page_properties_['SEO']['meta'] ) ) {
-					$output = array_merge( $output, $page_properties_['SEO']['meta'] );
+			if ( !empty( $pageProperties_ )
+				 && ( !empty( $pageProperties_['meta_subpages'] ) || $title_->getArticleID() == $title->getArticleID() )
+				 && !empty( $pageProperties_['meta'] ) ) {
+					$output = array_merge( $output, $pageProperties_['meta'] );
 			}
 		}
 
@@ -906,12 +1035,11 @@ class PageProperties {
 	 * @return mixed
 	 */
 	public static function getDisplayTitle( $title ) {
-		$page_properties = self::getPageProperties( $title );
+		$pageProperties = self::getPageProperties( $title );
 		// display title can be null
-		if ( $page_properties !== false
-			&& !empty( $page_properties['page-properties'] )
-			&& array_key_exists( 'display-title', $page_properties['page-properties'] ) ) {
-				return $page_properties['page-properties']['display-title'];
+		if ( $pageProperties !== false
+			&& $pageProperties['display_title'] !== null ) {
+			return $pageProperties['display_title'];
 		}
 		return false;
 	}
@@ -942,7 +1070,13 @@ class PageProperties {
 		if ( isset( $obj['pageForms'] ) ) {
 			// this will populate self::$schemas with data
 			foreach ( $obj['pageForms'] as $value ) {
-				self::setSchemas( $out, $value['data']['schemas'] );
+				self::setSchemas( $out, $value['schemas'] );
+			}
+		}
+
+		if ( isset( $_SESSION ) && !empty( $_SESSION['pagepropertiesform-submissiondata'] ) ) {
+			foreach ( $_SESSION['pagepropertiesform-submissiondata'] as $formData ) {
+				self::setSchemas( $out, $formData['schemas'] );
 			}
 		}
 
@@ -968,6 +1102,11 @@ class PageProperties {
 			$allowedMimeTypes = self::$schemaProcessor->getAllowedMimeTypes();
 		}
 
+		$VEForAll = false;
+		if ( ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
+			$VEForAll = true;
+			$out->addModules( 'ext.veforall.main' );
+		}
 		$default = [
 			'schemas' => [],
 			'pageForms' => [],
@@ -987,10 +1126,10 @@ class PageProperties {
 				'canmanagesemanticproperties' => self::$User->isAllowed( 'pageproperties-canmanagesemanticproperties' ),
 				'canmanageschemas' => self::$User->isAllowed( 'pageproperties-canmanageschemas' ),
 				// 'canmanageforms' => self::$User->isAllowed( 'pageproperties-canmanageforms' ),
-
 				'contentModels' => array_flip( self::getContentModels() ),
 				'contentModel' => $title->getContentModel(),
 				'SMW' => self::$SMW,
+				'VEForAll' => $VEForAll
 			],
 		];
 
@@ -998,11 +1137,22 @@ class PageProperties {
 		$obj = array_merge( $default, $obj );
 		$obj['config'] = array_merge_recursive( $default['config'], $config );
 
+		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
+		$showOutdatedVersion = empty( $GLOBALS['wgPagePropertiesDisableVersionCheck'] )
+			&& (
+				self::$User->isAllowed( 'canmanageschemas' )
+				|| count( array_intersect( $groups, self::getUserGroups() ) )
+			);
+
 		$out->addJsConfigVars( [
+			// @see VEForAll ext.veforall.target.js -> getPageName
+			'wgPageFormsTargetName' => ( $title && $title->canExist() ? $title
+				: Title::newMainPage() )->getFullText(),
+
 			'pageproperties-schemas' => json_encode( $obj['schemas'], true ),
 			'pageproperties-pageforms' => json_encode( $obj['pageForms'], true ),
 			'pageproperties-config' => json_encode( $obj['config'], true ),
-			'pageproperties-disableVersionCheck' => (bool)$GLOBALS['wgPagePropertiesDisableVersionCheck'],
+			'pageproperties-show-notice-outdated-version' => $showOutdatedVersion
 		] );
 	}
 
@@ -1058,7 +1208,7 @@ class PageProperties {
 		}
 
 		if ( !$output->getTitle() ) {
-			$output->setTitle( Title::newFromText( 'Main Page' ) );
+			$output->setTitle( Title::newMainPage() );
 		}
 
 		self::$schemaProcessor->setOutput( $output );
@@ -1351,6 +1501,49 @@ class PageProperties {
 				$wikiPage_->doPurge();
 			}
 		}
+	}
+
+	/**
+	 * @see https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageOwnership/+/7f9723dfd9d7cc3669d8530b8a098c0e13076c6e/includes/PageOwnership.php
+	 * @param Title $title
+	 * @param array $options
+	 * @param string $table
+	 * @param string $prefix
+	 * @return void
+	 */
+	public static function getLinksTo( $title, $options = [], $table = 'pagelinks', $prefix = 'pl' ) {
+		if ( count( $options ) > 0 ) {
+			$db = wfGetDB( DB_PRIMARY );
+		} else {
+			$db = wfGetDB( DB_REPLICA );
+		}
+
+		$res = $db->select(
+			[ 'page', $table ],
+			LinkCache::getSelectFields(),
+			[
+				"{$prefix}_from=page_id",
+				// ***edited
+				"{$prefix}_namespace" => $title->getNamespace(),
+				"{$prefix}_title" => $title->getDBkey() ],
+			__METHOD__,
+			$options
+		);
+
+		$retVal = [];
+		if ( $res->numRows() ) {
+			// $linkCache = MediaWikiServices::getInstance()->getLinkCache();
+			foreach ( $res as $row ) {
+				// ***edited
+				// $titleObj = self::makeTitle( $row->page_namespace, $row->page_title );
+				$titleObj = Title::newFromID( $row->page_id );
+				if ( $titleObj ) {
+					// $linkCache->addGoodLinkObjFromRow( $titleObj, $row );
+					$retVal[] = $titleObj;
+				}
+			}
+		}
+		return $retVal;
 	}
 
 	/**

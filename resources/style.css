@@ -177,6 +177,8 @@
 
 .PagePropertiesGroupWidgetMessageWidget {
 	margin-bottom: 12px;
+	/* to avoid overlapping edit button */
+	margin-right: 20px;
 }
 
 .PanelPropertiesStackPanelSingle,
@@ -218,4 +220,23 @@
 .pageproperties-wikitable-inner th,
 .pageproperties-wikitable-inner tr td {
 	text-align: left;
+}
+
+.pageproperties-form-container-edit-button {
+	float: right;
+	top: -16px;
+	left: 16px;
+	position: relative;
+}
+
+.PagePropertiesGroupWidgetPanel .mw-upload-bookletLayout-filePreview {
+	width: inherit;
+	height: inherit;
+	background-color: inherit;
+	background-size: inherit;
+	background-position: inherit;
+	padding: inherit;
+	margin: inherit;
+	margin-bottom: inherit;
+	position: inherit;
 }

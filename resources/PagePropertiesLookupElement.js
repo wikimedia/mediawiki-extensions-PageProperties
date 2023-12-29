@@ -32,13 +32,12 @@
 	OO.mixinClass( PagePropertiesLookupElement, OO.ui.mixin.LookupElement );
 
 	PagePropertiesLookupElement.prototype.getLookupRequest = function () {
-		// @IMPORTANT, do not cache,
+		// @IMPORTANT, do not cache
 		// mainly for the use of dependent inputs
 		this.requestCache = {};
 
 		var value = this.getValue(),
 			deferred = $.Deferred();
-
 		this.data.performQuery( this.data, value ).then( ( data ) => {
 			deferred.resolve( data );
 		} );

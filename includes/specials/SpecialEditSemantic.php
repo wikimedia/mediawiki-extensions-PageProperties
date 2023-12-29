@@ -18,8 +18,8 @@
  *
  * @file
  * @ingroup extensions
- * @author thomas-topway-it <thomas.topway.it@mail.com>
- * @copyright Copyright ©2021-2022, https://wikisphere.org
+ * @author thomas-topway-it <support@topway.it>
+ * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
 // @TODO implement as form
@@ -89,9 +89,7 @@ class SpecialEditSemantic extends SpecialPage {
 		}
 
 		$this->setData( $out );
-
 		$out->setPageTitle( $this->getDescription() );
-
 		$out->addModules( 'ext.PageProperties.EditSemantic' );
 	}
 
@@ -102,20 +100,20 @@ class SpecialEditSemantic extends SpecialPage {
 	private function setData( $out ) {
 		$schemas = [];
 		$categories = [];
-		$pageProperties = [];
+		$jsonData = [];
 
 		if ( $this->title && $this->title->isKnown() ) {
-			$pageProperties = \PageProperties::getPageProperties( $this->title );
+			$jsonData = \PageProperties::getJsonData( $this->title );
 
-			if ( $pageProperties === false ) {
-				$pageProperties = [];
+			if ( $jsonData === false ) {
+				$jsonData = [];
 			}
 
 			$categories = \PageProperties::getCategories( $this->title );
 		}
 
-		if ( !empty( $pageProperties['schemas'] ) ) {
-			$schemas = array_keys( $pageProperties['schemas'] );
+		if ( !empty( $jsonData['schemas'] ) ) {
+			$schemas = array_keys( $jsonData['schemas'] );
 		}
 
 		if ( !empty( $_GET['schemas'] ) ) {
@@ -126,16 +124,24 @@ class SpecialEditSemantic extends SpecialPage {
 		\PageProperties::setSchemas( $out, $schemas, true );
 
 		$this->schemas = $schemas;
-		$freetext = null;
+
+		$editFreetext = ( !$this->title
+		 // || $this->title->getContentModel() !== 'wikitext'
+		);
+
+		$freetext = !$editFreetext ? null : \PageProperties::getWikipageContent( $this->title );
+
 		$formID = \PageProperties::formID( $this->title ? $this->title : $out->getTitle(), $schemas, 1 );
 
 		$formData = [
 			'freetext' => $freetext,
-			'properties' => $pageProperties,
+			'jsonData' => $jsonData,
 			'categories' => $categories,
 			'schemas' => $schemas,
 			'errors' => [],
 		];
+
+		$targetSlot = \PageProperties::getTargetSlot( $this->title );
 
 		$options = [
 			// success submission
@@ -144,16 +150,24 @@ class SpecialEditSemantic extends SpecialPage {
 			// edited page
 			'edit-page' => ( $this->title ? $this->title->getFullText() : '' ),
 
+			'target-slot' => $targetSlot,
+			'edit-freetext' => $editFreetext,
+
 			// show errors
 			'origin-url' => 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 's' : '' ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"
 		];
 
+		if ( !$this->title && ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
+			$out->addModules( 'ext.veforall.main' );
+		}
+
 		$pageForms = [
 			$formID => [
-				'options' => $options,
-				'data' => $formData,
+				'options' => $options
 			]
 		];
+
+		$pageForms[$formID] = array_merge( $pageForms[$formID], $formData );
 
 		\PageProperties::addJsConfigVars( $out, [
 			'pageForms' => $pageForms,

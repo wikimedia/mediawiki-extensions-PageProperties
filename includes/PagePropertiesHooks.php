@@ -57,6 +57,10 @@ class PagePropertiesHooks {
 		$GLOBALS['wgPageLanguageUseDB'] = true;
 		$GLOBALS['wgAllowDisplayTitle'] = true;
 		$GLOBALS['wgRestrictDisplayTitle'] = false;
+
+		if ( !is_array( $GLOBALS['wgPagePropertiesEditSemanticNamespaces'] ) ) {
+			$GLOBALS['wgPagePropertiesEditSemanticNamespaces'] = [ 0 ];
+		}
 	}
 
 	/**
@@ -217,16 +221,22 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function onContentAlterParserOutput( Content $content, Title $title, ParserOutput &$parserOutput ) {
-		$page_properties = \PageProperties::getPageProperties( $title );
+		$jsonData = \PageProperties::getJsonData( $title );
 
-		if ( !empty( $page_properties['categories'] ) ) {
-			foreach ( $page_properties['categories'] as $category ) {
+		$categories = [];
+		if ( !empty( $jsonData['categories'] ) ) {
+			foreach ( $jsonData['categories'] as $category ) {
 				if ( !empty( $category ) ) {
-					$parserOutput->addCategory( str_replace( ' ', '_', $category ), ( version_compare( MW_VERSION, '1.38', '<' ) ? $parserOutput->getProperty( 'defaultsort' ) : null ) );
+					$categories[str_replace( ' ', '_', $category )] = ( version_compare( MW_VERSION, '1.38', '<' )
+						? $parserOutput->getProperty( 'defaultsort' ) : null );
 				}
 			}
 		}
-
+		if ( version_compare( MW_VERSION, '1.38', '<' ) ) {
+			$parserOutput->mCategories = $categories;
+		} else {
+			$parserOutput->setCategories( $categories );
+		}
 		if ( \PageProperties::$SMW ) {
 			SemanticMediawiki::onContentAlterParserOutput( $content, $title, $parserOutput );
 		}
@@ -248,15 +258,19 @@ class PagePropertiesHooks {
 		// @FIXME run selectively by setting an exension data
 		// \PageProperties::moveTableHeaders( $text, 'datatable' );
 
-		if ( empty( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
-			return;
+		if ( isset( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
+			$pageProperties = \PageProperties::getPageProperties( $title );
+			if ( !empty( $pageProperties ) ) {
+				$parser->addTrackingCategory( 'pageproperties-tracking-category' );
+			}
 		}
 
-		$page_properties = \PageProperties::getPageProperties( $title );
-
-		if ( !empty( $page_properties ) ) {
-			$parser->addTrackingCategory( 'pageproperties-tracking-category' );
-		}
+		// if ( isset( $GLOBALS['wgPagePropertiesJsonDataTrackingCategory'] ) ) {
+		// 	$jsonData = \PageProperties::getJsonData( $title );
+		// 	if ( !empty( $jsonData ) ) {
+		// 		$parser->addTrackingCategory( 'jsondata-tracking-category' );
+		// 	}
+		// }
 	}
 
 	/**
@@ -418,10 +432,10 @@ class PagePropertiesHooks {
 			$pageForms = $parserOutput->getExtensionData( 'pagepropertiesforms' );
 
 			foreach ( $pageForms as $formID => $value ) {
-				$schemas = $pageForms[$formID]['data']['schemas'];
+				$schemas = $pageForms[$formID]['schemas'];
 				$databaseManager->storeLink( $title, 'form', $schemas );
 
-				$pageProperties = [];
+				$jsonData = [];
 				$freetext = null;
 				$categories = [];
 				$title_ = ( $value['options']['action'] === 'edit' ? $title : null );
@@ -436,9 +450,9 @@ class PagePropertiesHooks {
 					if ( $title_ ) {
 						$pageForms[$formID]['options']['edit-page'] = $title_->getFullText();
 
-						$pageProperties_ = \PageProperties::getPageProperties( $title_ );
-						if ( $pageProperties_ !== false ) {
-							$pageProperties = $pageProperties_;
+						$jsonData_ = \PageProperties::getJsonData( $title_ );
+						if ( $jsonData_ !== false ) {
+							$jsonData = $jsonData_;
 						}
 					}
 				}
@@ -449,12 +463,16 @@ class PagePropertiesHooks {
 
 				if ( $value['options']['edit-freetext'] === true && $title_ ) {
 					$freetext = \PageProperties::getWikipageContent( $title_ );
+
+					// if ( ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
+					//	$out->addModules( 'ext.veforall.main' );
+					// }
 				}
 
-				$formData = &$pageForms[$formID]['data'];
+				$formData = &$pageForms[$formID];
 
 				$formData['freetext'] = $freetext;
-				$formData['properties'] = $pageProperties;
+				$formData['jsonData'] = $jsonData;
 				$formData['categories'] = $categories;
 				$formData['freetext'] = $freetext;
 				$formData['errors'] = [];
@@ -565,12 +583,8 @@ class PagePropertiesHooks {
 		$errors = [];
 		if ( \PageProperties::checkWritePermissions( $user, $title, $errors )
 			&& $user->isAllowed( 'pageproperties-caneditschemas' )
-			&& (
-				$title->isContentPage() ||
-					( is_array( $GLOBALS['wgPagePropertiesDisplayAlwaysUnprefixedTitles'] )
-					&& in_array( $title->getNamespace(), $GLOBALS['wgPagePropertiesDisplayAlwaysUnprefixedTitles'] )
-				)
-			)
+			&& !$title->isSpecialPage()
+			&& in_array( $title->getNamespace(), $GLOBALS['wgPagePropertiesEditSemanticNamespaces'] )
 		 ) {
 			$link = [
 				'class' => ( $skinTemplate->getRequest()->getVal( 'action' ) === 'editsemantic' ? 'selected' : '' ),
@@ -658,7 +672,7 @@ class PagePropertiesHooks {
 			'pageproperties-js-alert-2' => wfMessage( 'pageproperties-js-alert-2' )->text()
 		] );
 
-		// @TODO use Ajax validation form page-forms
+		// @TODO use Ajax validation for page-forms
 		if ( isset( $_SESSION ) && !empty( $_SESSION['pagepropertiesform-submissiondata'] ) ) {
 			$outputPage->addJsConfigVars( [
 				'pageproperties-submissiondata' => json_encode( $_SESSION['pagepropertiesform-submissiondata'], true ),
@@ -673,9 +687,12 @@ class PagePropertiesHooks {
 
 		// *** the rationale for this is that for background processes
 		// is not a good practice to display an indicator
-		if ( empty( $GLOBALS['wgPagePropertiesKeepAnnoyingSMWVerticalBarLoader'] ) ) {
-			$outputPage->addScript( Html::inlineScript( 'var elements = document.getElementsByClassName( "smw-indicator-vertical-bar-loader" ); if ( elements.length ) { elements[0].remove(); }' ) );
-		}
+		// *** use instead the following $wgDefaultUserOptions['smw-prefs-general-options-show-entity-issue-panel'] = false;
+		// @see https://sourceforge.net/p/semediawiki/mailman/message/58710334/
+
+		// if ( empty( $GLOBALS['wgPagePropertiesKeepAnnoyingSMWVerticalBarLoader'] ) ) {
+		// 	$outputPage->addScript( Html::inlineScript( 'var elements = document.getElementsByClassName( "smw-indicator-vertical-bar-loader" ); if ( elements.length ) { elements[0].remove(); }' ) );
+		// }
 
 		if ( $outputPage->isArticle() && \PageProperties::isKnownArticle( $title ) ) {
 			if ( empty( $GLOBALS['wgPagePropertiesDisableJsonLD'] ) ) {

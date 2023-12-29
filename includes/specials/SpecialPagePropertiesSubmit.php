@@ -85,7 +85,7 @@ class SpecialPagePropertiesSubmit extends SpecialPage {
 		// @TODO use standard Mediawiki's sessions interface
 		$_SESSION['pagepropertiesform-submissiondata'][$this->formID] = [
 			'freetext' => $result['freetext'],
-			'properties' => $result['properties'],
+			'jsonData' => $result['jsonData'],
 			'categories' => $result['categories'],
 			'errors' => $result['errors'],
 			'userDefined' => $result['userDefined'],

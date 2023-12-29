@@ -115,7 +115,7 @@ class ResultPrinter {
 	 */
 	public function processRow( $title, $value ) {
 		$path = '';
-		return $this->processSchemaRec( $this->schema, $value, $path );
+		return $this->processSchemaRec( $title, $this->schema, $value, $path );
 	}
 
 	/**
@@ -126,7 +126,7 @@ class ResultPrinter {
 	public function processRowTree( $title, $value ) {
 		$path = '';
 		$pathNoIndex = '';
-		return $this->processSchemaRecTree( $this->schema, $value, $path, $pathNoIndex );
+		return $this->processSchemaRecTree( $title, $this->schema, $value, $path, $pathNoIndex );
 	}
 
 	/**
@@ -158,6 +158,12 @@ class ResultPrinter {
 	 * @return string
 	 */
 	protected function processTemplate( $titleStr, $params ) {
+		$titleTemplate = \Title::makeTitle( NS_TEMPLATE, $titleStr );
+
+		if ( !$titleTemplate || !$titleTemplate->isKnown() ) {
+			return "[[$titleTemplate]]";
+		}
+
 		// @see Scribunto_LuaEngine -> expandTemplate
 		if ( class_exists( 'MediaWiki\Extension\Scribunto\Engines\LuaStandalone\LuaStandaloneEngine' ) ) {
 			$args = $params;
@@ -178,30 +184,21 @@ class ResultPrinter {
 			$argv[] = "$key=$value";
 		}
 
-		$titleTemplate = \Title::makeTitle( NS_TEMPLATE, $titleStr );
-
-		if ( !$titleTemplate ) {
-			return "[[$titleTemplate]]";
-		}
-
 		$text = '{{' . $titleTemplate . '|' . implode( '|', $argv ) . '}}';
 
 		return $this->parser->recursiveTagParse( $text );
 	}
 
 	/**
+	 * @param Title $title
 	 * @param array $schema
 	 * @param array $arr
 	 * @param string $path
 	 * @param string $pathNoIndex
 	 * @return string
 	 */
-	protected function processSchemaRecTree( $schema, $arr, $path, $pathNoIndex ) {
+	protected function processSchemaRecTree( $title, $schema, $arr, $path, $pathNoIndex ) {
 		$isArray = $schema['type'] === 'array';
-
-		if ( $path === '' ) {
-			$this->templateMap = [];
-		}
 
 		// reset indexes
 		if ( $isArray ) {
@@ -213,7 +210,7 @@ class ResultPrinter {
 
 			switch ( $schema['type'] ) {
 				case 'object':
-					$subschema = null;
+					$subschema = [];
 					if ( array_key_exists( $key, $schema['properties'] ) ) {
 						$subschema = $schema['properties'][$key];
 					}
@@ -232,34 +229,36 @@ class ResultPrinter {
 			}
 
 			if ( is_array( $value ) ) {
-				$ret[$key] = $this->processSchemaRecTree( $subschema, $value, $currentPath, $currentPathNoIndex );
+				$ret[$key] = $this->processSchemaRecTree( $title, $subschema, $value, $currentPath, $currentPathNoIndex );
 			} else {
-				$ret[$key] = $this->processChild( $subschema, $key, $value, $currentPathNoIndex, $path === '' );
+				$ret[$key] = $this->processChild( $subschema, $key, array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $arr ),
+					$currentPathNoIndex, $path === '' );
 			}
 		}
 
-		return $this->processParent( $schema, $ret, $pathNoIndex );
+		return $this->processParent( $schema,
+			array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret ), $pathNoIndex );
 	}
 
 	/**
+	 * @param Title $title
 	 * @param array $schema
 	 * @param array $arr
 	 * @param string $path
 	 * @return string
 	 */
-	protected function processSchemaRec( $schema, $arr, $path ) {
+	protected function processSchemaRec( $title, $schema, $arr, $path ) {
 		// $isArray = ( $schema['type'] === 'array' );
-
-		if ( $path === '' ) {
-			$this->templateMap = [];
-		}
 		$ret = [];
 		foreach ( $arr as $key => $value ) {
 			$currentPath = $path ? "$path/$key" : $key;
 
 			switch ( $schema['type'] ) {
 				case 'object':
-					$subschema = $schema['properties'][$key];
+					$subschema = [];
+					if ( array_key_exists( $key, $schema['properties'] ) ) {
+						$subschema = $schema['properties'][$key];
+					}
 					break;
 				case 'array':
 					// @FIXME handle tuple
@@ -267,17 +266,22 @@ class ResultPrinter {
 					$subschema = $schema['items']['properties'][$key];
 					break;
 				default:
+					if ( !array_key_exists( $key, $schema ) ) {
+						continue 2;
+					}
 					$subschema = $schema[$key];
 			}
 
 			if ( is_array( $value ) ) {
-				$ret[$key] = $this->processSchemaRec( $subschema, $value, $currentPath );
+				$ret[$key] = $this->processSchemaRec( $title, $subschema, $value, $currentPath );
 			} else {
-				$ret[$key] = $this->processChild( $subschema, $key, $value, $currentPath );
+				$ret[$key] = $this->processChild( $subschema, $key,
+					array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $arr ), $currentPath );
 			}
 		}
 
-		return $this->processParent( $schema, $ret, $path );
+		return $this->processParent( $schema,
+			array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret ), $path );
 	}
 
 	/**
@@ -312,15 +316,16 @@ class ResultPrinter {
 	/**
 	 * @param array|null $schema
 	 * @param string $key
-	 * @param string $value
+	 * @param array $properties
 	 * @param string $path
 	 * @return string
 	 */
-	public function processChild( $schema, $key, $value, $path ) {
+	public function processChild( $schema, $key, $properties, $path ) {
+		$value = $properties[$key];
 		// apply template
 		if ( array_key_exists( $path, $this->templates )
 			&& !empty( $this->templates[$path] ) ) {
-			$value = $this->processTemplate( $this->templates[$path], [ $key => $value ], false );
+			$value = $this->processTemplate( $this->templates[$path], $properties, false );
 		}
 
 		// retrieve label

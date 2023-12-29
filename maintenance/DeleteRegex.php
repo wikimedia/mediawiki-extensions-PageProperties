@@ -22,9 +22,6 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-use MediaWiki\MediaWikiServices;
-use MediaWiki\Page\DeletePage;
-
 $IP = getenv( 'MW_INSTALL_PATH' );
 if ( $IP === false ) {
 	$IP = __DIR__ . '/../../..';
@@ -80,13 +77,7 @@ class DeleteRegex extends Maintenance {
 
 		$user = User::newSystemUser( 'Maintenance script', [ 'steal' => true ] );
 
-		$this->params = [
-			'userId' => $user->getID(),
-			'reason' => 'DeleteRegex',
-			'suppress' => 'delete',
-			'tags' => json_encode( [] ),
-			'logsubtype' => 'delete'
-		];
+		$this->user = $user;
 
 		$conds = [
 			'page_is_redirect' => 0
@@ -128,8 +119,8 @@ class DeleteRegex extends Maintenance {
 		foreach ( $res as $row ) {
 			$title = Title::newFromRow( $row );
 			echo 'deleting ' . $title->getFullText() . PHP_EOL;
-			$status = $this->deletePageJob( $row->page_id );
-			if ( $status->isOK() ) {
+			$ret = $this->deletePageJob( $title );
+			if ( $ret ) {
 				$title = Title::newFromRow( $row );
 				echo 'done ' . PHP_EOL;
 			}
@@ -137,31 +128,28 @@ class DeleteRegex extends Maintenance {
 	}
 
 	/**
-	 * @param int $articleId
+	 * @see DeletePageJob
+	 * @param Title $title
 	 * @return Status|false
 	 */
-	private function deletePageJob( $articleId ) {
-		$services = MediaWikiServices::getInstance();
-		$wikiPage = $services->getWikiPageFactory()->newFromID( $articleId );
-		if ( !$wikiPage ) {
-			return false;
-		}
-		$deletePage = $services->getDeletePageFactory()->newDeletePage(
-			$wikiPage,
-			$services->getUserFactory()->newFromId( $this->params['userId'] )
-		);
-		return $deletePage
-			->setSuppress( $this->params['suppress'] )
-			->setTags( json_decode( $this->params['tags'] ) )
-			->setLogSubtype( $this->params['logsubtype'] )
-			->setDeletionAttempted()
-			->deleteInternal(
-				$wikiPage,
-				// Use a fallback for BC with queued jobs.
-				$this->params['pageRole'] ?? DeletePage::PAGE_BASE,
-				$this->params['reason'],
-				$this->getRequestId()
-			);
+	private function deletePageJob( $title ) {
+		$jobParams = [
+			'namespace' => $title->getNamespace(),
+			'title' => $title->getDBkey(),
+			'wikiPageId' => $title->getArticleId(),
+			// 'requestId' => $webRequestId ?? $this->webRequestID,
+			'reason' => 'DeleteRegex',
+			'suppress' => 'delete',
+			'userId' => $this->user->getID(),
+			'tags' => json_encode( [] ),
+			'logsubtype' => 'delete',
+			'pageRole' => null,
+		];
+
+		$job = new DeletePageJob( $jobParams );
+		// \PageProperties::pushJobs( $job );
+		$job->run();
+		return true;
 	}
 }
 

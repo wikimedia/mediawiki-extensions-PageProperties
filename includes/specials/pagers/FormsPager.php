@@ -126,16 +126,18 @@ class FormsPager extends TablePager {
 	 */
 	public function getQueryInfo() {
 		$dbr = wfGetDB( DB_REPLICA );
-
 		$ret = [];
 		$conds = [];
-		$join_conds[$dbr->tableName( 'page' ) . ' as page'] = [ 'LEFT JOIN', 'pageproperties_links.page_id=page.page_id' ];
+		$join_conds['page'] = [ 'LEFT JOIN', 'links.page_id=page.page_id' ];
 		$options = [];
 
-		$tables = [ $dbr->tableName( 'page' ) . ' as page', $dbr->tableName( 'pageproperties_links' ) . ' as pageproperties_links' ];
+		$tables = [
+			'page' => $dbr->tableName( 'page' ),
+			'links' => $dbr->tableName( 'pageproperties_links' )
+		];
 		$fields = [ '*', 'page_title' ];
 		$conds[ 'type' ] = 'form';
-		$conds[] = 'pageproperties_links.page_id != 0';
+		$conds[] = 'links.page_id != 0';
 
 		$schemaname = $this->request->getVal( 'schemaname' );
 		if ( !empty( $schemaname ) ) {

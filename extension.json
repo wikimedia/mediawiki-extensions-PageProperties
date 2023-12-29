@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.4.7",
+	"version": "1.4.8",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -192,6 +192,7 @@
 			"position": "top",
 			"scripts": [
 				"PagePropertiesFunctions.js",
+				"VersionCheck.js",
 				"tabs.js",
 				"dynamictable.js"
 			],
@@ -232,6 +233,7 @@
 		"ext.PageProperties.Common": {
 			"position": "top",
 			"scripts": [
+				"PagePropertiesFunctions.js",
 				"intl-tel-input/js/intlTelInput.js",
 				"ajv-validator/ajv7.bundle-ecma5-min.js",
 				"PagePropertiesintlTelInput.js",
@@ -240,7 +242,8 @@
 				"PagePropertiesMenuTagSearchMultiselect.js",
 				"PagePropertiesRatingWidget.js",
 				"PagePropertiesDropdownWidget.js",
-				"PagePropertiesUpload.js"
+				"PagePropertiesUpload.js",
+				"PagePropertiesVisualEditor.js"
 			],
 			"styles": [
 				"intl-tel-input/css/intlTelInput.min.css",
@@ -307,6 +310,8 @@
 				"PagePropertiesContentBlock.js",
 				"PagePropertiesFormField.js",
 				"PagePropertiesSchemas.js",
+				"PagePropertiesProcessModel.js",
+				"VersionCheck.js",
 				"PageProperties.js"
 			],
 			"styles": [
@@ -428,7 +433,8 @@
 				"pageproperties-jsmodule-schemas-message-container-info",
 				"pageproperties-jsmodule-dialog-cancel",
 				"pageproperties-jsmodule-dialog-main",
-				"pageproperties-special-submit-notitle"
+				"pageproperties-special-submit-notitle",
+				"pageproperties-jsmodule-pageforms-form-error"
 			]
 		}
 	},
@@ -440,7 +446,8 @@
 		"PagePropertiesOpenExternalLinksInNewTab": false,
 		"PagePropertiesDisplayAlwaysUnprefixedTitles": false,
 		"PagePropertiesCreateJobsWarningLimit": 0,
-		"PagePropertiesDisableVersionCheck": false
+		"PagePropertiesDisableVersionCheck": false,
+		"PagePropertiesEditSemanticNamespaces": [ 0 ]
 	},
 	"manifest_version": 1
 }

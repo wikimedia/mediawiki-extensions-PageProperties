@@ -48,21 +48,20 @@ class TableResultPrinter extends ResultPrinter {
 	 */
 	public function processRow( $title, $value ) {
 		$this->htmlTable->row();
-
 		$this->headers['_'] = $this->params['pagetitle-name'];
 		$formatted = Linker::link( $title, $title->getText() );
 		$this->htmlTable->cell( $formatted );
 
 		$path = '';
 		$pathNoIndex = '';
-		return $this->processSchemaRec( $this->schema, $value, $path, $pathNoIndex );
+		return $this->processSchemaRec( $title, $this->schema, $value, $path, $pathNoIndex );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
-	public function processChild( $schema, $key, $value, $path ) {
-		$value = parent::processChild( $schema, $key, $value, $path );
+	public function processChild( $schema, $key, $properties, $path ) {
+		$value = parent::processChild( $schema, $key, $properties, $path );
 
 		// retrieve label
 		if ( array_key_exists( 'title', $schema )

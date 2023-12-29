@@ -15,7 +15,7 @@
  * along with PageProperties.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @file
- * @author thomas-topway-it <thomas.topway.it@mail.com>
+ * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
@@ -398,68 +398,4 @@ $( function () {
 			} );
 		}
 	} );
-
-	var showNoticeOutdatedVersion = JSON.parse(
-		mw.config.get( 'pageproperties-show-notice-outdated-version' )
-	);
-
-	// display every 3 days
-	if (
-		!mw.config.get( 'pageproperties-disableVersionCheck' ) &&
-		showNoticeOutdatedVersion &&
-		!mw.cookie.get( 'pageproperties-check-latest-version' )
-	) {
-		mw.loader.using( 'mediawiki.api', function () {
-			new mw.Api()
-				.postWithToken( 'csrf', {
-					action: 'pageproperties-check-latest-version'
-				} )
-				.done( function ( res ) {
-					if ( 'pageproperties-check-latest-version' in res ) {
-						if ( res[ 'pageproperties-check-latest-version' ].result === 2 ) {
-							var messageWidget = new OO.ui.MessageWidget( {
-								type: 'warning',
-								label: new OO.ui.HtmlSnippet(
-									mw.msg(
-										'pageproperties-jsmodule-pageproperties-outdated-version'
-									)
-								),
-								// *** this does not work before ooui v0.43.0
-								showClose: true
-							} );
-							var closeFunction = function () {
-								var three_days = 3 * 86400;
-								mw.cookie.set( 'pageproperties-check-latest-version', true, {
-									path: '/',
-									expires: three_days
-								} );
-								$( messageWidget.$element ).parent().remove();
-							};
-							messageWidget.on( 'close', closeFunction );
-							$( '#pageproperties-form' )
-								.prepend( $( '<div><br/></div>' ).prepend( messageWidget.$element ) );
-							if (
-								!messageWidget.$element.hasClass(
-									'oo-ui-messageWidget-showClose'
-								)
-							) {
-								messageWidget.$element.addClass(
-									'oo-ui-messageWidget-showClose'
-								);
-								var closeButton = new OO.ui.ButtonWidget( {
-									classes: [ 'oo-ui-messageWidget-close' ],
-									framed: false,
-									icon: 'close',
-									label: OO.ui.msg( 'ooui-popup-widget-close-button-aria-label' ),
-									invisibleLabel: true
-								} );
-								closeButton.on( 'click', closeFunction );
-								messageWidget.$element.append( closeButton.$element );
-							}
-						}
-					}
-				} );
-		} );
-	}
-
 } );

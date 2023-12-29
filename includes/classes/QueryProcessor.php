@@ -70,7 +70,7 @@ class QueryProcessor {
 	private $databaseManager;
 
 	/** @var errors */
-	private $errors;
+	private $errors = [];
 
 	/** @var mapKeyToPrintout */
 	private $mapKeyToPrintout;
@@ -363,14 +363,14 @@ class QueryProcessor {
 
 		if ( empty( $this->conditionProperties )
 			&& empty( $this->conditionSubjects ) ) {
-			echo 'no query' . PHP_EOL;
+			$this->errors[] = 'no query';
 			return;
 		}
 
 		$schemaId = $this->databaseManager->getSchemaId( $this->params['schema'] );
 
 		if ( $schemaId === null ) {
-			echo 'no schema (' . $this->params['schema'] . ')' . PHP_EOL;
+			$this->errors[] = 'no schema (' . $this->params['schema'] . ')';
 			return;
 		}
 
@@ -461,12 +461,11 @@ class QueryProcessor {
 		$options = [];
 		$joins = [];
 
-		$fields[] = "t0.page_id AS page_id";
+		$fields["page_id"] = "t0.page_id";
 		$conds = [
-			"p0.schema_id" => $schemaId,
+			"t0.schema_id" => $schemaId,
 		];
 
-		// @TODO use subjquery to
 		foreach ( $combined as $key => $v ) {
 			$pathNoIndex = $v['printout'];
 			$isPrintout = $v['isPrintout'];
@@ -475,12 +474,17 @@ class QueryProcessor {
 			}
 			$tablename = $mapPathNoIndexTable[$pathNoIndex];
 			$joinConds = [];
-			$joinConds[] = "p$key.id=t$key.prop_id";
+
+			// @ATTENTION !!
+			// the following query structure assumes that
+			// the first queried printout always exists,
+			// evaluate whether to use something like
+			// "SELECT 1 FROM DUAL" instead
 
 			if ( $key === 0 ) {
-				$conds["p$key.path_no_index"] = $pathNoIndex;
+				$conds["t$key.path_no_index"] = $pathNoIndex;
 			} else {
-				$joinConds["p$key.path_no_index"] = $pathNoIndex;
+				$joinConds["t$key.path_no_index"] = $pathNoIndex;
 			}
 
 			if ( array_key_exists( $pathNoIndex, $this->conditionProperties ) ) {
@@ -492,36 +496,51 @@ class QueryProcessor {
 			}
 
 			if ( $key > 0 ) {
-				$joinConds[] = "p$key.schema_id=p0.schema_id";
+				$joinConds[] = "t$key.schema_id=t0.schema_id";
 				$joinConds[] = "t$key.page_id=t0.page_id";
 				if ( $this->params['hierarchical-conditions']
 					&& array_key_exists( 'parent', $v ) ) {
-					$pKey = $v['parent'];
+					$parentKey = $v['parent'];
 					if ( !$v['isSibling'] ) {
-						$joinConds[] = "LOCATE( p$pKey.path_parent, p$key.path_parent ) = 1";
+						$joinConds[] = "LOCATE( t$parentKey.path_parent, t$key.path_parent ) = 1";
 
 					// @IMPORTANT!! otherwise, with locate between
 					// identical strings, the query will not work!!
 					// (it could be related to how mysql manages indexes)
 					} else {
-						$joinConds[] = "p$pKey.path_parent = p$key.path_parent";
+						$joinConds[] = "t$parentKey.path_parent = t$key.path_parent";
 					}
 				}
+				$joins["t$key"] = [ 'LEFT JOIN', $this->dbr->makeList( $joinConds, LIST_AND ) ];
 			}
-			$tables[] = $this->dbr->tableName( "pageproperties_$tablename" ) . " AS t$key";
-			$tables[] = $this->dbr->tableName( 'pageproperties_props' ) . " AS p$key";
 
-			if ( $key > 0 ) {
-				$joins[$this->dbr->tableName( "pageproperties_$tablename" ) . " AS t$key"] = [ 'JOIN', [] ];
-			}
-			$joins[$this->dbr->tableName( 'pageproperties_props' ) . " AS p$key"] = [ 'JOIN', $this->dbr->makeList( $joinConds, LIST_AND ) ];
+			$tables_ = [
+				't' => $this->dbr->tableName( "pageproperties_$tablename" ),
+				'p' => $this->dbr->tableName( 'pageproperties_props' )
+			];
+			$fields_ = [ 't.value', 't.page_id', 'p.path_no_index', 'p.path', 'p.path_parent', 'p.schema_id' ];
+			$conds_ = [];
+			$options_ = [];
+			$jconds_ = [
+				'p' => [ 'JOIN', 'p.id=t.prop_id' ]
+			];
+
+			// @see ActiveUsersPager
+			$tables["t$key"] = $this->dbr->buildSelectSubquery(
+				$tables_,
+				$fields_,
+				$conds_,
+				__METHOD__,
+				$options_,
+				$jconds_
+			);
 
 			if ( $isPrintout ) {
 				if ( !$this->treeFormat ) {
-					$fields[] = "t$key.value AS v$key";
+					$fields["v$key"] = "t$key.value";
 				} else {
-					$fields[] = "GROUP_CONCAT(t$key.value SEPARATOR 0x1E) AS v$key";
-					$fields[] = "GROUP_CONCAT(p$key.path SEPARATOR 0x1E) AS p$key";
+					$fields["v$key"] = "GROUP_CONCAT(t$key.value SEPARATOR 0x1E)";
+					$fields["p$key"] = "GROUP_CONCAT(t$key.path SEPARATOR 0x1E)";
 				}
 			}
 		}
@@ -532,6 +551,7 @@ class QueryProcessor {
 			if ( !$title_ || !$title_->isKnown() ) {
 				continue;
 			}
+
 			if ( $title_->getNamespace() !== NS_CATEGORY ) {
 				$conds[] = 't0.page_id = ' . $title_->getArticleId();
 

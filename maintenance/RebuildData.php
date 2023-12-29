@@ -138,15 +138,20 @@ class RebuildData extends Maintenance {
 			// @ATTENTION required to execute
 			// onOutputPageParserOutput, alternatively use
 			// addParserOutputMetadata @see McrUndoAction
-			$article = new Article( $title );
-			$article->render();
+
+			try {
+				$article = new Article( $title );
+				$article->render();
+			} catch ( Exception $e ) {
+				echo $e->getMessage() . PHP_EOL;
+			}
 		}
 	}
 
 	private function rebuildData() {
 		$maxByPageId = $this->getMaxPageId();
 
-		for ( $i = 0; $i < $maxByPageId; $i++ ) {
+		for ( $i = 0; $i <= $maxByPageId; $i++ ) {
 			$title = Title::newFromID( $i );
 
 			echo "processing $i/$maxByPageId" . PHP_EOL;

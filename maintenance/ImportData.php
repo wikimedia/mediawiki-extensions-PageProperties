@@ -22,10 +22,7 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-use MediaWiki\Extension\PageProperties\DatabaseManager as DatabaseManager;
-use MediaWiki\Extension\PageProperties\SchemaProcessor as SchemaProcessor;
-use MediaWiki\Extension\PageProperties\SubmitForm as SubmitForm;
-use MediaWiki\Revision\SlotRecord;
+use MediaWiki\Extension\PageProperties\Importer as Importer;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
 if ( $IP === false ) {
@@ -38,35 +35,8 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 }
 
 class ImportData extends Maintenance {
-	/** @var User */
-	private $user;
-
-	/** @var string */
-	private $langCode;
-
-	/** @var importer */
-	private $importer;
-
 	/** @var error_messages */
 	private $error_messages = [];
-
-	/** @var schema */
-	private $schema;
-
-	/** @var output */
-	private $output;
-
-	/** @var context */
-	private $context;
-
-	/** @var schemaName */
-	private $schemaName;
-
-	/** @var mainSlot */
-	private $mainSlot;
-
-	/** @var limit */
-	private $limit;
 
 	public function __construct() {
 		parent::__construct();
@@ -79,7 +49,6 @@ class ImportData extends Maintenance {
 		$this->addOption( 'file', 'filename (complete path)', true, true );
 		$this->addOption( 'schema', 'schema registered on the wiki', false, true );
 		$this->addOption( 'pagename-formula', 'pagename formula', false, true );
-		$this->addOption( 'target-page', 'target-page', false, true );
 		$this->addOption( 'main-slot', 'whether to save to main slot', false, false );
 		$this->addOption( 'limit', 'limit pages to be imported', false, true );
 	}
@@ -92,12 +61,10 @@ class ImportData extends Maintenance {
 		$path = $this->getOption( 'file' ) ?? null;
 		$schemaName = $this->getOption( 'schema' ) ?? null;
 		$pagenameFormula = $this->getOption( 'pagename-formula' ) ?? null;
-		$targetPage = $this->getOption( 'pagename-formula' ) ?? null;
 		$mainSlot = $this->getOption( 'main-slot' ) ?? false;
 		$limit = $this->getOption( 'limit' ) ?? false;
 
-		$this->limit = ( $limit === false ? INF : (int)$limit );
-
+		$limit = ( $limit === false ? INF : (int)$limit );
 		$contents = file_get_contents( $path );
 
 		if ( !$contents ) {
@@ -108,8 +75,6 @@ class ImportData extends Maintenance {
 			return 'no schema';
 		}
 
-		$this->schemaName = $schemaName;
-
 		$data = json_decode( $contents, true );
 
 		if ( !$data ) {
@@ -117,140 +82,19 @@ class ImportData extends Maintenance {
 		}
 
 		$context = new RequestContext();
-		$this->context = $context;
 		$context->setTitle( Title::makeTitle( NS_MAIN, '' ) );
-		$this->output = $context->getOutput();
-		$this->mainSlot = $mainSlot;
 
-		$this->user = User::newSystemUser( 'Maintenance script', [ 'steal' => true ] );
-		$this->importer = \PageProperties::getImporter();
-		$schema = \PageProperties::getSchema( $this->output, $schemaName );
+		$user = User::newSystemUser( 'Maintenance script', [ 'steal' => true ] );
 
-		if ( !$schema ) {
-			echo 'generating schema' . PHP_EOL;
-			if ( !$this->createSchema( $schemaName, $data ) ) {
-				return 'schema not saved';
-			}
-		} else {
-			$this->schema = $schema;
-		}
+		$importer = new Importer( $user, $context, $schemaName, $mainSlot, $limit );
 
-		if ( \PageProperties::isList( $data ) ) {
-			$this->handleList( $pagenameFormula, $data );
-			return;
-		}
+		$showMsg = static function ( $msg ) {
+			echo $msg . PHP_EOL;
+		};
 
-		$this->handleObject( $targetPage, $data );
+		$importer->importData( $pagenameFormula, $data, $showMsg );
 	}
 
-	/**
-	 * @param string $pagenameFormula
-	 * @param array $data
-	 * @return bool|void
-	 */
-	private function handleList( $pagenameFormula, $data ) {
-		if ( empty( $pagenameFormula ) ) {
-			echo 'no pagename formula' . PHP_EOL;
-			return false;
-		}
-
-		$databaseManager = new DatabaseManager();
-		$submitForm = new SubmitForm( $this->user, $this->context );
-
-		$n = 0;
-		foreach ( $data as $key => $value ) {
-			$flatten = $databaseManager->prepareData( $this->schema, $value );
-			$titleText = $submitForm->replacePageNameFormula( $flatten, $pagenameFormula, $properties );
-
-			$title_ = Title::newFromText( $titleText );
-			if ( !$title_->canExist() ) {
-				echo 'wrong title ' . $titleText . PHP_EOL;
-				continue;
-			}
-
-			$pagename = $this->createArticle( $title_, $value );
-
-			echo 'saving article: ' . $pagename . "\n";
-
-			$entries = $databaseManager->recordProperties( 'ImportData', $title_, $flatten, $errors );
-
-			echo "$entries entries created for article $pagename" . PHP_EOL;
-			$n++;
-			if ( $n === $this->limit ) {
-				break;
-			}
-		}
-	}
-
-	/**
-	 * @param string $targetPage
-	 * @param array $data
-	 * @return bool|void
-	 */
-	private function handleObject( $targetPage, $data ) {
-		if ( empty( $targetPage ) ) {
-			echo 'no target page' . PHP_EOL;
-			return false;
-		}
-		// @TODO ...
-	}
-
-	/**
-	 * @param string $name
-	 * @param array $data
-	 * @return RevisionRecord|null
-	 */
-	private function createSchema( $name, $data ) {
-		$schemaProcessor = new SchemaProcessor();
-		$schemaProcessor->setOutput( $this->output );
-		$schema = $schemaProcessor->generateFromData( $data, $name );
-		// $recordedObj = $schemaProcessor->convertToSchema( $schema );
-		$recordedObj = $schema;
-		$title = Title::makeTitleSafe( NS_PAGEPROPERTIESSCHEMA, $name );
-		$this->schema = $schemaProcessor->processSchema( $schema, $name );
-		return \PageProperties::saveRevision( $this->user, $title, json_encode( $recordedObj ) );
-	}
-
-	/**
-	 * @param Title $title
-	 * @param array $data
-	 * @return string
-	 */
-	private function createArticle( $title, $data ) {
-		$obj = [
-			'schemas' => [
-				$this->schemaName => $data
-			]
-		];
-
-		// return \PageProperties::saveRevision( $this->user, $title, json_encode( $recordedObj ) );
-		$contents = [
-			[
-				'role' => $this->mainSlot ? SlotRecord::MAIN : SLOT_ROLE_PAGEPROPERTIES,
-				'model' => CONTENT_MODEL_PAGEPROPERTIES_JSONDATA,
-				'text' => json_encode( $obj, JSON_PRETTY_PRINT )
-			],
-		];
-
-		if ( !$this->mainSlot ) {
-			array_unshift( $contents, [
-				'role' => SlotRecord::MAIN,
-				'model' => 'wikitext',
-				'text' => ''
-			] );
-		}
-
-		$pagename = $title->getFullText();
-
-		try {
-			$this->importer->doImportSelf( $pagename, $contents );
-		} catch ( Exception $e ) {
-			$this->error_messages[$pagename] = $e->getMessage();
-		}
-
-		// print_r($this->error_messages);
-		return $pagename;
-	}
 }
 
 $maintClass = ImportData::class;

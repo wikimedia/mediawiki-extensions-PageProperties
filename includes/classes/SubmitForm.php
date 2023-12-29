@@ -281,37 +281,54 @@ class SubmitForm {
 
 		$databaseManager = new DatabaseManager();
 
-		$pageProperties = [];
+		$jsonData = [
+			'schemas' => [],
+			'schemas-data' => [],
+			'categories' => []
+		];
 		$editTitle = null;
 		if ( !empty( $data['options']['edit-page'] ) ) {
 			$editTitle = Title::newFromText( $data['options']['edit-page'] );
 
 			if ( $editTitle ) {
-				$pageProperties = \PageProperties::getPageProperties( $editTitle );
+				$jsonData_ = \PageProperties::getJsonData( $editTitle );
 
-				if ( $pageProperties === false ) {
-					$pageProperties = [];
+				if ( $jsonData_ !== false ) {
+					$jsonData = array_merge( $jsonData, $jsonData_ );
 				}
 			}
 		}
-		// @TODO remove all the slot once
-		// legacy pageproperties will be managed
-		// through the database only
+
+		$targetSlot = \PageProperties::getTargetSlot( $editTitle, $data['options']['target-slot'] );
+
+		if ( array_key_exists( 'categories', $data['form'] ) ) {
+			$jsonData['categories'] = $data['form']['categories'];
+		}
+
 		if ( !empty( $data['options']['action'] ) && $data['options']['action'] === 'delete' ) {
 			// @FIXME remove only deleted schemas
 			// if context !== EditSemantic
 			if ( $data['config']['context'] === 'EditSemantic' ) {
-				unset( $pageProperties['schemas'] );
-				unset( $pageProperties['schemas-data'] );
+				unset( $jsonData['schemas'] );
+				unset( $jsonData['schemas-data'] );
 				$databaseManager->deletePage( $editTitle );
 			} else {
 				// $data['schemas'] contains the recorded schemas
-				$pageProperties['schemas'] = array_diff_key( $pageProperties['schemas'], $data['schemas'] );
-				$pageProperties['schemas-data'] = array_diff_key( $pageProperties['schemas'], $data['schemas'] );
+				// or $jsonData['schemas'] = array_intersect_key( array_flip( $data['schemas'] ), $jsonData['schemas'] );
+				foreach ( $data['schemas'] as $v ) {
+					unset( $jsonData['schemas'][$v] );
+					unset( $jsonData['schemas-data'][$v] );
+				}
 				$databaseManager->deleteArticleSchemas( $editTitle, $data['schemas'], $errors );
 			}
+			$slots = [
+				$targetSlot => [
+					'model' => CONTENT_MODEL_PAGEPROPERTIES_JSONDATA,
+					'content' => $jsonData
+				]
+			];
 
-			$ret = \PageProperties::setPageProperties( $this->user, $editTitle, $pageProperties, $errors );
+			$ret = \PageProperties::setJsonData( $this->user, $editTitle, $slots, $errors );
 
 			// @TODO update database
 			return [
@@ -464,24 +481,17 @@ class SubmitForm {
 			return $arr1;
 		};
 
-		if ( !empty( $pageProperties['schemas'] ) ) {
-			$walkRec( $pageProperties['schemas'], $transformedValues, '' );
+		if ( !empty( $jsonData['schemas'] ) ) {
+			$walkRec( $jsonData['schemas'], $transformedValues, '' );
 		}
 
 		// save new values
 		$schemas = array_replace_recursive( $data['data'], $transformedValues );
 
-		$pageProperties = array_merge( $pageProperties, [
-			// 'categories' =>  $data['form']['categories'],
-			'schemas' => $schemas
-		] );
-
-		if ( !empty( $data['form']['categories'] ) ) {
-			$pageProperties['categories'] = $data['form']['categories'];
-		}
+		$jsonData = array_merge( $jsonData, [ 'schemas' => $schemas ] );
 
 		if ( !empty( $untransformedValues ) ) {
-			$pageProperties['schemas-data']['untransformed'] = $untransformedValues;
+			$jsonData['schemas-data']['untransformed'] = $untransformedValues;
 		}
 
 		$contentModel = array_key_exists( 'content-model', $data['form'] ) ? $data['form']['content-model']
@@ -499,11 +509,33 @@ class SubmitForm {
 
 		// $errors is handled by reference
 		if ( !count( $errors ) ) {
-			// @ATTENTION ! put this before setPageProperties
+			// @ATTENTION ! put this before setJsonData
 			// otherwise it will be delayes after $wikiPage->doPurge();
 			// below !!
 			$databaseManager->recordProperties( $data['config']['context'], $targetTitle, $data['flatten'], $errors );
-			$ret = \PageProperties::setPageProperties( $this->user, $targetTitle, $pageProperties, $errors, $freetext, $contentModel );
+
+			$slots = [
+				$targetSlot => [
+					'model' => CONTENT_MODEL_PAGEPROPERTIES_JSONDATA,
+					'content' => $jsonData
+				]
+			];
+
+			// @ATTENTION !! if NULL the slot content
+			// must not be edited
+			if ( $targetSlot !== 'main' && $freetext !== null ) {
+				$slots[SlotRecord::MAIN] = [
+					'model' => $contentModel,
+					'content' => $freetext
+				];
+			}
+
+			$ret = \PageProperties::setJsonData(
+				$this->user,
+				$targetTitle,
+				$slots,
+				$errors,
+			);
 			$databaseManager->invalidatePagesWithQueries( array_map( static function ( $v ) {
 				return [ 'name' => $v ];
 			}, $data['schemas'] ) );
@@ -512,7 +544,7 @@ class SubmitForm {
 		if ( count( $errors ) ) {
 			return [
 				'freetext' => $data['form']['freetext'],
-				'properties' => $pageProperties,
+				'jsonData' => $jsonData,
 				'categories' => $data['form']['categories'],
 				'errors' => array_unique( $errors ),
 				'userDefined' => ( !array_key_exists( 'target-title', $data['form'] ) ? ''
@@ -532,13 +564,13 @@ class SubmitForm {
 		MediaWikiServices::getInstance()->getHookContainer()->run( 'PageProperties::OnEditSemanticSave', [
 			$this->user,
 			$targetTitle,
-			$pageProperties,
+			$jsonData,
 			$freetext,
 			$isNewPage
 		] );
 
 		return [
-			'target-url' => !empty( $form['options']['return-url'] ) ? $form['options']['return-url']
+			'target-url' => !empty( $data['options']['return-url'] ) ? $data['options']['return-url']
 				: $targetTitle->getFullUrl(),
 			'errors' => [],
 		];

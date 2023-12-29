@@ -784,6 +784,15 @@ const PagePropertiesInputConfig = function ( phpConfig, windowManager ) {
 					text: [ 'string', 'Text to insert' ]
 				};
 
+			case 'VisualEditor':
+				return {
+					classes: [
+						'string',
+						'The names of the CSS classes to apply to the element.'
+					]
+					// contentModel: [ 'string', 'Output (wikitext or html)' ],
+				};
+
 			case 'OO.ui.SelectFileWidget':
 				return {
 					accept: [ 'array', 'MIME types to accept.' ],

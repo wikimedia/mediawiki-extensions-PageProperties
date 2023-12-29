@@ -54,14 +54,14 @@ class QueryResultPrinter extends ResultPrinter {
 
 		$path = '';
 		$pathNoIndex = '';
-		return $this->processSchemaRec( $this->schema, $value, $path, $pathNoIndex );
+		return $this->processSchemaRec( $title, $this->schema, $value, $path, $pathNoIndex );
 	}
 
 	/**
 	 * @inheritDoc
 	 */
-	public function processChild( $schema, $key, $value, $path ) {
-		$this->fields[$path] = $value;
+	public function processChild( $schema, $key, $properties, $path ) {
+		$this->fields[$path] = $properties[$key];
 	}
 
 	/**

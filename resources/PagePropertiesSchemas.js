@@ -228,7 +228,7 @@ const PagePropertiesSchemas = ( function () {
 		// or the array schema "subject" in case of
 		// array, with name of parent schema
 		function getItem( thisItem ) {
-			var thisItem = JSON.parse( JSON.stringify( thisItem ) );
+			var thisItem = PagePropertiesFunctions.deepCopy( thisItem );
 			if ( !( 'wiki' in thisItem ) ) {
 				thisItem.wiki = { name: '' };
 			}
@@ -466,27 +466,27 @@ const PagePropertiesSchemas = ( function () {
 	ProcessDialog.static.actions = [
 		{
 			action: 'delete',
+			modes: 'main',
 			label: mw.msg( 'pageproperties-jsmodule-dialog-delete' ),
 			flags: 'destructive'
 		},
 		{
 			action: 'save',
-			modes: 'edit',
+			modes: [ 'main', 'properties' ],
 			label: mw.msg( 'pageproperties-jsmodule-dialog-save' ),
 			flags: [ 'primary', 'progressive' ]
 		},
 		{
-			modes: 'edit',
+			modes: [ 'main', 'properties' ],
 			label: mw.msg( 'pageproperties-jsmodule-dialog-cancel' ),
 			flags: [ 'safe', 'close' ]
 		}
 	];
 
-	ProcessDialog.prototype.initialize = function () {
-		ProcessDialog.super.prototype.initialize.apply( this, arguments );
-		this.page1 = new PageOneLayout( 'page1', {} );
+	function DialogContent() {
+		var page1 = new PageOneLayout( 'main', {} );
 
-		this.page2 = new PageTwoLayout( 'properties', {
+		var page2 = new PageTwoLayout( 'properties', {
 			classes: [ 'pageproperties-schemas-panel-properties' ]
 		} );
 
@@ -520,32 +520,51 @@ const PagePropertiesSchemas = ( function () {
 		} );
 
 		booklet.addPages( [
-			this.page1,
-			this.page2
+			page1,
+			page2
 			// this.page3,
 			// this.page4,
 			// this.page5,
 			// this.page6,
 		] );
-		booklet.setPage( 'page1' );
 
-		booklet.on( 'set', function ( value ) {
+		return booklet;
+	}
+
+	ProcessDialog.prototype.getSetupProcess = function ( data ) {
+		var initPropertiesTab = function ( tabName ) {
 			if (
-				value.name !== 'page1' &&
-				!$.fn.DataTable.isDataTable( '#' + getDatatableId( value.name ) )
+				tabName !== 'page1' &&
+				!$.fn.DataTable.isDataTable( '#' + getDatatableId( tabName ) )
 			) {
 				// $('#pageproperties-forms-datatable-dialog').DataTable().clear().draw();
-				initializeNestedDataTable( value.name );
+				initializeNestedDataTable( tabName );
 			}
-		} );
+		};
 
-		this.$body.append( booklet.$element );
+		return ProcessDialog.super.prototype.getSetupProcess.call( this, data )
+			.next( function () {
+				this.actions.setMode( data.initialTab );
+				var booklet = DialogContent();
+				this.$body.append( booklet.$element );
+				booklet.setPage( data.initialTab );
 
-		setTimeout( function () {
-			PagePropertiesFunctions.removeNbspFromLayoutHeader(
-				'#pageproperties-ProcessDialogEditSchemas'
-			);
-		}, 30 );
+				booklet.on( 'set', function ( value ) {
+					initPropertiesTab( value.name );
+				} );
+
+				setTimeout( function () {
+					initPropertiesTab( data.initialTab );
+					PagePropertiesFunctions.removeNbspFromLayoutHeader(
+						'#pageproperties-ProcessDialogEditSchemas'
+					);
+				}, 30 );
+
+			}, this );
+	};
+
+	ProcessDialog.prototype.initialize = function () {
+		ProcessDialog.super.prototype.initialize.apply( this, arguments );
 	};
 
 	ProcessDialog.prototype.getActionProcess = function ( action ) {
@@ -698,17 +717,8 @@ const PagePropertiesSchemas = ( function () {
 								} )
 								.fail( function ( res ) {
 									// eslint-disable-next-line no-console
-									console.error( 'res', res );
-									// this will show a nice modal but is not necessary
-									// reject();
-									resolve();
-									var msg = res;
-									// The following messages are used here:
-									// * pageproperties-permissions-error
-									// * pageproperties-permissions-error-b
-									PagePropertiesFunctions.OOUIAlert( mw.msg( msg ), {
-										size: 'medium'
-									} );
+									console.error( 'pageproperties-save-schema', res );
+									reject( res );
 								} );
 						};
 
@@ -716,7 +726,9 @@ const PagePropertiesSchemas = ( function () {
 							mw.loader.using( 'mediawiki.api', function () {
 								callApi( payload, resolve, reject );
 							} );
-						} ); // promise
+						} ).catch( ( err ) => {
+							PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
+						} );
 				}
 			} ); // .next
 
@@ -1389,34 +1401,32 @@ const PagePropertiesSchemas = ( function () {
 		};
 
 		return new Promise( ( resolve, reject ) => {
-
 			new mw.Api()
 				.postWithToken( 'csrf', payload )
 				.done( function ( res ) {
 					// console.log('pageproperties-get-schemas res', res)
 					if ( payload.action in res ) {
 						var thisSchemas = JSON.parse( res[ payload.action ].schemas );
-
 						for ( var i in thisSchemas ) {
 							Schemas[ i ] = thisSchemas[ i ];
 						}
 						resolve();
-
 						for ( var instance of PagePropertiesForms ) {
-							instance.updatePanels();
+							instance.updateSchemas( Schemas );
 						}
 					}
 				} )
 				.fail( function ( res ) {
 					// eslint-disable-next-line no-console
-					console.error( 'ProcessDialogSearch error', res );
-
+					console.error( 'pageproperties-get-schemas', res );
 					reject( res );
 				} );
+		} ).catch( ( err ) => {
+			PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
 		} );
 	}
 
-	function openDialog( schema, propName ) {
+	function openDialog( schema, propName, initialTab ) {
 		if ( !schema ) {
 			SelectedItems.push( {
 				properties: {},
@@ -1483,7 +1493,7 @@ const PagePropertiesSchemas = ( function () {
 				) + ( name ? ' - ' + name : '' );
 		}
 
-		WindowManager.newWindow( processDialog, { title: title } );
+		WindowManager.newWindow( processDialog, { title: title, initialTab: initialTab || 'main' } );
 	}
 
 	// function escape( s ) {
@@ -1533,16 +1543,19 @@ const PagePropertiesSchemas = ( function () {
 			var index = DataTable.row( this ).index();
 			if ( index !== undefined ) {
 				var label = data[ index ][ 0 ];
-
-				if ( !Object.keys( Schemas[ label ] ).length ) {
-					loadSchemas( [ label ] ).then( function () {
-						openDialog( Schemas[ label ], null, false );
-					} );
-				} else {
-					openDialog( Schemas[ label ], null, false );
-				}
+				openSchemaDialog( label, false );
 			}
 		} );
+	}
+
+	function openSchemaDialog( label, initialTab ) {
+		if ( !Object.keys( Schemas[ label ] ).length ) {
+			loadSchemas( [ label ] ).then( function () {
+				openDialog( Schemas[ label ], null, initialTab );
+			} );
+		} else {
+			openDialog( Schemas[ label ], null, initialTab );
+		}
 	}
 
 	function createToolbarB( panelName ) {
@@ -1725,6 +1738,7 @@ const PagePropertiesSchemas = ( function () {
 		getModel,
 		handleSaveArray,
 		getWidgetValue,
-		loadSchemas
+		loadSchemas,
+		openSchemaDialog
 	};
 }() );

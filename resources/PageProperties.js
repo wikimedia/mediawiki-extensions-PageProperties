@@ -24,7 +24,7 @@
 /* eslint-disable no-underscore-dangle */
 
 const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager ) {
-	var Model;
+	var Model = {};
 	var ModelSchemas;
 	var OuterStack;
 	var PropertiesStack;
@@ -39,13 +39,16 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	var GoBackButton;
 	var DeleteButton;
 	// shallow copy
-	var RecordedSchemas = Form.data.schemas.slice();
-	var Fields = {};
-	var SchemasLayout;
+	var RecordedSchemas = Form.schemas.slice();
+	var Fields;
 	var DialogName = 'dialogForm';
-	var StoredProperties;
+	var StoredJsonData;
 	var ModelFlatten;
 	var SelectedSchema;
+	var PreviousSchemas = Schemas;
+	var ProcessModel;
+	var InputWidgets;
+	var SchemasLayout;
 
 	function inArray( val, arr ) {
 		return arr.indexOf( val ) !== -1;
@@ -53,6 +56,101 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	function escapeJsonPtr( str ) {
 		return str.replace( /~/g, '~0' ).replace( /\//g, '~1' );
+	}
+
+	function showVisualEditor() {
+		function timeOut( i ) {
+			setTimeout( function () {
+				if (
+					InputWidgets[ i ] &&
+					InputWidgets[ i ].$element.parent().is( ':visible' )
+				) {
+					InputWidgets[ i ].initialize();
+				}
+			}, 50 );
+		}
+
+		// @IMPORTANT use "let" with timeout !!
+		for ( let i in InputWidgets ) {
+			if (
+				InputWidgets[ i ].constructor.name === 'PagePropertiesVisualEditor' ||
+				( 'constructorName' in InputWidgets[ i ] &&
+					InputWidgets[ i ].constructorName === 'PagePropertiesVisualEditor' )
+			) {
+				timeOut( i );
+			}
+		}
+	}
+
+	function onSetPropertiesStack( item ) {
+		showVisualEditor();
+	}
+
+	function onChangePropertiesStack( items ) {}
+
+	function onTabSelect( selectedSchema ) {
+		SelectedSchema = selectedSchema;
+		showVisualEditor();
+	}
+
+	function callbackShowError( schemaName, errorMessage, errors ) {
+		// remove error messages
+		if ( !errorMessage && ( !errors || !Object.keys( errors ).length ) ) {
+			for ( var i in Fields ) {
+				if ( Fields[ i ].constructor.name === 'OoUiMessageWidget' ) {
+					Fields[ i ].toggle( false );
+				} else {
+					Fields[ i ].setErrors( [] );
+				}
+			}
+			return;
+		}
+
+		Fields[ schemaName ].toggle( true );
+		Fields[ schemaName ].setType( 'error' );
+
+		// @TODO
+		// add: "please report the issue in the talk page
+		// of the extension"
+		Fields[ schemaName ].setLabel(
+			errorMessage || mw.msg( 'pageproperties-jsmodule-pageforms-form-error' )
+		);
+
+		for ( var path in errors ) {
+			if ( !( path in Fields ) ) {
+				continue;
+			}
+
+			if ( Fields[ path ].constructor.name === 'OoUiMessageWidget' ) {
+				Fields[ path ].setType( 'error' );
+				Fields[ path ].setLabel( errors[ path ] );
+
+				Fields[ path ].toggle( true );
+			} else {
+				Fields[ path ].setErrors( [ errors[ path ] ] );
+			}
+		}
+
+		var el = window.document.querySelector(
+			`#PagePropertiesGroupWidgetPanel-${ FormID }-${ schemaName }`.replace(
+				/ /g,
+				'_'
+			)
+		);
+
+		if ( el ) {
+			if ( 'setTabPanel' in SchemasLayout ) {
+				SchemasLayout.setTabPanel( schemaName );
+			} else if ( 'setPage' in SchemasLayout ) {
+				SchemasLayout.setPage( schemaName );
+			}
+
+			setTimeout( function () {
+				el.scrollIntoView( {
+					behavior: 'smooth'
+				} );
+			}, 250 );
+		}
 	}
 
 	function getInputWidget( config ) {
@@ -63,11 +161,11 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		}
 		var required = 'required' in field && field.required;
 
-		// create shallow copy, otherwise changes are
+		// create deep copy, otherwise changes are
 		// copied to Forms[ form ].properties[ property ][ 'input-config' ]
 		var inputConfig = $.extend(
 			{}, // *** important !! cast to object
-			JSON.parse( JSON.stringify( field[ 'input-config' ] ) ),
+			PagePropertiesFunctions.deepCopy( field[ 'input-config' ] ),
 			{ value: config.data, required: required }
 		);
 
@@ -87,6 +185,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		if ( !( 'name' in config ) || config.name.trim() === '' ) {
 			inputConfig.name = `${ FormID }-${ config.model.path }`;
+		} else {
+			inputConfig.name = config.name;
 		}
 
 		if ( Array.isArray( inputConfig.value ) ) {
@@ -109,7 +209,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				var SMWProperty = getSMWProperty( field );
 				if ( '_PVAL' in SMWProperty.properties ) {
 					inputConfig.options = PagePropertiesFunctions.createDropDownOptions(
-
 						SMWProperty.properties._PVAL,
 						{
 							key: 'value'
@@ -127,10 +226,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			schema: config.model.schema,
 			performQuery: performQuery
 		};
-		return PagePropertiesFunctions.inputInstanceFromName(
-			inputName,
-			inputConfig
-		);
+		return ( InputWidgets[ inputConfig.name ] =
+			PagePropertiesFunctions.inputInstanceFromName( inputName, inputConfig ) );
 	}
 
 	function isSMWProperty( field ) {
@@ -152,7 +249,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	}
 
 	function getCategories() {
-		return Form.data.categories;
+		return Form.categories;
 	}
 
 	function getFieldAlign( field ) {
@@ -163,246 +260,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	function getHelpInline( field ) {
 		return !( 'popup-help' in Form.options ? Form.options[ 'popup-help' ] : false );
-	}
-
-	function getModel( action, schemaName ) {
-		var flatten = {};
-
-		function castType( value, thisModel ) {
-			// *** this is an hack to prevent
-			// empty string, alternatively
-			// use required native validation
-			// or "minLength": 1
-
-			if (
-				thisModel.schema.wiki.required &&
-				thisModel.schema.type === 'string' &&
-				// value can be undefined for OO.ui.SelectFileWidget
-				( !value || ( typeof value === 'string' && value.trim() === '' ) )
-			) {
-				return null;
-			}
-
-			return PagePropertiesFunctions.castType( value, thisModel.schema.type );
-		}
-
-		function formatValue( thisModel ) {
-			var value = 'getValue' in thisModel.input ? thisModel.input.getValue() : '';
-			if ( Array.isArray( value ) ) {
-				value = value.map( ( x ) => castType( x, thisModel ) );
-			} else {
-				value = castType( value, thisModel );
-			}
-
-			flatten[ thisModel.path ] = {
-				pathNoIndex: thisModel.pathNoIndex,
-				value: value,
-				multiselect: thisModel.multiselect,
-				schema: thisModel.schema
-			};
-
-			if ( thisModel.isFile ) {
-				flatten[ thisModel.path ].filekey = thisModel.filekey;
-				// flatten[thisModel.path].previousFilaneme = thisModel.previousFilaneme;
-			}
-
-			return value;
-		}
-
-		function getValuesRec( thisModel ) {
-			switch ( thisModel.schema.type ) {
-				case 'array':
-					var items = [];
-					// @TODO handle tuple
-					// multiselect
-					if ( 'schema' in thisModel.items ) {
-						items = formatValue( thisModel.items );
-					} else {
-						for ( var ii in thisModel.items ) {
-							items.push( getValuesRec( thisModel.items[ ii ] ) );
-						}
-					}
-					// set to null only required items
-					for ( var ii in items ) {
-						if (
-							typeof items[ ii ] === 'string' &&
-							items[ ii ].trim() === '' &&
-							'minItems' in thisModel.schema &&
-							ii <= thisModel.schema.minItems
-						) {
-							items[ ii ] = null;
-						}
-					}
-					return items;
-				// return items.filter(function (x) {
-				// 	return (
-				// 		PagePropertiesFunctions.isObject(x) || (x && x.trim() !== "")
-				// 	);
-				// 	});
-				case 'object':
-					var items = {};
-					for ( var ii in thisModel.properties ) {
-						items[ ii ] = getValuesRec( thisModel.properties[ ii ] );
-					}
-					return items;
-
-				default:
-					return formatValue( thisModel );
-			}
-		}
-
-		function showError( thisSchemaName ) {
-			var el = window.document.querySelector(
-				`#PagePropertiesGroupWidgetPanel-${ FormID }-${ thisSchemaName }`.replace(
-					/ /g,
-					'_'
-				)
-			);
-
-			if ( el ) {
-				if ( 'setTabPanel' in SchemasLayout ) {
-					SchemasLayout.setTabPanel( thisSchemaName );
-				} else if ( 'setPage' in SchemasLayout ) {
-					SchemasLayout.setPage( thisSchemaName );
-				}
-
-				setTimeout( function () {
-					el.scrollIntoView( {
-						behavior: 'smooth'
-					} );
-				}, 250 );
-			}
-		}
-
-		function validate( thisSchemaName, data, schema ) {
-
-			// eslint-disable-next-line new-cap
-			const ajv = new window.ajv7( { strict: false } );
-
-			var validateAjv;
-			try {
-				validateAjv = ajv.compile( schema );
-			} catch ( e ) {
-				// eslint-disable-next-line no-console
-				console.error( 'validate', e );
-				Fields[ thisSchemaName ].toggle( true );
-				Fields[ thisSchemaName ].setType( 'error' );
-
-				// @TODO
-				// add: "please report the issue in the talk page
-				// of the extension"
-				Fields[ thisSchemaName ].setLabel( e.message );
-
-				showError( thisSchemaName );
-				return false;
-			}
-
-			if ( validateAjv( data ) ) {
-				return true;
-			}
-
-			Fields[ thisSchemaName ].toggle( true );
-			Fields[ thisSchemaName ].setType( 'error' );
-			Fields[ thisSchemaName ].setLabel( 'there are errors' );
-
-			for ( var error of validateAjv.errors ) {
-				var path = `${ thisSchemaName }${ error.instancePath }`;
-
-				if ( path in Fields ) {
-					// eslint-disable-next-line no-console
-					console.log( 'error', error );
-					if ( Fields[ path ].constructor.name === 'OoUiMessageWidget' ) {
-						Fields[ path ].setType( 'error' );
-						Fields[ path ].setLabel( error.message );
-
-						Fields[ path ].toggle( true );
-					} else {
-						Fields[ path ].setErrors( [ error.message ] );
-					}
-				}
-			}
-
-			showError( thisSchemaName );
-
-			return false;
-		}
-
-		var ret = {};
-		switch ( action ) {
-			case 'validate':
-				for ( var i in Fields ) {
-					if ( Fields[ i ].constructor.name === 'OoUiMessageWidget' ) {
-						Fields[ i ].toggle( false );
-					} else {
-						Fields[ i ].setErrors( [] );
-					}
-				}
-
-				try {
-					for ( var schemaName in ModelSchemas ) {
-						ret[ schemaName ] = getValuesRec( ModelSchemas[ schemaName ] );
-						// removeNulls(ret);
-
-						if ( !validate( schemaName, ret[ schemaName ], Schemas[ schemaName ] ) ) {
-							return false;
-						}
-					}
-				} catch ( e ) {
-					// eslint-disable-next-line no-console
-					console.error( 'validate', e );
-					return false;
-				}
-				return ret;
-
-			case 'fetch':
-				for ( var schemaName in ModelSchemas ) {
-					ret[ schemaName ] = getValuesRec( ModelSchemas[ schemaName ] );
-				}
-				return ret;
-
-			case 'submit':
-				for ( var schemaName in ModelSchemas ) {
-					ret[ schemaName ] = getValuesRec( ModelSchemas[ schemaName ] );
-				}
-
-				var model = {};
-				for ( var i in Model ) {
-					model[ i ] = Model[ i ].getValue();
-				}
-
-				return {
-					data: ret,
-					flatten: flatten,
-					form: model,
-					schemas: Object.keys( ModelSchemas ),
-					// @FIXME or retrieve it server side
-					options: Form.options
-				};
-
-			case 'validate&submit':
-				if ( !getModel( 'validate' ) ) {
-					return false;
-				}
-				return getModel( 'submit' );
-
-			case 'delete':
-				Form.options.action = 'delete';
-				return {
-					options: Form.options,
-					schemas: RecordedSchemas // Object.keys(ModelSchemas),
-				};
-
-			case 'schema':
-				if ( !( schemaName in ModelSchemas ) ) {
-					return false;
-				}
-
-				var ret = getValuesRec( ModelSchemas[ schemaName ] );
-				return {
-					data: ret,
-					flatten: flatten
-				};
-		}
 	}
 
 	function clearDependentFields( pathNoIndex ) {
@@ -419,13 +276,10 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		}
 	}
 
-	function performQuery( data, value ) {
+	async function performQuery( data, value ) {
 		var field = data.schema.wiki;
 		var askQuery = field[ 'options-askquery' ];
 		let matches = [];
-		// for ( const match of matches_ ) {
-		// 	matches.push( match );
-		// }
 
 		var re = /<([^<>]+)>/g;
 		while ( true ) {
@@ -436,75 +290,77 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			matches.push( match );
 		}
 
+		function doQuery() {
+			var payload = {
+				action: 'pageproperties-askquery',
+				data: JSON.stringify( {
+					query: askQuery,
+					properties: field[ 'askquery-printouts' ],
+					schema: field[ 'askquery-schema' ],
+					'options-query-formula': field[ 'options-query-formula' ],
+					'mapping-label-formula': field[ 'mapping-label-formula' ]
+				} )
+			};
+
+			return new Promise( ( resolve, reject ) => {
+				mw.loader.using( 'mediawiki.api', function () {
+					new mw.Api()
+						.postWithToken( 'csrf', payload )
+						.done( function ( thisRes ) {
+							if ( payload.action in thisRes ) {
+								var thisData = thisRes[ payload.action ];
+								thisData = JSON.parse( thisData.result );
+								resolve( thisData );
+							}
+						} )
+						.fail( function ( thisRes ) {
+							// eslint-disable-next-line no-console
+							console.error( 'pageproperties-askquery', thisRes );
+							reject( thisRes );
+						} );
+				} );
+			} ).catch( ( err ) => {
+				PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
+			} );
+		}
+
 		if ( matches.length ) {
-			var res = getModel( 'schema', field.schema );
-			if ( res ) {
-				// @MUST MATCH classes/SubmitForm -> replaceFormula
-				var parent = data.path.slice( 0, Math.max( 0, data.path.indexOf( '/' ) ) );
-				for ( var match of matches ) {
-					for ( var i in res.flatten ) {
-						if ( match[ 1 ] === 'value' ) {
-							askQuery = askQuery.replace(
-								match[ 0 ],
-								// value of lookupElement
-								value
-							);
-							continue;
-						}
+			var res = await ProcessModel.getModel( 'schema', field.schema );
 
-						// match first names at the same level
-						var fullPath = parent + '/' + match[ 1 ];
+			// @MUST MATCH classes/SubmitForm -> replaceFormula
+			var parent = data.path.slice( 0, Math.max( 0, data.path.indexOf( '/' ) ) );
+			for ( var match of matches ) {
+				for ( var i in res.flatten ) {
+					if ( match[ 1 ] === 'value' ) {
+						askQuery = askQuery.replace(
+							match[ 0 ],
+							// value of lookupElement
+							value
+						);
+						continue;
+					}
 
-						if ( fullPath in res.flatten ) {
-							askQuery = askQuery.replace(
-								match[ 0 ],
-								res.flatten[ fullPath ].value
-							);
-							continue;
-						}
+					// match first names at the same level
+					var fullPath = parent + '/' + match[ 1 ];
 
-						// var fullPath = match[1];
-						// if (fullPath.charAt(0) !== "/") {
-						// 	fullPath = "/${fullPath}";
-						// }
+					if ( fullPath in res.flatten ) {
+						askQuery = askQuery.replace( match[ 0 ], res.flatten[ fullPath ].value );
+						continue;
+					}
 
-						if ( res.flatten[ i ].pathNoIndex === fullPath ) {
-							askQuery = askQuery.replace( match[ 0 ], res.flatten[ i ].value );
-						}
+					// var fullPath = match[1];
+					// if (fullPath.charAt(0) !== "/") {
+					// 	fullPath = "/${ fullPath }";
+					// }
+
+					if ( res.flatten[ i ].pathNoIndex === fullPath ) {
+						askQuery = askQuery.replace( match[ 0 ], res.flatten[ i ].value );
 					}
 				}
 			}
 		}
 
-		var payload = {
-			action: 'pageproperties-askquery',
-			data: JSON.stringify( {
-				query: askQuery,
-				properties: field[ 'askquery-printouts' ],
-				schema: field[ 'askquery-schema' ],
-				'options-query-formula': field[ 'options-query-formula' ],
-				'mapping-label-formula': field[ 'mapping-label-formula' ]
-			} )
-		};
-
-		return new Promise( ( resolve, reject ) => {
-			mw.loader.using( 'mediawiki.api', function () {
-				new mw.Api()
-					.postWithToken( 'csrf', payload )
-					.done( function ( thisRes ) {
-						if ( payload.action in thisRes ) {
-							var thisData = thisRes[ payload.action ];
-							thisData = JSON.parse( thisData.result );
-							resolve( thisData );
-						}
-					} )
-					.fail( function ( thisRes ) {
-						// eslint-disable-next-line no-console
-						console.error( 'res', thisRes );
-						reject( thisRes );
-					} );
-			} );
-		} );
+		return doQuery();
 	}
 
 	var FileItemWidget = function ( config ) {
@@ -526,7 +382,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		);
 
 		var deleteButton = new OO.ui.ButtonWidget( {
-			icon: 'close'
+			icon: 'trash'
 			// flags: ["destructive"],
 		} );
 
@@ -675,7 +531,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		var inputWidget = getInputWidget( config );
 
-		inputWidget.on( 'change', function ( e ) {
+		inputWidget.on( 'change', function () {
 			clearDependentFields( config.model.pathNoIndex );
 		} );
 
@@ -813,7 +669,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				align: fieldAlign,
 				helpInline: helpMessage ? helpInline : true,
 				help: new OO.ui.HtmlSnippet( helpMessage )
-				// classes: [`pageproperties-input-${config.model.path}`],
+				// classes: [`pageproperties-input-${ config.model.path }`],
 			}
 		);
 
@@ -835,7 +691,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	ProcessDialogSearch.prototype.initialize = function () {
 		ProcessDialogSearch.super.prototype.initialize.apply( this, arguments );
 		var self = this;
-		var selectedSchemas = Form.data.schemas;
+		var selectedSchemas = Form.schemas;
 		this.selectedItems = [];
 		function getItems( value ) {
 			var values;
@@ -914,13 +770,14 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		if ( action === 'save' ) {
 			var values = processDialogSearch.selectedItems;
-			Form.data.properties.schemas = getModel( 'fetch' );
+			// ProcessModel.getModel("fetch").then(function (res) {
+			//	Form.jsonData.schemas = res;
 
-			switch ( this.data.toolName ) {
+			switch ( dialog.data.toolName ) {
 				case 'addremoveschemas':
 					for ( var i in ModelSchemas ) {
 						if ( !inArray( i, values ) ) {
-							delete Form.data.properties.schemas[ i ];
+							delete Form.jsonData.schemas[ i ];
 							delete ModelSchemas[ i ];
 							delete Fields[ i ];
 						}
@@ -941,6 +798,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 					break;
 			}
+			// });
 		}
 
 		return new OO.ui.Process( function () {
@@ -1025,7 +883,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					this.setDisabled( false );
 					this.setActive( false );
 
-					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( error ), {
+					// eslint-disable-next-line mediawiki/msg-doc
+					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( mw.msg( error ) ), {
 						size: 'medium'
 					} );
 				} );
@@ -1145,7 +1004,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					$( ToolbarMain.$bar ).find( '.wrapper' ).css( 'pointer-events', 'auto' );
 					this.setActive( false );
 
-					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( error ), {
+					// eslint-disable-next-line mediawiki/msg-doc
+					PagePropertiesFunctions.OOUIAlert( new OO.ui.HtmlSnippet( mw.msg( error ) ), {
 						size: 'medium'
 					} );
 				} );
@@ -1199,7 +1059,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				type: 'list',
 				label: 'Switch editor',
 				invisibleLabel: true,
-				icon: 'edit',
+				icon: 'menu',
 				include: [ { group: 'selectSwitch' } ]
 			}
 		] );
@@ -1231,30 +1091,64 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		this.data = data;
 
-		var showBorder =
-			!data.root &&
-			data.schema.wiki.type !== 'content-block' &&
-			data.schema.wiki.type !== 'property' &&
-			( data.schema.type !== 'array' ||
-				data.schema.items.type === 'object' ||
-				!( 'preferred-input' in data.schema.items.wiki ) ||
-				!PagePropertiesFunctions.isMultiselect(
+		function showBorder() {
+			if (
+				data.root ||
+				data.schema.wiki.type === 'content-block' ||
+				data.schema.wiki.type === 'property'
+			) {
+				return false;
+			}
+
+			if (
+				data.schema.type === 'array' &&
+				data.schema.items.type !== 'object' &&
+				'preferred-input' in data.schema.items.wiki &&
+				PagePropertiesFunctions.isMultiselect(
 					data.schema.items.wiki[ 'preferred-input' ]
-				) );
+				)
+			) {
+				return false;
+			}
+			return true;
+		}
+		var showBorderValue = showBorder();
 
 		// eslint-disable-next-line mediawiki/class-doc
 		var layout = new OO.ui.PanelLayout( {
 			expanded: false,
-			padded: showBorder,
-			framed: showBorder,
+			padded: showBorderValue,
+			framed: showBorderValue,
 			classes: [
-				'PagePropertiesGroupWidgetPanel' + ( !showBorder ? '-border' : '' )
+				'PagePropertiesGroupWidgetPanel' + ( !showBorderValue ? '-border' : '' )
 			],
 			id: `PagePropertiesGroupWidgetPanel-${ FormID }-${ data.path }`.replace(
 				/ /g,
 				'_'
 			)
 		} );
+
+		if ( data.root && Config.canmanageschemas ) {
+			var editButton = new OO.ui.ButtonWidget( {
+				icon: 'edit',
+				framed: false
+				// flags: ["destructive"],
+				// classes: ["PagePropertiesOptionsListDeleteButton"],
+			} );
+
+			editButton.on( 'click', function () {
+				PagePropertiesSchemas.openSchemaDialog(
+					[ data.schema.wiki.name ],
+					'properties'
+				);
+			} );
+
+			layout.$element.append(
+				$( '<div class="pageproperties-form-container-edit-button">' ).append(
+					editButton.$element
+				)
+			);
+		}
 
 		var messageWidget = new OO.ui.MessageWidget( {
 			classes: [ 'PagePropertiesGroupWidgetMessageWidget' ]
@@ -1275,7 +1169,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		layout.$element.append( messageWidget.$element );
 
-		// console.log("data.schema", data.schema);
 		switch ( data.schema.wiki.layout ) {
 			case 'horizontal':
 				this.layoutHorizontal = new OO.ui.HorizontalLayout();
@@ -1418,7 +1311,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		var data = this.data;
 		var content;
-		SchemasLayout = {};
 
 		if ( !( 'layout' in Form.options ) ) {
 			Form.options.layout = 'tabs';
@@ -1431,7 +1323,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		function getWidgets() {
 			var ret = {};
-			for ( var thisSchemaName of Form.data.schemas ) {
+
+			for ( var thisSchemaName of Form.schemas ) {
 				if ( !( thisSchemaName in Schemas ) ) {
 					// eslint-disable-next-line no-console
 					console.error( "required schema doesn't exist", thisSchemaName );
@@ -1439,9 +1332,13 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				}
 
 				var schema = Schemas[ thisSchemaName ];
+				var previousSchema =
+					thisSchemaName in PreviousSchemas ?
+						PreviousSchemas[ thisSchemaName ] :
+						{};
 
-				if ( !( thisSchemaName in Form.data.properties.schemas ) ) {
-					Form.data.properties.schemas[ thisSchemaName ] = {};
+				if ( !( thisSchemaName in Form.jsonData.schemas ) ) {
+					Form.jsonData.schemas[ thisSchemaName ] = {};
 				}
 
 				var path = `${ escapeJsonPtr( thisSchemaName ) }`;
@@ -1454,12 +1351,13 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				processSchema(
 					widget,
 					schema,
+					previousSchema,
 					thisSchemaName,
 					( ModelSchemas[ thisSchemaName ] = {
 						parent: ModelSchemas,
 						childIndex: thisSchemaName
 					} ),
-					Form.data.properties.schemas[ thisSchemaName ],
+					Form.jsonData.schemas[ thisSchemaName ],
 					path,
 					pathNoIndex,
 					false
@@ -1471,10 +1369,39 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			return ret;
 		}
 
+		function getEditFreeTextInput( VEForAll, thisConfig ) {
+			var thisInputWidget;
+
+			thisConfig = $.extend(
+				{
+					name: `${ FormID }-model-freetext`,
+					id: `${ FormID }-model-freetext`
+				},
+				thisConfig
+			);
+
+			if ( !VEForAll ) {
+				thisInputWidget = new OO.ui.MultilineTextInputWidget(
+					$.extend(
+						{
+							autosize: true,
+							rows: 6
+						},
+						thisConfig
+					)
+				);
+			} else {
+				thisInputWidget = new PagePropertiesVisualEditor( thisConfig );
+			}
+			Model.freetext = thisInputWidget;
+			InputWidgets[ thisConfig.name ] = thisInputWidget;
+			return thisInputWidget;
+		}
+
 		switch ( data.name ) {
 			case 'schemas':
-				if ( !( 'schemas' in Form.data.properties ) ) {
-					Form.data.properties.schemas = {};
+				if ( !( 'schemas' in Form.jsonData ) ) {
+					Form.jsonData.schemas = {};
 				}
 
 				var layout = Form.options.layout;
@@ -1531,7 +1458,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 						}
 
 						booklet.on( 'set', function () {
-							SelectedSchema = booklet.getCurrentPageName();
+							onTabSelect( booklet.getCurrentPageName() );
 						} );
 
 						SchemasLayout = booklet;
@@ -1561,6 +1488,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 							padded: false,
 							autoFocus: false
 						} );
+
 						SchemasLayout = indexLayout;
 
 						if (
@@ -1571,12 +1499,10 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 						}
 
 						indexLayout.on( 'set', function () {
-							SelectedSchema = indexLayout.getCurrentTabPanelName();
+							onTabSelect( indexLayout.getCurrentTabPanelName() );
 						} );
 
-						var widgets = getWidgets();
 						var items = [];
-
 						for ( var schemaName in widgets ) {
 							var tabPanel = new ThisTabPanelLayout( schemaName );
 							tabPanel.$element.append( widgets[ schemaName ].$element );
@@ -1603,7 +1529,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 					userDefinedInput = new mw.widgets.TitleInputWidget( {
 						name: `${ FormID }-model-target-title`,
-						value: !( 'userDefined' in Form.data ) ? '' : Form.data.userDefined,
+						value: !( 'userDefined' in Form ) ? '' : Form.userDefined,
 						// @FIXME if the stack panel is hidden
 						// this will create a browser error
 						required: true
@@ -1620,38 +1546,15 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				}
 
 				if ( data.editFreeText ) {
-					// @TODO add editor
-					// @see PageForms-5.5.1/includes/forminputs/PF_TextAreaInput.php
-					// libs/PF_wikieditor.js
-
-					var inputName = 'OO.ui.MultilineTextInputWidget';
-					var inputWidget = new OO.ui.MultilineTextInputWidget( {
-						name: `${ FormID }-model-freetext`,
-						autosize: true,
-						rows: 6,
-						value: Model.freetext ?
-							Model.freetext.getValue() :
-							Form.data.freetext
+					var inputWidget = getEditFreeTextInput( Config.VEForAll, {
+						value: Form.freetext,
+						contentModel: Config.contentModel
 					} );
-
-					// @TODO VEFORALL
-					// inputWidget.$element.find("textarea").addClass("visualeditor");
-
-					// if ($.fn.applyVisualEditor) {
-					// 	inputWidget.$element.find("textarea").applyVisualEditor();
-					// } else {
-					// 	jQuery(document).on("VEForAllLoaded", function (e) {
-					// 		inputWidget.$element.find("textarea").applyVisualEditor();
-					// 	});
-					// }
-
-					Model.freetext = inputWidget;
 
 					items.push(
 						new OO.ui.FieldLayout( inputWidget, {
 							label: mw.msg( 'pageproperties-jsmodule-formedit-freetext' ),
 							align: data.fieldAlign
-							// classes: ["ItemWidget", "inputName-" + inputName],
 						} )
 					);
 				}
@@ -1685,6 +1588,33 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 							Config.contentModels
 						),
 						value: Config.contentModel
+					} );
+
+					contentModelInput.on( 'change', async function ( value ) {
+						if ( !( 'freetext' in Model ) ) {
+							return;
+						}
+						var thisInputWidget;
+						var freetextValue = Model.freetext.getValue();
+
+						if ( PagePropertiesFunctions.isPromise( freetextValue ) ) {
+							freetextValue = await freetextValue;
+						}
+
+						// @TODO convert from/to html and wikitext
+						// value === "html" ||
+						if ( value === 'wikitext' ) {
+							thisInputWidget = getEditFreeTextInput( true, {
+								contentModel: value,
+								value: freetextValue
+							} );
+							// // @TODO use TinyMCE for html
+						} else {
+							thisInputWidget = getEditFreeTextInput( false, {
+								value: freetextValue
+							} );
+						}
+						$( `#${ FormID }-model-freetext` ).replaceWith( thisInputWidget.$element );
 					} );
 
 					Model[ 'content-model' ] = contentModelInput;
@@ -1762,61 +1692,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	// 	}
 	// }
 
-	function updateOnItemDelete( optionsList, item ) {
-		var itemIndex = item.data.index;
-		var itemPath = item.data.path;
-		var model = optionsList.model;
-
-		delete model[ itemIndex ];
-
-		// @FIXME
-		// a simpler way is just to updatePanels
-		// in this case also Fields with path
-		// of the related schema must be
-		// deleted from function PanelLayout
-
-		// *** the following code is only
-		// required to identify the rearranged
-		// element upon validation
-
-		for ( var path in Fields ) {
-			if ( path.indexOf( itemPath ) === 0 ) {
-				delete Fields[ path ];
-			}
-		}
-
-		// reorder the model of current level
-		var ret = {};
-		var n = 0;
-		for ( var i in model ) {
-			ret[ n ] = model[ i ];
-			delete model[ i ];
-			n++;
-		}
-
-		// rename paths and indexes in the model,
-		// Fields and optionsList items
-		for ( var i in ret ) {
-			var oldPath = ret[ i ].path;
-			var newPath = oldPath.split( '/' ).slice( 0, -1 ).join( '/' ) + '/' + i;
-
-			model[ i ] = ret[ i ];
-			model[ i ].path = newPath;
-
-			// @ATTENTION ensure it is a number
-			optionsList.items[ i ].data.index = parseInt( i );
-			optionsList.items[ i ].data.path = newPath;
-
-			for ( var path in Fields ) {
-				if ( path.indexOf( oldPath ) === 0 ) {
-					var newPath_ = newPath + path.slice( oldPath.length );
-					Fields[ newPath_ ] = Fields[ path ];
-					delete Fields[ path ];
-				}
-			}
-		}
-	}
-
 	OptionsList.prototype.addItem = function ( item, i ) {
 		var self = this;
 		item.data.index = i;
@@ -1853,10 +1728,17 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				!( 'minItems' in self.schema ) ||
 				self.items.length > self.schema.minItems
 			) {
+				// *** rather than removing the item
+				// from the model, we mark it as removed
+				// this ensures consistency of the data
+				// structure, the items marked as removed
+				// will be removed from submitted data.
+				// Both the 2 alternate methods aren't
+				// optimal: updatePanels() is too expensive
+				// and renaming all the data structure
+				// is too tricky and leads to errors
 				self.removeItems( [ item ] );
-				// updateOnItemDelete(self, item);
-				delete self.model[ item.data.index ];
-				updatePanels();
+				self.model[ item.data.index ].removed = true;
 			} else {
 				recDeleteValue( self.model[ item.data.index ] );
 			}
@@ -1897,22 +1779,23 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	function applyUntransformed( data, i, path ) {
 		if (
-			!( 'schemas-data' in Form.data.properties ) ||
-			!( 'untransformed' in Form.data.properties[ 'schemas-data' ] ) ||
-			!( path in Form.data.properties[ 'schemas-data' ].untransformed )
+			!( 'schemas-data' in Form.jsonData ) ||
+			!( 'untransformed' in Form.jsonData[ 'schemas-data' ] ) ||
+			!( path in Form.jsonData[ 'schemas-data' ].untransformed )
 		) {
 			return;
 		}
 
 		// *** this ensures subsequent edits are maintained
-		data[ i ] = Form.data.properties[ 'schemas-data' ].untransformed[ path ];
-		delete Form.data.properties[ 'schemas-data' ].untransformed[ path ];
+		data[ i ] = Form.jsonData[ 'schemas-data' ].untransformed[ path ];
+		delete Form.jsonData[ 'schemas-data' ].untransformed[ path ];
 	}
 
 	var OptionsListContainer = function OptionsListContainer(
 		config,
 		schema,
 		item,
+		previousItem,
 		schemaName,
 		model,
 		data,
@@ -1935,6 +1818,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			processSchema(
 				widget_,
 				item,
+				previousItem,
 				schemaName,
 				model,
 				data,
@@ -1985,6 +1869,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			processSchema(
 				widget_,
 				item,
+				previousItem,
 				schemaName,
 				( model[ i ] = { parent: model, childIndex: i } ),
 				data[ i ],
@@ -2017,6 +1902,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				processSchema(
 					widget_,
 					item,
+					previousItem,
 					schemaName,
 					( model[ ii ] = { parent: model, childIndex: ii } ),
 					( data[ ii ] = {} ),
@@ -2035,9 +1921,68 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	OO.inheritClass( OptionsListContainer, OO.ui.Widget );
 	// OO.mixinClass(OptionsListContainer, OO.ui.mixin.GroupWidget);
 
+	function determineInputValue(
+		schema,
+		previousSchema,
+		schemaName,
+		model,
+		data,
+		newItem
+	) {
+		// can be an array, in case of multiselect
+		var ret = PagePropertiesFunctions.isObject( data ) ? null : data;
+		// remove value-prefix
+		// ***this is not necessary, since is hanlded
+		// by applyUntransformed
+		// if (defaultValue) {
+		// 	if ("value-prefix" in schema.wiki) {
+		// 		var prefixLength = schema.wiki["value-prefix"].length;
+		// 		if (Array.isArray(defaultValue)) {
+		// 			defaultValue = value.map((x) => x.substr(prefixLength));
+		// 		} else {
+		// 			defaultValue = defaultValue.substr(prefixLength);
+		// 		}
+		// 	}
+		// }
+
+		if (
+			!newItem &&
+			!isNewSchema( schemaName ) &&
+			Form.options.action !== 'create'
+		) {
+			return ret;
+		}
+
+		if ( !( 'default-parsed' in schema.wiki ) ) {
+			return ret;
+		}
+
+		if (
+			ret !== null &&
+			( !( 'wiki' in previousSchema ) ||
+				!( 'default-parsed' in previousSchema.wiki ) ||
+				ret !== previousSchema.wiki[ 'default-parsed' ] )
+		) {
+			return ret;
+		}
+
+		// *** in case of array the default values will
+		// create the respective entries by OptionsListContainer
+		if (
+			( Array.isArray( schema.wiki[ 'default-parsed' ] ) &&
+				!( 'preferred-input' in schema.wiki ) ) ||
+			!PagePropertiesFunctions.isMultiselect( schema.wiki[ 'preferred-input' ] )
+		) {
+			return ret;
+		}
+
+		return schema.wiki[ 'default-parsed' ];
+	}
+
 	function processSchema(
 		widget,
 		schema,
+		previousSchema,
 		schemaName,
 		model,
 		data,
@@ -2048,8 +1993,9 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		if ( !( 'type' in schema ) ) {
 			schema.type = 'default' in schema ? 'string' : 'object';
 		}
+		model.previousSchema = previousSchema;
 
-		model.schema = schema;
+		model.schema = PagePropertiesFunctions.deepCopy( schema );
 		model.path = path;
 		model.pathNoIndex = pathNoIndex;
 		// @TODO implement allOf, anyOf, oneOf using addCombinedItem
@@ -2074,10 +2020,15 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 							`${ pathNoIndex }/${ escapeJsonPtr( i ) }` :
 							escapeJsonPtr( i );
 						var item = schema.properties[ i ];
+						var previousItem =
+							'properties' in previousSchema && i in previousSchema.properties ?
+								previousSchema.properties[ i ] :
+								{};
 						var widget_ = new GroupWidget( {}, { schema: item, path: path_ } );
 						processSchema(
 							widget_,
 							item,
+							previousItem,
 							schemaName,
 							( model.properties[ i ] = {
 								parent: model.properties,
@@ -2101,11 +2052,14 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 						if ( item.wiki.type === 'property' ) {
 							item.wiki.layout = 'table';
 						}
+						var previousItem =
+							'items' in previousSchema ? previousSchema.items : {};
 
 						var optionsListContainer = new OptionsListContainer(
 							{},
 							schema,
 							item,
+							previousItem,
 							schemaName,
 							model.items,
 							data,
@@ -2140,46 +2094,27 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					return;
 				}
 
-				var defaultValue = PagePropertiesFunctions.isObject( data ) ? null : data;
+				var inputValue = determineInputValue(
+					schema,
+					previousSchema,
+					schemaName,
+					model,
+					data,
+					newItem
+				);
 
-				// remove value-prefix
-				// ***this is not necessary, since is hanlded
-				// by applyUntransformed
-				// if (defaultValue) {
-				// 	if ("value-prefix" in schema.wiki) {
-				// 		var prefixLength = schema.wiki["value-prefix"].length;
-				// 		if (Array.isArray(defaultValue)) {
-				// 			defaultValue = value.map((x) => x.substr(prefixLength));
-				// 		} else {
-				// 			defaultValue = defaultValue.substr(prefixLength);
-				// 		}
-				// 	}
-				// }
-
-				// can be an array, in case of multiselect
-
-				if (
-					defaultValue === null &&
-					( newItem ||
-						isNewSchema( schemaName ) ||
-						Form.options.action === 'create' ) &&
-					'default-parsed' in schema.wiki
-				) {
-					defaultValue = schema.wiki[ 'default-parsed' ];
-				}
-
-				if ( Array.isArray( defaultValue ) ) {
-					defaultValue = defaultValue.filter(
+				if ( Array.isArray( inputValue ) ) {
+					inputValue = inputValue.filter(
 						( x ) => !PagePropertiesFunctions.isObject( x )
 					);
 				}
 
 				// used by getFieldAlign
-				schema.wiki.schema = schemaName;
+				model.schema.wiki.schema = schemaName;
 				var item = new ItemWidget( {
 					classes: [ 'PagePropertiesItemWidget' ],
 					model: model,
-					data: defaultValue
+					data: inputValue
 				} );
 
 				widget.addItems( [ item ] );
@@ -2208,9 +2143,20 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	function getSchemasPanel() {
 		Fields = {};
-		Model = {};
 		ModelSchemas = {};
 		ModelFlatten = [];
+		InputWidgets = {};
+
+		// @TODO implement a better interface between
+		// PageProperties instance and this constructor
+		ProcessModel = new PagePropertiesProcessModel(
+			callbackShowError,
+			Form,
+			Schemas,
+			RecordedSchemas,
+			Model,
+			ModelSchemas
+		);
 
 		return new PanelLayout( {
 			expanded: true,
@@ -2219,7 +2165,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			// classes: ["PanelProperties-panel-section"],
 			data: {
 				name: 'schemas',
-				schemas: Form.data.schemas
+				schemas: Form.schemas
 			}
 		} );
 	}
@@ -2228,8 +2174,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		var userDefined = Config.isNewPage && Form.options[ 'edit-page' ] === '';
 
 		// var editFreeText = Config.isNewPage;
-		// var editContentModel = Config.isNewPage || !Form.data.schemas.length || Config.context === "EditSemantic";
-		// var editCategories = Config.isNewPage || !Form.data.schemas.length || Config.context === "EditSemantic";
+		// var editContentModel = Config.isNewPage || !Form.schemas.length || Config.context === "EditSemantic";
+		// var editCategories = Config.isNewPage || !Form.schemas.length || Config.context === "EditSemantic";
 
 		var editFreeText = Config.isNewPage && Config.context === 'EditSemantic';
 		var editContentModel = Config.context === 'EditSemantic';
@@ -2247,6 +2193,14 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		if ( 'edit-freetext' in Form.options ) {
 			editFreeText = Form.options[ 'edit-freetext' ];
+		}
+
+		if (
+			'target-slot' in Form.options &&
+			Form.options[ 'target-slot' ] === 'main'
+		) {
+			editFreeText = false;
+			editContentModel = false;
 		}
 
 		var fieldAlign = 'top';
@@ -2273,7 +2227,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				Form.options[ 'default-categories' ] :
 				[]
 		)
-			.concat( Form.data.categories )
+			.concat( Form.categories )
 			.filter( function onlyUnique( value, index, self ) {
 				return self.indexOf( value ) === index;
 			} );
@@ -2302,65 +2256,70 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	}
 
 	function updatePanels() {
-		Form.data.properties.schemas = getModel( 'fetch' );
+		ProcessModel.getModel( 'fetch' ).then( function ( res ) {
+			Form.jsonData.schemas = res;
 
-		var panels = PropertiesStack.getItems();
-		for ( var panel of panels ) {
-			if ( panel.getData().name === 'schemas' ) {
-				PropertiesStack.removeItems( [ panel ] );
-				break;
+			var panels = PropertiesStack.getItems();
+			for ( var panel of panels ) {
+				if ( panel.getData().name === 'schemas' ) {
+					PropertiesStack.removeItems( [ panel ] );
+					break;
+				}
 			}
-		}
 
-		var schemasPanel = getSchemasPanel();
-		if ( !schemasPanel.isEmpty ) {
-			PropertiesStack.addItems( [ schemasPanel ], 0 );
-		}
+			var schemasPanel = getSchemasPanel();
+			if ( !schemasPanel.isEmpty ) {
+				PropertiesStack.addItems( [ schemasPanel ], 0 );
+			}
 
-		panels = PropertiesStack.getItems();
+			panels = PropertiesStack.getItems();
 
-		PropertiesStack.setItem( panels[ 0 ] );
+			PropertiesStack.setItem( panels[ 0 ] );
 
-		PropertiesStack.$element.removeClass( [
-			'PanelPropertiesStack',
-			'PanelPropertiesStack-empty'
-		] );
+			PropertiesStack.$element.removeClass( [
+				'PanelPropertiesStack',
+				'PanelPropertiesStack-empty'
+			] );
 
-		switch ( panels.length ) {
-			case 0:
-				PropertiesStack.$element.addClass( 'PanelPropertiesStack-empty' );
-				break;
-			default:
-				PropertiesStack.$element.addClass( 'PanelPropertiesStack' );
-		}
+			switch ( panels.length ) {
+				case 0:
+					PropertiesStack.$element.addClass( 'PanelPropertiesStack-empty' );
+					break;
+				default:
+					PropertiesStack.$element.addClass( 'PanelPropertiesStack' );
+			}
 
-		updateButtons( panels );
+			updateButtons( panels );
 
-		setTimeout( function () {
-			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
-		}, 30 );
+			setTimeout( function () {
+				PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
+			}, 30 );
+		} );
 	}
 
 	function updateButtons( panels ) {
 		if ( hasMultiplePanels() ) {
 			ValidateButton.toggle( panels.length !== 0 );
-			DeleteButton.toggle( hasStoredProperties() );
+			DeleteButton.toggle( hasStoredJsonData() );
 			GoBackButton.toggle( false );
 			SubmitButton.toggle( false );
 		} else {
 			SubmitButton.toggle( panels.length !== 0 );
-			DeleteButton.toggle( hasStoredProperties() );
+			DeleteButton.toggle( hasStoredJsonData() );
 			GoBackButton.toggle( false );
 			ValidateButton.toggle( false );
 		}
 	}
 
 	function updateSchemas( schemas ) {
-		Schemas = schemas;
+		PreviousSchemas = Schemas;
+		Schemas = PagePropertiesFunctions.deepCopy( schemas );
 		updatePanels();
 	}
 
-	function onSubmit() {
+	async function onSubmit( e ) {
+		e.preventDefault();
+
 		var action;
 		var formEl = $( this ); // .closest(".PagePropertiesForm");
 
@@ -2370,19 +2329,21 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			action = !hasMultiplePanels() ? 'validate&submit' : 'submit';
 		}
 
-		var res = getModel( action );
+		ProcessModel.getModel( action ).then( async function ( res ) {
+			if ( typeof res === 'boolean' && res === false ) {
+				return;
+			}
 
-		if ( typeof res === 'boolean' && !res ) {
-			return false;
-		}
+			$( '<input>' )
+				.attr( {
+					type: 'hidden',
+					name: 'data',
+					value: JSON.stringify( getFormAttributes( res ) )
+				} )
+				.appendTo( formEl );
 
-		$( '<input>' )
-			.attr( {
-				type: 'hidden',
-				name: 'data',
-				value: JSON.stringify( getFormAttributes( res ) )
-			} )
-			.appendTo( formEl );
+			formEl.unbind( 'submit' ).submit();
+		} );
 	}
 
 	function ProcessDialog( config ) {
@@ -2439,7 +2400,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	ProcessDialog.prototype.getSetupProcess = function ( data ) {
 		// data = data || {};
-
 		// @see https://www.mediawiki.org/wiki/OOUI/Windows/Process_Dialogs
 		return ProcessDialog.super.prototype.getSetupProcess
 			.call( this, data )
@@ -2448,7 +2408,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				this.actions.setMode(
 					( PropertiesStack.getItems().length > 1 ?
 						'validate' :
-						'submit-single' ) + ( !hasStoredProperties() ? '' : '-delete' )
+						'submit-single' ) + ( !hasStoredJsonData() ? '' : '-delete' )
 				);
 
 				this.$body.append( data.PropertiesStack.$element );
@@ -2493,71 +2453,73 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 								Form.options[ 'popup-size' ]
 						);
 						self.actions.setMode(
-							'validate' + ( !hasStoredProperties() ? '' : '-delete' )
+							'validate' + ( !hasStoredJsonData() ? '' : '-delete' )
 						);
 						break;
 					case 'validate':
-						var res = getModel( 'validate' );
+						ProcessModel.getModel( 'validate' ).then( function ( res ) {
+							if ( typeof res === 'boolean' ) {
+								return;
+							}
 
-						if ( typeof res === 'boolean' ) {
-							return;
-						}
-
-						var panels = PropertiesStack.getItems();
-						PropertiesStack.setItem( panels[ panels.length - 1 ] );
-						self.setSize( 'medium' );
-						self.actions.setMode(
-							'submit' + ( !hasStoredProperties() ? '' : '-delete' )
-						);
+							var thisPanels = PropertiesStack.getItems();
+							PropertiesStack.setItem( thisPanels[ thisPanels.length - 1 ] );
+							self.setSize( 'medium' );
+							self.actions.setMode(
+								'submit' + ( !hasStoredJsonData() ? '' : '-delete' )
+							);
+						} );
 						break;
 					case 'validate&submit':
 					case 'submit':
 					case 'delete':
-						var res = getModel( action );
+						ProcessModel.getModel( action ).then( function ( res ) {
+							if ( action.indexOf( 'submit' ) !== 1 && typeof res === 'boolean' ) {
+								return;
+							}
 
-						if ( action.indexOf( 'submit' ) !== 1 && typeof res === 'boolean' ) {
-							return;
-						}
+							var payload = {
+								data: JSON.stringify( getFormAttributes( res ) ),
+								action: 'pageproperties-submit-form'
+							};
 
-						var payload = {
-							data: JSON.stringify( getFormAttributes( res ) ),
-							action: 'pageproperties-submit-form'
-						};
-
-						return new Promise( ( resolve, reject ) => {
-							mw.loader.using( 'mediawiki.api', function () {
-								new mw.Api()
-									.postWithToken( 'csrf', payload )
-									.done( function ( thisRes ) {
-										resolve();
-										if ( payload.action in thisRes ) {
-											var data = JSON.parse( thisRes[ payload.action ].result );
-											if ( !data.errors.length ) {
-												WindowManager.removeActiveWindow();
-												// @FIXME reload only if the changes affect
-												// the current page
-												if ( data[ 'target-url' ] === window.location.href ) {
-													window.location.reload();
-												} else {
-													window.location.href = data[ 'target-url' ];
-												}
-											} else {
-												PagePropertiesFunctions.OOUIAlert(
-													new OO.ui.HtmlSnippet( data.errors.join( '<br />' ) ),
-													{
-														size: 'medium'
+							return new Promise( ( resolve, reject ) => {
+								mw.loader.using( 'mediawiki.api', function () {
+									new mw.Api()
+										.postWithToken( 'csrf', payload )
+										.done( function ( thisRes ) {
+											resolve();
+											if ( payload.action in thisRes ) {
+												var data = JSON.parse( thisRes[ payload.action ].result );
+												if ( !data.errors.length ) {
+													WindowManager.removeActiveWindow();
+													// @FIXME reload only if the changes affect
+													// the current page
+													if ( data[ 'target-url' ] === window.location.href ) {
+														window.location.reload();
+													} else {
+														window.location.href = data[ 'target-url' ];
 													}
-												);
+												} else {
+													PagePropertiesFunctions.OOUIAlert(
+														new OO.ui.HtmlSnippet( data.errors.join( '<br />' ) ),
+														{
+															size: 'medium'
+														}
+													);
+												}
 											}
-										}
-									} )
-									.fail( function ( thisRes ) {
-										// eslint-disable-next-line no-console
-										console.error( 'res', thisRes );
-										reject();
-									} );
+										} )
+										.fail( function ( thisRes ) {
+											// eslint-disable-next-line no-console
+											console.error( 'pageproperties-submit-form', res );
+											reject( thisRes );
+										} );
+								} );
+							} ).catch( ( err ) => {
+								PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
 							} );
-						} ); // promise
+						} );
 				}
 			} );
 
@@ -2622,32 +2584,28 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			// * PanelPropertiesStack-empty
 			classes: classes
 		} );
+
+		PropertiesStack.on( 'change', onChangePropertiesStack );
+		PropertiesStack.on( 'set', onSetPropertiesStack );
 		return panels;
 	}
 
 	function hasMultiplePanels() {
-		return (
-			PropertiesStack.getItems().length > 1
-			// Form.options.view === "popup"
-			// || Object.keys( SchemasLayout ) > 0
-		);
+		return PropertiesStack.getItems().length > 1;
 	}
 
-	function hasStoredProperties() {
-		if (
-			Config.context !== 'EditSemantic' &&
-			Form.options.action !== 'edit'
-		) {
+	function hasStoredJsonData() {
+		if ( Config.context !== 'EditSemantic' && Form.options.action !== 'edit' ) {
 			return false;
 		}
 
-		if ( !( 'schemas' in StoredProperties ) ) {
+		if ( !( 'schemas' in StoredJsonData ) ) {
 			return false;
 		}
-		for ( var i in StoredProperties.schemas ) {
+		for ( var i in StoredJsonData.schemas ) {
 			if (
-				PagePropertiesFunctions.isObject( StoredProperties.schemas[ i ] ) &&
-				Object.keys( StoredProperties.schemas[ i ] ).length
+				PagePropertiesFunctions.isObject( StoredJsonData.schemas[ i ] ) &&
+				Object.keys( StoredJsonData.schemas[ i ] ).length
 			) {
 				return true;
 			}
@@ -2657,7 +2615,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	function initialize( pageProperties ) {
 		if ( arguments.length ) {
-
 			Self = pageProperties;
 		}
 
@@ -2669,7 +2626,9 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 			popupButton.on( 'click', function () {
 				initializePropertiesStack();
-				StoredProperties = JSON.parse( JSON.stringify( Form.data.properties ) );
+				StoredJsonData = PagePropertiesFunctions.deepCopy(
+					Form.jsonData
+				);
 
 				var thisClasses = [];
 				if ( 'css-class' in Form.options && Form.options[ 'css-class' ] !== '' ) {
@@ -2698,10 +2657,10 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 		var formContent = [];
 
-		if ( Form.data.errors.length ) {
+		if ( Form.errors.length ) {
 			var messageWidget = new OO.ui.MessageWidget( {
 				type: 'error',
-				label: new OO.ui.HtmlSnippet( Form.data.errors.join( '<br /> ' ) )
+				label: new OO.ui.HtmlSnippet( Form.errors.join( '<br /> ' ) )
 			} );
 
 			formContent.push( messageWidget.$element );
@@ -2709,7 +2668,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		}
 
 		var panels = initializePropertiesStack();
-		StoredProperties = JSON.parse( JSON.stringify( Form.data.properties ) );
+		StoredJsonData = PagePropertiesFunctions.deepCopy( Form.jsonData );
 
 		SubmitButton = new OO.ui.ButtonInputWidget( {
 			label:
@@ -2738,27 +2697,27 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		} );
 
 		ValidateButton.on( 'click', function () {
-			var res = getModel( 'validate' );
+			ProcessModel.getModel( 'validate' ).then( function ( res ) {
+				if ( typeof res === 'boolean' && res === false ) {
+					return;
+				}
 
-			if ( typeof res === 'boolean' && !res ) {
-				return false;
-			}
+				var thisPanels = PropertiesStack.getItems();
+				PropertiesStack.setItem( thisPanels[ thisPanels.length - 1 ] );
 
-			var thisPanels = PropertiesStack.getItems();
-			PropertiesStack.setItem( thisPanels[ thisPanels.length - 1 ] );
-
-			ValidateButton.toggle( false );
-			SubmitButton.toggle( true );
-			GoBackButton.toggle( true );
-			DeleteButton.toggle( false );
-			$( '#pagepropertiesform-wrapper-' + FormID )
-				.get( 0 )
-				.scrollIntoView( { behavior: 'smooth' } );
+				ValidateButton.toggle( false );
+				SubmitButton.toggle( true );
+				GoBackButton.toggle( true );
+				DeleteButton.toggle( false );
+				$( '#pagepropertiesform-wrapper-' + FormID )
+					.get( 0 )
+					.scrollIntoView( { behavior: 'smooth' } );
+			} );
 		} );
 
 		formContent.push( ValidateButton.$element );
 
-		var printDeleteButton = hasStoredProperties();
+		var printDeleteButton = hasStoredJsonData();
 
 		DeleteButton = new OO.ui.ButtonInputWidget( {
 			label: mw.msg( 'pageproperties-jsmodule-pageproperties-delete' ),
@@ -2772,7 +2731,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		GoBackButton = new OO.ui.ButtonInputWidget( {
 			label: mw.msg( 'pageproperties-jsmodule-pageproperties-goback' ),
 			classes: [ 'PagePropertiesFormSubmitButton' ],
-			flags: [ 'progressive' ]
+			flags: [ 'progressive' ],
+			icon: 'arrowPrevious'
 		} );
 
 		GoBackButton.on( 'click', function () {
@@ -2782,7 +2742,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			ValidateButton.toggle( true );
 			SubmitButton.toggle( false );
 			GoBackButton.toggle( false );
-			DeleteButton.toggle( hasStoredProperties() );
+			DeleteButton.toggle( hasStoredJsonData() );
 
 			$( '#pagepropertiesform-wrapper-' + FormID )
 				.get( 0 )
@@ -2993,7 +2953,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 
 	return {
 		initialize,
-		getModel,
 		getCategories,
 		// updateForms,
 		updateSchemas,
@@ -3035,24 +2994,24 @@ $( function () {
 		for ( var formID in pageForms ) {
 			var form = pageForms[ formID ];
 
-			if ( formID in submissionData ) {
-				form.data = submissionData[ formID ];
-			}
-
-			if ( !( 'data' in form ) ) {
-				form.data = {};
-			}
-
-			form.data = $.extend(
+			form = $.extend(
 				{
 					freetext: '',
-					properties: {},
+					jsonData: {},
 					categories: [],
 					errors: [],
-					schemas: []
+					schemas: [],
+					options: {}
 				},
-				form.data
+				form
 			);
+
+			if ( formID in submissionData ) {
+				form = $.extend(
+					form,
+					submissionData[ formID ]
+				);
+			}
 
 			var pageProperties = new PageProperties(
 				config,
@@ -3064,7 +3023,7 @@ $( function () {
 
 			pageProperties.initialize( pageProperties );
 
-			if ( config.context === 'parserfunction' && form.data.errors.length ) {
+			if ( config.context === 'parserfunction' && form.errors.length ) {
 				$( '#pagepropertiesform-wrapper-' + formID )
 					.get( 0 )
 					.scrollIntoView();
@@ -3085,72 +3044,5 @@ $( function () {
 
 	if ( config.context === 'ManageSchemas' ) {
 		PagePropertiesSchemas.initialize();
-	}
-
-	// display every 3 days
-	if (
-		!mw.config.get( 'pageproperties-disableVersionCheck' ) &&
-		( config.canmanageschemas ||
-			config.canmanagesemanticproperties ||
-			config.canmanageforms ) &&
-		!mw.cookie.get( 'pageproperties-check-latest-version' )
-	) {
-		mw.loader.using( 'mediawiki.api', function () {
-			var payload = {
-				action: 'pageproperties-check-latest-version'
-			};
-			new mw.Api()
-				.postWithToken( 'csrf', payload )
-				.done( function ( res ) {
-					if ( payload.action in res ) {
-						if ( res[ payload.action ].result === 2 ) {
-							var messageWidget = new OO.ui.MessageWidget( {
-								type: 'warning',
-								label: new OO.ui.HtmlSnippet(
-									mw.msg(
-										'pageproperties-jsmodule-pageproperties-outdated-version'
-									)
-								),
-								// *** this does not work before ooui v0.43.0
-								showClose: true
-							} );
-							var closeFunction = function () {
-								var three_days = 3 * 86400;
-								mw.cookie.set( 'pageproperties-check-latest-version', true, {
-									path: '/',
-									expires: three_days
-								} );
-								$( messageWidget.$element ).parent().remove();
-							};
-							messageWidget.on( 'close', closeFunction );
-							$( '.PagePropertiesForm' )
-								.first()
-								.prepend( $( '<div><br/></div>' ).prepend( messageWidget.$element ) );
-							if (
-								!messageWidget.$element.hasClass(
-									'oo-ui-messageWidget-showClose'
-								)
-							) {
-								messageWidget.$element.addClass(
-									'oo-ui-messageWidget-showClose'
-								);
-								var closeButton = new OO.ui.ButtonWidget( {
-									classes: [ 'oo-ui-messageWidget-close' ],
-									framed: false,
-									icon: 'close',
-									label: OO.ui.msg( 'ooui-popup-widget-close-button-aria-label' ),
-									invisibleLabel: true
-								} );
-								closeButton.on( 'click', closeFunction );
-								messageWidget.$element.append( closeButton.$element );
-							}
-						}
-					}
-				} )
-				.fail( function ( res ) {
-					// eslint-disable-next-line no-console
-					console.error( 'res', res );
-				} );
-		} );
 	}
 } );
