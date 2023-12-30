@@ -46,7 +46,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	var ModelFlatten;
 	var SelectedSchema;
 	var PreviousSchemas = Schemas;
-	var ProcessModel;
+	var ProcessModel = {};
 	var InputWidgets;
 	var SchemasLayout;
 
@@ -2300,6 +2300,9 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	}
 
 	function updateButtons( panels ) {
+		if ( Form.options.view === 'popup' ) {
+			return;
+		}
 		if ( hasMultiplePanels() ) {
 			ValidateButton.toggle( panels.length !== 0 );
 			DeleteButton.toggle( hasStoredJsonData() );
@@ -2316,6 +2319,10 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	function updateSchemas( schemas ) {
 		PreviousSchemas = Schemas;
 		Schemas = PagePropertiesFunctions.deepCopy( schemas );
+		// uninitialized
+		if ( !( 'getModel' in ProcessModel ) ) {
+			return;
+		}
 		updatePanels();
 	}
 
