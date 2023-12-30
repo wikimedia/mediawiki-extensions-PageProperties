@@ -1969,9 +1969,11 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		// *** in case of array the default values will
 		// create the respective entries by OptionsListContainer
 		if (
-			( Array.isArray( schema.wiki[ 'default-parsed' ] ) &&
-				!( 'preferred-input' in schema.wiki ) ) ||
-			!PagePropertiesFunctions.isMultiselect( schema.wiki[ 'preferred-input' ] )
+			Array.isArray( schema.wiki[ 'default-parsed' ] ) &&
+				(
+					!( 'preferred-input' in schema.wiki ) ||
+					!PagePropertiesFunctions.isMultiselect( schema.wiki[ 'preferred-input' ] )
+				)
 		) {
 			return ret;
 		}
