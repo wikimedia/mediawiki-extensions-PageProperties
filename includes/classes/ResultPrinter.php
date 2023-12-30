@@ -191,6 +191,18 @@ class ResultPrinter {
 
 	/**
 	 * @param Title $title
+	 * @param array $arr
+	 * @return array
+	 */
+	protected function getTemplateParams( $title, $arr ) {
+		$ret = array_filter( $arr, static function ( $value ) {
+			return !is_array( $value );
+		} );
+		return array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret );
+	}
+
+	/**
+	 * @param Title $title
 	 * @param array $schema
 	 * @param array $arr
 	 * @param string $path
@@ -231,13 +243,17 @@ class ResultPrinter {
 			if ( is_array( $value ) ) {
 				$ret[$key] = $this->processSchemaRecTree( $title, $subschema, $value, $currentPath, $currentPathNoIndex );
 			} else {
-				$ret[$key] = $this->processChild( $subschema, $key, array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $arr ),
-					$currentPathNoIndex, $path === '' );
+				$ret[$key] = $this->processChild(
+					$subschema,
+					$key,
+					$this->getTemplateParams( $title, $arr ),
+					$currentPathNoIndex,
+					$path === ''
+				);
 			}
 		}
 
-		return $this->processParent( $schema,
-			array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret ), $pathNoIndex );
+		return $this->processParent( $schema, $this->getTemplateParams( $title, $ret ), $pathNoIndex );
 	}
 
 	/**
@@ -275,13 +291,20 @@ class ResultPrinter {
 			if ( is_array( $value ) ) {
 				$ret[$key] = $this->processSchemaRec( $title, $subschema, $value, $currentPath );
 			} else {
-				$ret[$key] = $this->processChild( $subschema, $key,
-					array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $arr ), $currentPath );
+				$ret[$key] = $this->processChild(
+					$subschema,
+					$key,
+					$this->getTemplateParams( $title, $arr ),
+					$currentPath
+				);
 			}
 		}
 
-		return $this->processParent( $schema,
-			array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret ), $path );
+		return $this->processParent(
+			$schema,
+			$this->getTemplateParams( $title, $ret ),
+			$path
+		);
 	}
 
 	/**
