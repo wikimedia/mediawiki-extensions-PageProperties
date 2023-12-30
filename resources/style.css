@@ -229,7 +229,8 @@
 	position: relative;
 }
 
-.PagePropertiesGroupWidgetPanel .mw-upload-bookletLayout-filePreview {
+.PagePropertiesGroupWidgetPanel .mw-upload-bookletLayout-filePreview,
+.PagePropertiesGroupWidgetPanel-border .mw-upload-bookletLayout-filePreview {
 	width: inherit;
 	height: inherit;
 	background-color: inherit;
