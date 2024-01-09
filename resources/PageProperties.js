@@ -2487,7 +2487,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					case 'validate&submit':
 					case 'submit':
 					case 'delete':
-						ProcessModel.getModel( action ).then( function ( res ) {
+						return ProcessModel.getModel( action ).then( function ( res ) {
 							if ( action.indexOf( 'submit' ) !== 1 && typeof res === 'boolean' ) {
 								return;
 							}
@@ -2530,9 +2530,9 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 											reject( thisRes );
 										} );
 								} );
-							} ).catch( ( err ) => {
-								PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
 							} );
+						} ).catch( ( err ) => {
+							PagePropertiesFunctions.OOUIAlert( `error: ${ err }`, { size: 'medium' } );
 						} );
 				}
 			} );

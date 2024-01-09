@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS /*_*/pageproperties_pageproperties (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 ALTER TABLE /*_*/pageproperties_pageproperties
- ADD UNIQUE KEY `index_a` (`page_id`);
+ ADD UNIQUE KEY IF NOT EXISTS `index_a` (`page_id`);

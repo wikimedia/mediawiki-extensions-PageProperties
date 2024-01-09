@@ -44,6 +44,9 @@ class Importer {
 	/** @var Context */
 	private $context;
 
+	/** @var Output */
+	private $output;
+
 	/** @var bool|int */
 	private $limit = false;
 
@@ -66,6 +69,7 @@ class Importer {
 	public function __construct( $user, $context, $schemaName, $mainSlot = false, $limit = false ) {
 		$this->user = $user;
 		$this->context = $context;
+		$this->output = $this->context->getOutput();
 		$this->schemaName = $schemaName;
 		$this->mainSlot = $mainSlot;
 		$this->limit = $limit;
@@ -85,7 +89,7 @@ class Importer {
 
 		$this->showMsg = $showMsg;
 
-		$schema = \PageProperties::getSchema( $this->context->getOutput(), $this->schemaName );
+		$schema = \PageProperties::getSchema( $this->output, $this->schemaName );
 
 		if ( !$schema ) {
 			$showMsg( 'generating schema' );
@@ -107,7 +111,7 @@ class Importer {
 
 		$n = 0;
 		foreach ( $data as $key => $value ) {
-			$flatten = $databaseManager->prepareData( $schema, $value );
+			$flatten = $databaseManager->prepareData( $this->schema, $value );
 			$titleText = $submitForm->replacePageNameFormula( $flatten, $pagenameFormula, $properties );
 
 			$title_ = Title::newFromText( $titleText );

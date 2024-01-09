@@ -1202,8 +1202,13 @@ class SchemaProcessor {
 	private function getType( $value ) {
 		$type = gettype( $value );
 
+		if ( $type === 'string' && is_numeric( $value ) ) {
+			return 'number';
+		}
+
 		switch ( $type ) {
 			case 'integer':
+				return 'integer';
 			case 'double':
 				return 'number';
 			default:

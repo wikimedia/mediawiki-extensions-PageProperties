@@ -260,7 +260,7 @@ class QueryProcessor {
 	 * @param string $dataType
 	 * @param string|int|float|bool &$val
 	 */
-	private function castVal( $dataType, &$val ) {
+	private function castValAndQuote( $dataType, &$val ) {
 		switch ( $dataType ) {
 			case 'text':
 			case 'textarea':
@@ -352,22 +352,23 @@ class QueryProcessor {
 				$likeAfter = true;
 			}
 		}
-		$val = $value;
+
 		if ( !$likeBefore && !$likeAfter ) {
-			if ( $val === '+' ) {
+			if ( $value === '+' ) {
 				return "$field IS NOT NULL";
 			}
-			$this->castVal( $dataType, $val );
+			$quotedVal = $value;
+			$this->castValAndQuote( $dataType, $quotedVal );
+
 			if ( in_array( $dataType, [ 'integer', 'numeric', 'date', 'datetime', 'time' ] ) ) {
 				// https://www.semantic-mediawiki.org/wiki/Help:Search_operators#User_manual
 
 				$patterns = [
-					'/^(>)\s*(.+)$/' => '>=',
 					'/^(>>)\s*(.+)$/' => '>',
-					'/^(>=)\s*(.+)$/' => '>=',
+					'/^(>=?)\s*(.+)$/' => '>=',
 					'/^(<)\s*(.+)$/' => '<=',
 					'/^(<<)\s*(.+)$/' => '<',
-					'/^(<=)\s*(.+)$/' => '<=',
+					'/^(<=?)\s*(.+)$/' => '<=',
 					'/^(!)\s*(.+)$/' => 'NOT',
 				];
 			} else {
@@ -375,27 +376,26 @@ class QueryProcessor {
 					'/^(!)\s*(.+)$/' => 'NOT',
 				];
 			}
-
 			foreach ( $patterns as $regex => $sql ) {
 				preg_match( $regex, $value, $match );
 				if ( !empty( $match ) ) {
-					return "$field {$sql} {$match[2]}";
+					return "$field {$sql} " . $this->dbr->addQuotes( $match[2] );
 				}
 			}
 
-			return "$field = $val";
+			return "$field = $quotedVal";
 		}
 
 		$any = $this->dbr->anyString();
 		if ( $likeBefore && !$likeAfter ) {
-			$val = $this->dbr->buildLike( $any, $val );
+			$quotedVal = $this->dbr->buildLike( $any, $value );
 		} elseif ( !$likeBefore && $likeAfter ) {
-			$val = $this->dbr->buildLike( $val, $any );
+			$quotedVal = $this->dbr->buildLike( $value, $any );
 		} elseif ( $likeBefore && $likeAfter ) {
-			$val = $this->dbr->buildLike( $any, $val, $any );
+			$quotedVal = $this->dbr->buildLike( $any, $value, $any );
 		}
 		$not = ( empty( $match[2] ) ) ? '' : ' NOT';
-		return "{$field}{$not}{$val}";
+		return "{$field}{$not}{$quotedVal}";
 	}
 
 	private function performQuery() {
@@ -552,11 +552,7 @@ class QueryProcessor {
 			}
 
 			if ( array_key_exists( $pathNoIndex, $this->conditionProperties ) ) {
-				if ( $key === 0 ) {
-					$conds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], "t$key.value", $tablename );
-				} else {
-					$joinConds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], "t$key.value", $tablename );
-				}
+				$conds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], "t$key.value", $tablename );
 			}
 
 			if ( $key > 0 ) {
@@ -631,8 +627,8 @@ class QueryProcessor {
 				$arr = explode( ':', $value );
 				if ( count( $arr ) > 1 ) {
 					$ns = array_shift( $arr );
-					$nsIndex = array_search( $ns, $this->formattedNamespaces );
-					if ( $nsIndex !== false ) {
+					// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.Found
+					if ( ( $nsIndex = array_search( $ns, $this->formattedNamespaces ) ) !== false ) {
 						$value = implode( ':', $arr );
 						$conds[] = "page.page_namespace = $nsIndex";
 					}
