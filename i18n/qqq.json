@@ -50,6 +50,166 @@
 	"pagepropertiesbrowse-forms-label": "A label message",
 	"pagepropertiesbrowse-queries-label": "A label message",
 	"pagepropertiesbrowsedata-topnav": "A label message",
+
+	"pageproperties-parserfunction-form-placeholder": "A label message",
+	"pageproperties-parserfunction-button-placeholder": "A label message",
+	"pageproperties-parserfunction-query-placeholder": "A label message",
+
+	"pageproperties-parserfunction-template-notice-visual-editor-newlines": "A label message",
+	"pageproperties-parserfunction-button-description": "A label message",
+
+	"pageproperties-parserfunction-button-label-label": "A label message",
+	"pageproperties-parserfunction-button-label-description": "A label message",
+	"pageproperties-parserfunction-button-label-example": "A label message",
+
+	"pageproperties-parserfunction-button-callback-label": "A label message",
+	"pageproperties-parserfunction-button-callback-description": "A label message",
+	"pageproperties-parserfunction-button-callback-example": "A label message",
+
+	"pageproperties-parserfunction-button-preload-label": "A label message",
+	"pageproperties-parserfunction-button-preload-description": "A label message",
+	"pageproperties-parserfunction-button-preload-example": "A label message",
+
+	"pageproperties-parserfunction-button-value-label": "A label message",
+	"pageproperties-parserfunction-button-value-description": "A label message",
+	"pageproperties-parserfunction-button-value-example": "A label message",
+
+	"pageproperties-parserfunction-button-icon-label": "A label message",
+	"pageproperties-parserfunction-button-icon-description": "A label message",
+	"pageproperties-parserfunction-button-icon-example": "A label message",
+
+	"pageproperties-parserfunction-form-description": "A label message",
+
+	"pageproperties-parserfunction-form-title-label": "A label message",
+	"pageproperties-parserfunction-form-title-description": "A label message",
+	"pageproperties-parserfunction-form-title-example": "A label message",
+
+	"pageproperties-parserfunction-form-schemas-label": "A label message",
+	"pageproperties-parserfunction-form-schemas-description": "A label message",
+	"pageproperties-parserfunction-form-schemas-example": "A label message",
+
+	"pageproperties-parserfunction-form-action-label": "A label message",
+	"pageproperties-parserfunction-form-action-description": "A label message",
+	"pageproperties-parserfunction-form-action-example": "A label message",
+
+	"pageproperties-parserfunction-form-view-label": "A label message",
+	"pageproperties-parserfunction-form-view-description": "A label message",
+	"pageproperties-parserfunction-form-view-example": "A label message",
+
+	"pageproperties-parserfunction-form-layout-label": "A label message",
+	"pageproperties-parserfunction-form-layout-description": "A label message",
+	"pageproperties-parserfunction-form-layout-example": "A label message",
+
+	"pageproperties-parserfunction-form-callback-label": "A label message",
+	"pageproperties-parserfunction-form-callback-description": "A label message",
+	"pageproperties-parserfunction-form-callback-example": "A label message",
+
+	"pageproperties-parserfunction-form-edit-page-label": "A label message",
+	"pageproperties-parserfunction-form-edit-page-description": "A label message",
+	"pageproperties-parserfunction-form-edit-page-example": "A label message",
+
+	"pageproperties-parserfunction-form-preload-label": "A label message",
+	"pageproperties-parserfunction-form-preload-description": "A label message",
+	"pageproperties-parserfunction-form-preload-example": "A label message",
+
+	"pageproperties-parserfunction-form-return-page-label": "A label message",
+	"pageproperties-parserfunction-form-return-page-description": "A label message",
+	"pageproperties-parserfunction-form-return-page-example": "A label message",
+
+	"pageproperties-parserfunction-form-popup-size-label": "A label message",
+	"pageproperties-parserfunction-form-popup-size-description": "A label message",
+	"pageproperties-parserfunction-form-popup-size-example": "A label message",
+
+	"pageproperties-parserfunction-form-css-class-label": "A label message",
+	"pageproperties-parserfunction-form-css-class-description": "A label message",
+	"pageproperties-parserfunction-form-css-class-example": "A label message",
+
+	"pageproperties-parserfunction-form-pagename-formula-label": "A label message",
+	"pageproperties-parserfunction-form-pagename-formula-description": "A label message",
+	"pageproperties-parserfunction-form-pagename-formula-example": "A label message",
+
+	"pageproperties-parserfunction-form-edit-freetext-label": "A label message",
+	"pageproperties-parserfunction-form-edit-freetext-description": "A label message",
+	"pageproperties-parserfunction-form-edit-freetext-example": "A label message",
+
+	"pageproperties-parserfunction-form-edit-categories-label": "A label message",
+	"pageproperties-parserfunction-form-edit-categories-description": "A label message",
+	"pageproperties-parserfunction-form-edit-categories-example": "A label message",
+
+	"pageproperties-parserfunction-form-edit-content-model-label": "A label message",
+	"pageproperties-parserfunction-form-edit-content-model-description": "A label message",
+	"pageproperties-parserfunction-form-edit-content-model-example": "A label message",
+
+	"pageproperties-parserfunction-form-target-slot-label": "A label message",
+	"pageproperties-parserfunction-form-target-slot-description": "A label message",
+	"pageproperties-parserfunction-form-target-slot-example": "A label message",
+
+	"pageproperties-parserfunction-form-default-categories-label": "A label message",
+	"pageproperties-parserfunction-form-default-categories-description": "A label message",
+	"pageproperties-parserfunction-form-default-categories-example": "A label message",
+
+	"pageproperties-parserfunction-form-default-content-model-label": "A label message",
+	"pageproperties-parserfunction-form-default-content-model-description": "A label message",
+	"pageproperties-parserfunction-form-default-content-model-example": "A label message",
+
+	"pageproperties-parserfunction-form-layout-align-label": "A label message",
+	"pageproperties-parserfunction-form-layout-align-description": "A label message",
+	"pageproperties-parserfunction-form-layout-align-example": "A label message",
+
+	"pageproperties-parserfunction-form-popup-help-label": "A label message",
+	"pageproperties-parserfunction-form-popup-help-description": "A label message",
+	"pageproperties-parserfunction-form-popup-help-example": "A label message",
+
+	"pageproperties-parserfunction-form-submit-button-text-label": "A label message",
+	"pageproperties-parserfunction-form-submit-button-text-description": "A label message",
+	"pageproperties-parserfunction-form-submit-button-text-example": "A label message",
+
+	"pageproperties-parserfunction-form-validate-button-text-label": "A label message",
+	"pageproperties-parserfunction-form-validate-button-text-description": "A label message",
+	"pageproperties-parserfunction-form-validate-button-text-example": "A label message",
+
+	"pageproperties-parserfunction-query-description": "A label message",
+
+	"pageproperties-parserfunction-query-schema-label": "A label message",
+	"pageproperties-parserfunction-query-schema-description": "A label message",
+	"pageproperties-parserfunction-query-schema-example": "A label message",
+
+	"pageproperties-parserfunction-query-separator-label": "A label message",
+	"pageproperties-parserfunction-query-separator-description": "A label message",
+	"pageproperties-parserfunction-query-separator-example": "A label message",
+
+	"pageproperties-parserfunction-query-values-separator-label": "A label message",
+	"pageproperties-parserfunction-query-values-separator-description": "A label message",
+	"pageproperties-parserfunction-query-values-separator-example": "A label message",
+
+	"pageproperties-parserfunction-query-template-label": "A label message",
+	"pageproperties-parserfunction-query-template-description": "A label message",
+	"pageproperties-parserfunction-query-template-example": "A label message",
+
+	"pageproperties-parserfunction-query-limit-label": "A label message",
+	"pageproperties-parserfunction-query-limit-description": "A label message",
+	"pageproperties-parserfunction-query-limit-example": "A label message",
+
+	"pageproperties-parserfunction-query-offset-label": "A label message",
+	"pageproperties-parserfunction-query-offset-description": "A label message",
+	"pageproperties-parserfunction-query-offset-example": "A label message",
+
+	"pageproperties-parserfunction-query-order-label": "A label message",
+	"pageproperties-parserfunction-query-order-description": "A label message",
+	"pageproperties-parserfunction-query-order-example": "A label message",
+
+	"pageproperties-parserfunction-query-format-label": "A label message",
+	"pageproperties-parserfunction-query-format-description": "A label message",
+	"pageproperties-parserfunction-query-format-example": "A label message",
+
+	"pageproperties-parserfunction-query-pagetitle-name-label": "A label message",
+	"pageproperties-parserfunction-query-pagetitle-name-description": "A label message",
+	"pageproperties-parserfunction-query-pagetitle-name-example": "A label message",
+
+	"pageproperties-parserfunction-query-articleid-name-label": "A label message",
+	"pageproperties-parserfunction-query-articleid-name-description": "A label message",
+	"pageproperties-parserfunction-query-articleid-name-example": "A label message",
+
 	"pageproperties-special-browse-data-description": "A label message",
 	"pageproperties-special-browse-queries-description": "A label message",
 	"pageproperties-special-browse-forms-description": "A label message",

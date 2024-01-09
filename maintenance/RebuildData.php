@@ -221,6 +221,9 @@ class RebuildData extends Maintenance {
 	 */
 	private function dropTables() {
 		foreach ( DatabaseManager::$tables as $tableName ) {
+			if ( $tableName === 'pageproperties_pageproperties' ) {
+				continue;
+			}
 			echo 'dropping ' . $tableName . PHP_EOL;
 			$res = $this->db->dropTable(
 				$tableName

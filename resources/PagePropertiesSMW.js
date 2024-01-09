@@ -897,7 +897,7 @@ const PagePropertiesSMW = ( function () {
 													);
 												}
 												if ( updateData( data ) === true ) {
-													WindowManager.removeActiveWindow();
+													WindowManager.closeActiveWindow();
 												} else {
 													PagePropertiesFunctions.OOUIAlert(
 														mw.msg( 'pageproperties-jsmodule-unknown-error' ),

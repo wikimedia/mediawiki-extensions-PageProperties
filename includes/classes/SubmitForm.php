@@ -38,13 +38,13 @@ use Title;
 
 class SubmitForm {
 
-	/** @var output */
+	/** @var Output */
 	private $output;
 
-	/** @var output */
+	/** @var Context */
 	private $context;
 
-	/** @var user */
+	/** @var User */
 	private $user;
 
 	/**
@@ -185,7 +185,7 @@ class SubmitForm {
 			$this->context->getRequest(),
 			[
 				'action' => 'move',
-				'fromid' => $title_from->getArticleId(),
+				'fromid' => $title_from->getArticleID(),
 				'to' => $title_to->getFullText(),
 				// 'reason' => $title_to->getText(),
 				'token' => $this->user->getEditToken(),

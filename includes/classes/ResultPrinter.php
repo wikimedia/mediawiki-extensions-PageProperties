@@ -29,35 +29,32 @@ use MediaWiki\Extension\Scribunto\Engines\LuaStandalone\LuaStandaloneEngine as L
 
 class ResultPrinter {
 
-	/** @var output */
+	/** @var Output */
 	protected $output;
 
-	/** @var format */
+	/** @var string */
 	private $format;
 
-	/** @var parser */
+	/** @var Parser */
 	public $parser;
 
-	/** @var queryProcessor */
+	/** @var QueryProcessor */
 	public $queryProcessor;
 
-	/** @var separator */
+	/** @var string */
 	public $separator = '';
 
-	/** @var valuesSeparator */
+	/** @var string */
 	public $valuesSeparator = ', ';
 
-	/** @var params */
+	/** @var array */
 	public $params;
 
-	/** @var schema */
+	/** @var string */
 	public $schema;
 
-	/** @var printouts */
+	/** @var array */
 	public $printouts;
-
-	/** @var tree */
-	public $tree;
 
 	/**
 	 * @param Parser $parser
@@ -78,6 +75,7 @@ class ResultPrinter {
 			'values-separator' => [ ', ', 'string' ],
 			'template' => [ '', 'string' ],
 			'pagetitle-name' => [ 'pagetitle', 'string' ],
+			'articleid-name' => [ 'articleid', 'string' ],
 		];
 
 		$params = \PageProperties::applyDefaultParams( $defaultParameters, $params );
@@ -198,7 +196,10 @@ class ResultPrinter {
 		$ret = array_filter( $arr, static function ( $value ) {
 			return !is_array( $value );
 		} );
-		return array_merge( [ $this->params['pagetitle-name'] => $title->getFullText() ], $ret );
+		return array_merge( [
+			$this->params['pagetitle-name'] => $title->getFullText(),
+			$this->params['articleid-name'] => $title->getArticleID()
+		], $ret );
 	}
 
 	/**

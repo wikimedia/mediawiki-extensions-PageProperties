@@ -25,17 +25,21 @@ const PagePropertiesWindowManager = function () {
 	var WindowManagers = [];
 	var DialogName = 'dialog';
 
-	function removeActiveWindow() {
-		var windowManager = WindowManagers.pop();
-		if ( !windowManager ) {
+	function closeActiveWindow() {
+		if ( !WindowManagers.length ) {
 			return;
 		}
+		var windowManager = WindowManagers[ WindowManagers.length - 1 ];
 		try {
 			windowManager.removeWindows( [ DialogName ] );
 		} catch ( exceptionVar ) {
 		}
 		windowManager.destroy();
-		// $( document.body ).remove(windowManager.$element)
+	}
+
+	function removeActiveWindow() {
+		var windowManager = WindowManagers.pop();
+		windowManager.destroy();
 	}
 
 	function newWindow( processDialog, data ) {
@@ -51,6 +55,7 @@ const PagePropertiesWindowManager = function () {
 
 	return {
 		newWindow,
-		removeActiveWindow
+		removeActiveWindow,
+		closeActiveWindow
 	};
 };

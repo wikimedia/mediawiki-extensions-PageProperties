@@ -58,6 +58,12 @@ class PageProperties {
 	/** @var int */
 	public static $formIndex = 0;
 
+	/** @var array */
+	public static $pageButtons = [];
+
+	/** @var int */
+	public static $buttonIndex = 0;
+
 	/** @var Logger */
 	private static $Logger;
 
@@ -67,8 +73,316 @@ class PageProperties {
 	/** @var SMW */
 	public static $SMW;
 
-	/** @var schemaProcessor */
+	/** @var SchemaProcessor */
 	public static $schemaProcessor;
+
+	/** @var array */
+	public static $PagepropertiesButtonDefaultParameters = [
+		'label' => [
+			'label' => 'pageproperties-parserfunction-button-label-label',
+			'description' => 'pageproperties-parserfunction-button-label-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-button-label-example'
+		],
+		'value' => [
+			'label' => 'pageproperties-parserfunction-button-value-label',
+			'description' => 'pageproperties-parserfunction-button-value-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-button-value-example'
+		],
+		'callback' => [
+			'label' => 'pageproperties-parserfunction-button-callback-label',
+			'description' => 'pageproperties-parserfunction-button-callback-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-button-callback-example'
+		],
+		'preload' => [
+			'label' => 'pageproperties-parserfunction-button-preload-label',
+			'description' => 'pageproperties-parserfunction-button-preload-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-button-preload-example'
+		],
+		'icon' => [
+			'label' => 'pageproperties-parserfunction-button-icon-label',
+			'description' => 'pageproperties-parserfunction-button-icon-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-button-icon-example'
+		]
+	];
+
+	/** @var array */
+	public static $PagepropertiesFormDefaultParameters = [
+		'schemas' => [
+			'label' => 'pageproperties-parserfunction-form-schemas-label',
+			'description' => 'pageproperties-parserfunction-form-schemas-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-schemas-example'
+		],
+		'title' => [
+			'label' => 'pageproperties-parserfunction-form-title-label',
+			'description' => 'pageproperties-parserfunction-form-title-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-title-example'
+		],
+		'action' => [
+			'label' => 'pageproperties-parserfunction-form-action-label',
+			'description' => 'pageproperties-parserfunction-form-action-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => 'create',
+			'example' => 'pageproperties-parserfunction-form-action-example'
+		],
+		'view' => [
+			'label' => 'pageproperties-parserfunction-form-view-label',
+			'description' => 'pageproperties-parserfunction-form-view-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => 'inline',
+			'example' => 'pageproperties-parserfunction-form-view-example'
+		],
+		'layout' => [
+			'label' => 'pageproperties-parserfunction-form-layout-label',
+			'description' => 'pageproperties-parserfunction-form-layout-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => 'tabs',
+			'example' => 'pageproperties-parserfunction-form-layout-example'
+		],
+		'callback' => [
+			'label' => 'pageproperties-parserfunction-form-callback-label',
+			'description' => 'pageproperties-parserfunction-form-callback-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-callback-example'
+		],
+		'edit-page' => [
+			'label' => 'pageproperties-parserfunction-form-edit-page-label',
+			'description' => 'pageproperties-parserfunction-form-edit-page-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-edit-page-example'
+		],
+		'preload' => [
+			'label' => 'pageproperties-parserfunction-form-preload-label',
+			'description' => 'pageproperties-parserfunction-form-preload-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-preload-example'
+		],
+		'return-page' => [
+			'label' => 'pageproperties-parserfunction-form-return-page-label',
+			'description' => 'pageproperties-parserfunction-form-return-page-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-return-page-example'
+		],
+		'popup-size' => [
+			'label' => 'pageproperties-parserfunction-form-popup-size-label',
+			'description' => 'pageproperties-parserfunction-form-popup-size-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'medium',
+			'example' => 'pageproperties-parserfunction-form-popup-size-example'
+		],
+		'css-class' => [
+			'label' => 'pageproperties-parserfunction-form-css-class-label',
+			'description' => 'pageproperties-parserfunction-form-css-class-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-css-class-example'
+		],
+		'pagename-formula' => [
+			'label' => 'pageproperties-parserfunction-form-pagename-formula-label',
+			'description' => 'pageproperties-parserfunction-form-pagename-formula-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-pagename-formula-example'
+		],
+		'edit-freetext' => [
+			'label' => 'pageproperties-parserfunction-form-edit-freetext-label',
+			'description' => 'pageproperties-parserfunction-form-edit-freetext-description',
+			'type' => 'boolean',
+			'required' => false,
+			'default' => '0',
+			'example' => 'pageproperties-parserfunction-form-edit-freetext-example'
+		],
+		'edit-categories' => [
+			'label' => 'pageproperties-parserfunction-form-edit-categories-label',
+			'description' => 'pageproperties-parserfunction-form-edit-categories-description',
+			'type' => 'boolean',
+			'required' => false,
+			'default' => '0',
+			'example' => 'pageproperties-parserfunction-form-edit-categories-example'
+		],
+		'edit-content-model' => [
+			'label' => 'pageproperties-parserfunction-form-edit-content-model-label',
+			'description' => 'pageproperties-parserfunction-form-edit-content-model-description',
+			'type' => 'boolean',
+			'required' => false,
+			'default' => '0',
+			'example' => 'pageproperties-parserfunction-form-edit-content-model-example'
+		],
+		'target-slot' => [
+			'label' => 'pageproperties-parserfunction-form-target-slot-label',
+			'description' => 'pageproperties-parserfunction-form-target-slot-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'pageproperties',
+			'example' => 'pageproperties-parserfunction-form-target-slot-example'
+		],
+		'default-categories' => [
+			'label' => 'pageproperties-parserfunction-form-default-categories-label',
+			'description' => 'pageproperties-parserfunction-form-default-categories-description',
+			'type' => 'array',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-form-default-categories-example'
+		],
+		'default-content-model' => [
+			'label' => 'pageproperties-parserfunction-form-default-content-model-label',
+			'description' => 'pageproperties-parserfunction-form-default-content-model-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'wikitext',
+			'example' => 'pageproperties-parserfunction-form-default-content-model-example'
+		],
+		'layout-align' => [
+			'label' => 'pageproperties-parserfunction-form-layout-align-label',
+			'description' => 'pageproperties-parserfunction-form-layout-align-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'top',
+			'example' => 'pageproperties-parserfunction-form-layout-align-example'
+		],
+		'popup-help' => [
+			'label' => 'pageproperties-parserfunction-form-popup-help-label',
+			'description' => 'pageproperties-parserfunction-form-popup-help-description',
+			'type' => 'boolean',
+			'required' => false,
+			'default' => '0',
+			'example' => 'pageproperties-parserfunction-form-popup-help-example'
+		],
+		'submit-button-text' => [
+			'label' => 'pageproperties-parserfunction-form-submit-button-text-label',
+			'description' => 'pageproperties-parserfunction-form-submit-button-text-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'submit',
+			'example' => 'pageproperties-parserfunction-form-submit-button-text-example'
+		],
+		'validate-button-text' => [
+			'label' => 'pageproperties-parserfunction-form-validate-button-text-label',
+			'description' => 'pageproperties-parserfunction-form-validate-button-text-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'validate',
+			'example' => 'pageproperties-parserfunction-form-validate-button-text-example'
+		]
+	];
+
+	/** @var array */
+	public static $PagepropertiesQueryDefaultParameters = [
+		'schema' => [
+			'label' => 'pageproperties-parserfunction-query-schema-label',
+			'description' => 'pageproperties-parserfunction-query-schema-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-query-schema-example'
+		],
+		'separator' => [
+			'label' => 'pageproperties-parserfunction-query-separator-label',
+			'description' => 'pageproperties-parserfunction-query-separator-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-query-separator-example'
+		],
+		'values-separator' => [
+			'label' => 'pageproperties-parserfunction-query-values-separator-label',
+			'description' => 'pageproperties-parserfunction-query-values-separator-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => ', ',
+			'example' => 'pageproperties-parserfunction-query-values-separator-example'
+		],
+		'template' => [
+			'label' => 'pageproperties-parserfunction-query-template-label',
+			'description' => 'pageproperties-parserfunction-query-template-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-query-template-example'
+		],
+		'limit' => [
+			'label' => 'pageproperties-parserfunction-query-limit-label',
+			'description' => 'pageproperties-parserfunction-query-limit-description',
+			'type' => 'integer',
+			'required' => false,
+			'default' => '100',
+			'example' => 'pageproperties-parserfunction-query-limit-example'
+		],
+		'offset' => [
+			'label' => 'pageproperties-parserfunction-query-offset-label',
+			'description' => 'pageproperties-parserfunction-query-offset-description',
+			'type' => 'integer',
+			'required' => false,
+			'default' => '0',
+			'example' => 'pageproperties-parserfunction-query-offset-example'
+		],
+		'order' => [
+			'label' => 'pageproperties-parserfunction-query-order-label',
+			'description' => 'pageproperties-parserfunction-query-order-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-query-order-example'
+		],
+		'format' => [
+			'label' => 'pageproperties-parserfunction-query-format-label',
+			'description' => 'pageproperties-parserfunction-query-format-description',
+			'type' => 'string',
+			'required' => true,
+			'default' => '',
+			'example' => 'pageproperties-parserfunction-query-format-example'
+		],
+		'pagetitle-name' => [
+			'label' => 'pageproperties-parserfunction-query-pagetitle-name-label',
+			'description' => 'pageproperties-parserfunction-query-pagetitle-name-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'pagetitle',
+			'example' => 'pageproperties-parserfunction-query-pagetitle-name-example'
+		],
+		'articleid-name' => [
+			'label' => 'pageproperties-parserfunction-query-articleid-name-label',
+			'description' => 'pageproperties-parserfunction-query-articleid-name-description',
+			'type' => 'string',
+			'required' => false,
+			'default' => 'articleid',
+			'example' => 'pageproperties-parserfunction-query-articleid-name-example'
+		]
+	];
 
 	/**
 	 * @return void
@@ -103,13 +417,141 @@ class PageProperties {
 	}
 
 	/**
+	 * @param string $pageName
+	 * @param array $value
+	 * @return array
+	 */
+	public static function createTemplateContent( $pageName, $value ) {
+		$mapDescription = [
+			'PagePropertiesForm' => 'pageproperties-parserfunction-form-description',
+			// 'PagePropertiesQuery' => 'pageproperties-parserfunction-query-description',
+			'PagePropertiesButton' => 'pageproperties-parserfunction-button-description',
+			'PagePropertiesPrint' => 'pageproperties-parserfunction-print-description'
+		];
+
+		$ret = "<noinclude>
+<pre>
+{{{$pageName}
+";
+
+		foreach ( $value as $key => $values ) {
+			$ret .= "|$key = \n";
+		}
+
+		$ret .= '}}
+</pre>
+
+';
+
+		$ret .= wfMessage( 'pageproperties-parserfunction-template-notice-visual-editor-newlines' )->parse();
+
+		$ret .= '
+<templatedata>
+';
+
+		$params = [];
+		foreach ( $value as $key => $values ) {
+			$values['label'] = wfMessage( $values['label'] )->text();
+			$values['description'] = wfMessage( $values['description'] )->text();
+			$values['example'] = wfMessage( $values['example'] )->text();
+
+			if ( $values['type'] === 'integer' ) {
+				$values['type'] = 'number';
+			}
+
+			if ( $values['type'] === 'array' ) {
+				$values['type'] = 'string';
+				$values['default'] = '';
+			}
+
+			$params[$key] = $values;
+		}
+
+		$json = [
+			'description' => wfMessage( $mapDescription[$pageName] )->text(),
+			'params' => $params
+		];
+
+		$ret .= json_encode( $json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+
+		$ret .= '
+</templatedata>
+</noinclude>
+<includeonly>{{#' . strtolower( $pageName ) . ':';
+
+		$ret .= '{{{' . key( $value ) . '}}}';
+		array_shift( $value );
+
+		foreach ( $value as $key => $values ) {
+			if ( empty( $values['default'] ) ) {
+				$values['default'] = '';
+			}
+			$ret .= "|$key = {{{{$key}|{$values['default']}}}}";
+		}
+
+		$ret .= ' }}
+</includeonly>
+';
+
+		return $ret;
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param mixed ...$argv
+	 * @return array
+	 */
+	public static function parserFunctionPagepropertiesButton( Parser $parser, ...$argv ) {
+		$parserOutput = $parser->getOutput();
+		$parserOutput->setExtensionData( 'pagepropertiesbutton', true );
+		$title = $parser->getTitle();
+
+/*
+{{#pagepropertiesbutton: Get folders
+|callback = ContactManager.formAction
+|preload = Data:ContactManager/MailboxInfo/Preload
+}}
+*/
+		$defaultParameters = self::$PagepropertiesButtonDefaultParameters;
+
+		array_walk( $defaultParameters, static function ( &$value, $key ) {
+			$value = [ $value['default'], $value['type'] ];
+		} );
+
+		[ $values, $options ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
+
+		if ( !count( $values ) || empty( $values[0] ) ) {
+			return 'no label';
+		}
+
+		$label = $values[0];
+
+		$params = self::applyDefaultParams( $defaultParameters, $options );
+
+		$params['label'] = $label;
+
+		$buttonID = ++self::$buttonIndex;
+
+		self::$pageButtons[$buttonID] = $params;
+
+		$parserOutput->setExtensionData( 'pagepropertiesbuttons', self::$pageButtons );
+
+		return [
+			'<div class="PagePropertiesButton" id="pagepropertiesbutton-wrapper-' . $buttonID . '">'
+				. wfMessage( 'pageproperties-parserfunction-button-placeholder' )->text() . '</div>',
+			'noparse' => true,
+			'isHTML' => true
+		];
+	}
+
+	/**
 	 * @param Parser $parser
 	 * @param mixed ...$argv
 	 * @return array
 	 */
 	public static function parserFunctionPagepropertiesForm( Parser $parser, ...$argv ) {
-		$out = $parser->getOutput();
-		$out->setExtensionData( 'pagepropertiesform', true );
+		$parserOutput = $parser->getOutput();
+		$parserOutput->setExtensionData( 'pagepropertiesform', true );
 		$title = $parser->getTitle();
 
 /*
@@ -137,34 +579,18 @@ class PageProperties {
 |show-progress =
 }}
 */
+		$defaultParameters = self::$PagepropertiesFormDefaultParameters;
+		array_walk( $defaultParameters, static function ( &$value, $key ) {
+			$value = [ $value['default'], $value['type'] ];
+		} );
 
-		$defaultParameters = [
-			'action' => [ 'create', 'string' ],
-			'edit-page' => [ '', 'string' ],
-			'return-page' => [ '', 'string' ],
-			'title' => [ '', 'string' ],
-			'view' => [ 'inline', 'string' ],
-			'popup-size' => [ 'medium', 'string' ],
-			'css-class' => [ '', 'string' ],
-			'pagename-formula' => [ '', 'string' ],
-			'edit-freetext' => [ 'false', 'bool' ],
-			'edit-categories' => [ 'false', 'bool' ],
-			'edit-content-model' => [ 'false', 'bool' ],
-			'target-slot' => [ 'pageproperties', 'string' ],
-			'default-categories' => [ '', 'array' ],
-			'default-content-model' => [ 'wikitext', 'string' ],
-			'layout-align' => [ 'top', 'string' ],
-			'popup-help' => [ 'false', 'bool' ],
-			'submit-button-text' => [ '', 'string' ],
-			'validate-button-text' => [ '', 'string' ],
-			'layout' => [ 'tabs', 'string' ],
-			'email-to' => [ '', 'array' ],
-			'navigation-next' => [ '', 'string' ],
-			'navigation-back' => [ '', 'string' ],
-			'show-progress' => [ '', 'bool' ],
-		];
+		[ $values, $options ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
 
-		[ $schemas, $options ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
+		if ( !count( $values ) || empty( $values[0] ) ) {
+			return 'no schemas';
+		}
+
+		$schemas = preg_split( '/\s*,\s*/', $values[0], -1, PREG_SPLIT_NO_EMPTY );
 
 		$params = self::applyDefaultParams( $defaultParameters, $options );
 
@@ -181,10 +607,11 @@ class PageProperties {
 			'options' => $params
 		];
 
-		$out->setExtensionData( 'pagepropertiesforms', self::$pageForms );
+		$parserOutput->setExtensionData( 'pagepropertiesforms', self::$pageForms );
 
 		return [
-			'<div class="PagePropertiesFormWrapper" id="pagepropertiesform-wrapper-' . $formID . '"></div>',
+			'<div class="PagePropertiesFormWrapper" id="pagepropertiesform-wrapper-' . $formID . '">'
+				. wfMessage( 'pageproperties-parserfunction-form-placeholder' )->text() . '</div>',
 			'noparse' => true,
 			'isHTML' => true
 		];
@@ -206,6 +633,7 @@ class PageProperties {
 
 			switch ( $type ) {
 				case 'bool':
+				case 'boolean':
 					$val = filter_var( $val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 					if ( $val === null ) {
 						$val = filter_var( $defaultValue, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
@@ -278,11 +706,11 @@ class PageProperties {
 	 * @return array
 	 */
 	public static function parserFunctionPagepropertiesQuery( Parser $parser, ...$argv ) {
-		$out = $parser->getOutput();
+		$parserOutput = $parser->getOutput();
 		$title = $parser->getTitle();
-		$out->setExtensionData( 'pagepropertiesquery', true );
+		$parserOutput->setExtensionData( 'pagepropertiesquery', true );
 
-		$out->addModules( [ 'ext.PageProperties.PrintResults' ] );
+		$parserOutput->addModules( [ 'ext.PageProperties.PrintResults' ] );
 /*
 {{#pagepropertiesquery: [[approved::true]][[display_date::{{#time: Y-m-d }}]]
 |?display_date
@@ -297,19 +725,13 @@ class PageProperties {
 */
 		$query = array_shift( $argv );
 
-		$defaultParameters = [
-			'schema' => [ '', 'string' ],
-			'separator' => [ '', 'string' ],
-			'values-separator' => [ ', ', 'string' ],
-			'template' => [ '', 'string' ],
-			'limit' => [ 100, 'integer' ],
-			'offset' => [ 0, 'integer' ],
-			'order' => [ '', 'string' ],
-			'format' => [ '', 'string' ],
-			'pagetitle-name' => [ 'pagetitle', 'string' ],
-			'hierarchical-conditions' => [ true, 'bool' ],
-			'function' => [ 'query', 'string' ],
-		];
+		$defaultParameters = self::$PagepropertiesQueryDefaultParameters;
+
+		array_walk( $defaultParameters, static function ( &$value, $key ) {
+			$value = [ $value['default'], $value['type'] ];
+		} );
+
+		$defaultParameters['function'] = [ 'query', 'string' ];
 
 		[ $values, $params ] = self::parseParameters( $argv, array_keys( $defaultParameters ) );
 
@@ -364,7 +786,7 @@ class PageProperties {
 
 		$databaseManager = new DatabaseManager();
 
-		$out->setExtensionData( 'pagepropertiesquerydata', $params );
+		$parserOutput->setExtensionData( 'pagepropertiesquerydata', $params );
 
 		if ( !$databaseManager->schemaExists( $params['schema'] ) ) {
 			return $returnError( 'schema does not exist' );
@@ -373,18 +795,52 @@ class PageProperties {
 		$printouts = array_keys( $printouts );
 
 		$output = RequestContext::getMain()->getOutput();
-		$schema = self::getSchema( $output, $params['schema'] );
 
-		$className = "MediaWiki\Extension\PageProperties\ResultPrinters\\{$GLOBALS['wgPagePropertiesResultPrinterClasses'][$params['format']]}";
-
-		$queryProcessor = new QueryProcessor( $query, $printouts, $params );
-
-		$resultsPrinter = new $className( $parser, $out, $queryProcessor, $schema, $templates, $params, $printouts );
-
-		$ret = $resultsPrinter->getResults();
-		$isHtml = $resultsPrinter->isHtml();
+		[ $ret, $isHtml ] = self::getResults(
+			$parser,
+			$output,
+			$query,
+			$templates,
+			$printouts,
+			$params
+		);
 
 		return [ $ret, 'isHTML' => $isHtml ];
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param Output $output
+	 * @param string $query
+	 * @param array $templates
+	 * @param array $printouts
+	 * @param array $params
+	 * @return bool|array
+	 */
+	public static function getResults(
+		$parser,
+		$output,
+		$query,
+		$templates,
+		$printouts,
+		$params
+	) {
+		if ( empty( $params['schema'] ) || empty( $params['format'] ) ) {
+			return false;
+		}
+		$schema = self::getSchema( $output, $params['schema'] );
+		if ( !$schema ) {
+			return false;
+		}
+		if ( !array_key_exists( $params['format'], $GLOBALS['wgPagePropertiesResultPrinterClasses'] ) ) {
+			return false;
+		}
+		$className = $GLOBALS['wgPagePropertiesResultPrinterClasses'][$params['format']];
+		$class = "MediaWiki\Extension\PageProperties\ResultPrinters\\{$className}";
+		$queryProcessor = new QueryProcessor( $schema, $query, $printouts, $params );
+		$resultsPrinter = new $class( $parser, $output, $queryProcessor, $schema, $templates, $params, $printouts );
+
+		return [ $resultsPrinter->getResults(), $resultsPrinter->isHtml() ];
 	}
 
 	/**
@@ -506,7 +962,7 @@ class PageProperties {
 			return false;
 		}
 
-		$page_id = $title->getArticleId();
+		$page_id = $title->getArticleID();
 		if ( !$title->isKnown() || empty( $page_id ) ) {
 			return false;
 		}
@@ -654,10 +1110,9 @@ class PageProperties {
 
 	/**
 	 * @param Title $title
-	 * @param bool $entire_site
 	 * @return false|array
 	 */
-	public static function getJsonData( $title, $entire_site = false ) {
+	public static function getJsonData( $title ) {
 		// @ATTENTION!
 		// $page_id is 0 for newly created pages
 		// $title->getArticleID();
@@ -770,6 +1225,50 @@ class PageProperties {
 		}
 
 		return ( count( $errors ) === 0 );
+	}
+
+	/**
+	 * @param User $user
+	 * @param Title $title
+	 * @param array $schemas
+	 * @param string $defaultSlot
+	 * @param array &$errors
+	 * @return bool
+	 */
+	public static function updateCreateSchemas(
+		$user,
+		$title,
+		$schemas,
+		$defaultSlot,
+		&$errors = []
+	) {
+		$jsonData = self::getJsonData( $title );
+
+		if ( !$jsonData ) {
+			$jsonData = [];
+		}
+
+		if ( !isset( $jsonData['schemas'] ) ) {
+			$jsonData['schemas'] = [];
+		}
+
+		$jsonData['schemas'] = array_merge( $jsonData['schemas'], $schemas );
+
+		$targetSlot = self::getTargetSlot( $title, $defaultSlot );
+
+		$slots = [
+			$targetSlot => [
+				'model' => CONTENT_MODEL_PAGEPROPERTIES_JSONDATA,
+				'content' => $jsonData
+			]
+		];
+
+		return self::setJsonData(
+			$user,
+			$title,
+			$slots,
+			$errors,
+		);
 	}
 
 	/**
@@ -1060,11 +1559,122 @@ class PageProperties {
 	}
 
 	/**
+	 * @param string $titletText
+	 * @return Title|null
+	 */
+	private static function getTitleIfKnown( $titletText ) {
+		$title_ = Title::newFromText( $titletText );
+		if ( $title_ && $title_->isKnown() ) {
+			return $title_;
+		}
+		return null;
+	}
+
+	/**
+	 * @param Title $title
+	 * @param array $pageForms
+	 * @param array $config
+	 * @return array
+	 */
+	private static function processPageForms( $title, $pageForms, $config ) {
+		if ( $config['context'] !== 'EditSemantic' ) {
+			$databaseManager = new DatabaseManager();
+		}
+
+		foreach ( $pageForms as $formID => $value ) {
+			$schemas = $pageForms[$formID]['schemas'];
+
+			if ( $config['context'] !== 'EditSemantic' ) {
+				$databaseManager->storeLink( $title, 'form', $schemas );
+			}
+
+			$jsonData = [];
+			$freetext = null;
+			$categories = [];
+			$editTitle = ( $title && $title->isKnown() ? $title : null );
+
+			if ( !empty( $value['options']['preload'] ) ) {
+				$jsonData = self::getPreloadData( $value['options']['preload'] );
+			}
+
+			if ( $value['options']['action'] === 'edit' ) {
+				if ( !empty( $value['options']['edit-page'] ) ) {
+					$editTitle = self::getTitleIfKnown( $value['options']['edit-page'] );
+				}
+
+				if ( $editTitle ) {
+					$pageForms[$formID]['options']['edit-page'] = $editTitle->getFullText();
+
+					if ( empty( $jsonData ) ) {
+						$jsonData = self::getJsonData( $editTitle );
+					}
+				}
+			}
+
+			if ( $value['options']['edit-categories'] === true && $editTitle ) {
+				$categories = self::getCategories( $editTitle );
+			}
+
+			if ( $value['options']['edit-freetext'] === true && $editTitle ) {
+				$freetext = self::getWikipageContent( $editTitle );
+
+				// if ( ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
+				//	$out->addModules( 'ext.veforall.main' );
+				// }
+			}
+
+			$formData = &$pageForms[$formID];
+
+			$formData['freetext'] = $freetext;
+			$formData['jsonData'] = $jsonData;
+			$formData['categories'] = $categories;
+			$formData['freetext'] = $freetext;
+			$formData['errors'] = [];
+
+			// show errors (SubmitForm)
+			if ( !array_key_exists( 'origin-url', $value['options'] ) ) {
+				$pageForms[$formID]['options']['origin-url'] = $title->getLocalURL();
+			}
+
+			// otherwise return-url is the target title
+			// @see SubmitForm
+			if ( !array_key_exists( 'return-url', $value['options'] )
+				&& !empty( $value['options']['return-page'] ) ) {
+				$title_ = self::getTitleIfKnown( $value['options']['return-page'] );
+
+				if ( $title_ ) {
+					$pageForms[$formID]['options']['return-url'] = $title_->getLocalURL();
+				}
+			}
+		}
+
+		return $pageForms;
+	}
+
+	/**
+	 * @param string $titleText
+	 * @param Title|null &$title
+	 * @return array
+	 */
+	public static function getPreloadData( $titleText, &$title = null ) {
+		$title = self::getTitleIfKnown( $titleText );
+		if ( !$title ) {
+			return [];
+		}
+		$jsonData = self::getJsonData( $title );
+		if ( $jsonData !== false ) {
+			return $jsonData;
+		}
+		return [];
+	}
+
+	/**
 	 * @param OutputPage $out
 	 * @param array $obj
 	 * @return void
 	 */
 	public static function addJsConfigVars( $out, $obj ) {
+		$title = $out->getTitle();
 		$loadedData = [];
 
 		if ( isset( $obj['pageForms'] ) ) {
@@ -1072,6 +1682,10 @@ class PageProperties {
 			foreach ( $obj['pageForms'] as $value ) {
 				self::setSchemas( $out, $value['schemas'] );
 			}
+
+			// *** this accounts also of forms inside forms
+			$obj['pageForms'] = array_merge( $obj['pageForms'], self::$pageForms );
+			$obj['pageForms'] = self::processPageForms( $title, $obj['pageForms'], $obj['config'] );
 		}
 
 		if ( isset( $_SESSION ) && !empty( $_SESSION['pagepropertiesform-submissiondata'] ) ) {
@@ -1090,8 +1704,6 @@ class PageProperties {
 		}
 
 		$obj['schemas'] = self::$schemas;
-
-		$title = $out->getTitle();
 
 		$schemaUrl = self::getFullUrlOfNamespace( NS_PAGEPROPERTIESSCHEMA );
 
@@ -1114,7 +1726,7 @@ class PageProperties {
 			'config' => [
 				'PagePropertiesSchemaUrl' => $schemaUrl,
 				'actionUrl' => SpecialPage::getTitleFor( 'PagePropertiesSubmit', $title->getPrefixedDBkey() )->getLocalURL(),
-				'isNewPage' => $title->getArticleId() === 0 || !$title->isKnown(),
+				'isNewPage' => $title->getArticleID() === 0 || !$title->isKnown(),
 
 				// *** keep commented to prevent array_merge_recursive
 				// creating an array instead of a single value

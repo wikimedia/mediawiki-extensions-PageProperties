@@ -9,7 +9,7 @@
 	"pageproperties": "Page Properties",
 	"manageschemas-label": "Manage Schemas",
 	"pageproperties-slot-label-pageproperties": "Properties",
-	"pageproperties-editsemantic-label": "Edit semantic",
+	"pageproperties-editsemantic-label": "Edit schemas",
 	"pageproperties-navigation": "Properties",
 	"specialpages-group-pageproperties": "PageProperties",
 
@@ -58,6 +58,165 @@
 	"pagepropertiesbrowse-queries-label": "Browse queries",
 	"pagepropertiesbrowsedata-topnav": "'''navigation'''",
 
+	"pageproperties-parserfunction-form-placeholder": "form is loading...",
+	"pageproperties-parserfunction-button-placeholder": "button is rendering...",
+	"pageproperties-parserfunction-query-placeholder": "query is rendering...",
+
+	"pageproperties-parserfunction-template-notice-visual-editor-newlines": "'''Attention!''' VisualEditor won't handle the template correctly if it contains new lines!!",
+	"pageproperties-parserfunction-button-description": "A parser function to print a button with value or data submitted to a (javascript) callback",
+
+	"pageproperties-parserfunction-button-label-label": "label",
+	"pageproperties-parserfunction-button-label-description": "button label",
+	"pageproperties-parserfunction-button-label-example": "",
+
+	"pageproperties-parserfunction-button-callback-label": "callback",
+	"pageproperties-parserfunction-button-callback-description": "(javascript) callback function",
+	"pageproperties-parserfunction-button-callback-example": "",
+
+	"pageproperties-parserfunction-button-preload-label": "preload",
+	"pageproperties-parserfunction-button-preload-description": "pagename with json data",
+	"pageproperties-parserfunction-button-preload-example": "",
+
+	"pageproperties-parserfunction-button-value-label": "value",
+	"pageproperties-parserfunction-button-value-description": "value string",
+	"pageproperties-parserfunction-button-value-example": "",
+
+	"pageproperties-parserfunction-button-icon-label": "icon",
+	"pageproperties-parserfunction-button-icon-description": "icon name (Mediawiki's OOUI)",
+	"pageproperties-parserfunction-button-icon-example": "",
+
+	"pageproperties-parserfunction-form-description": "A parser function to enclose one or more schemas in a form",
+
+	"pageproperties-parserfunction-form-title-label": "title",
+	"pageproperties-parserfunction-form-title-description": "title of the form (or the panel if a form containing multiple schemas)",
+	"pageproperties-parserfunction-form-title-example": "",
+
+	"pageproperties-parserfunction-form-schemas-label": "schemas",
+	"pageproperties-parserfunction-form-schemas-description": "one more schema name, comma separated",
+	"pageproperties-parserfunction-form-schemas-example": "",
+
+	"pageproperties-parserfunction-form-action-label": "action",
+	"pageproperties-parserfunction-form-action-description": "form action, can be create or edit",
+	"pageproperties-parserfunction-form-action-example": "",
+
+	"pageproperties-parserfunction-form-view-label": "view",
+	"pageproperties-parserfunction-form-view-description": "display mode of the form, can be inline or popup",
+	"pageproperties-parserfunction-form-view-example": "",
+
+	"pageproperties-parserfunction-form-layout-label": "layout",
+	"pageproperties-parserfunction-form-layout-description": "form layout with multiple schemas, can be tabs or booklet",
+	"pageproperties-parserfunction-form-layout-example": "",
+
+	"pageproperties-parserfunction-form-callback-label": "callback",
+	"pageproperties-parserfunction-form-callback-description": "(javascript) callback function called on submit",
+	"pageproperties-parserfunction-form-callback-example": "",
+
+	"pageproperties-parserfunction-form-edit-page-label": "edit-page",
+	"pageproperties-parserfunction-form-edit-page-description": "title of the page holding the data to edit (with edit action)",
+	"pageproperties-parserfunction-form-edit-page-example": "",
+
+	"pageproperties-parserfunction-form-preload-label": "preload",
+	"pageproperties-parserfunction-form-preload-description": "page name with preload json data",
+	"pageproperties-parserfunction-form-preload-example": "",
+
+	"pageproperties-parserfunction-form-return-page-label": "return-page",
+	"pageproperties-parserfunction-form-return-page-description": "return page",
+	"pageproperties-parserfunction-form-return-page-example": "",
+
+	"pageproperties-parserfunction-form-popup-size-label": "popup-size",
+	"pageproperties-parserfunction-form-popup-size-description": "popup-size, possible values: small, medium, large, larger full",
+	"pageproperties-parserfunction-form-popup-size-example": "",
+
+	"pageproperties-parserfunction-form-css-class-label": "css-class",
+	"pageproperties-parserfunction-form-css-class-description": "css-class to be attached to the form",
+	"pageproperties-parserfunction-form-css-class-example": "",
+
+	"pageproperties-parserfunction-form-pagename-formula-label": "pagename-formula",
+	"pageproperties-parserfunction-form-pagename-formula-description": "formula used to create a new article through the form with the entered data, in the form contacts/<first_name> <last_name>, where <first_name> and <last_name> are the property names of the related schema",
+	"pageproperties-parserfunction-form-pagename-formula-example": "",
+
+	"pageproperties-parserfunction-form-edit-freetext-label": "edit-freetext",
+	"pageproperties-parserfunction-form-edit-freetext-description": "whether the form allows to edit freetext",
+	"pageproperties-parserfunction-form-edit-freetext-example": "",
+
+	"pageproperties-parserfunction-form-edit-categories-label": "edit-categories",
+	"pageproperties-parserfunction-form-edit-categories-description": "whether the form allows to edit categories",
+	"pageproperties-parserfunction-form-edit-categories-example": "",
+
+	"pageproperties-parserfunction-form-edit-content-model-label": "edit-content-model",
+	"pageproperties-parserfunction-form-edit-content-model-description": "whether the form allows to edit the content model",
+	"pageproperties-parserfunction-form-edit-content-model-example": "",
+
+	"pageproperties-parserfunction-form-target-slot-label": "target-slot",
+	"pageproperties-parserfunction-form-target-slot-description": "target slot for the semantic data, could be pageproperties or main",
+	"pageproperties-parserfunction-form-target-slot-example": "",
+
+	"pageproperties-parserfunction-form-default-categories-label": "default-categories",
+	"pageproperties-parserfunction-form-default-categories-description": "default categories (comma separated)",
+	"pageproperties-parserfunction-form-default-categories-example": "",
+
+	"pageproperties-parserfunction-form-default-content-model-label": "default-content-model",
+	"pageproperties-parserfunction-form-default-content-model-description": "default content model",
+	"pageproperties-parserfunction-form-default-content-model-example": "",
+
+	"pageproperties-parserfunction-form-layout-align-label": "layout-align",
+	"pageproperties-parserfunction-form-layout-align-description": "default align for the OO.ui.FieldLayout, possible values are left right top inline",
+	"pageproperties-parserfunction-form-layout-align-example": "",
+
+	"pageproperties-parserfunction-form-popup-help-label": "popup-help",
+	"pageproperties-parserfunction-form-popup-help-description": "corresponds to helpinline set to false in the OO.ui.FieldLayout",
+	"pageproperties-parserfunction-form-popup-help-example": "",
+
+	"pageproperties-parserfunction-form-submit-button-text-label": "submit-button-text",
+	"pageproperties-parserfunction-form-submit-button-text-description": "text of the submit button",
+	"pageproperties-parserfunction-form-submit-button-text-example": "",
+
+	"pageproperties-parserfunction-form-validate-button-text-label": "validate-button-text",
+	"pageproperties-parserfunction-form-validate-button-text-description": "text of the validate button",
+	"pageproperties-parserfunction-form-validate-button-text-example": "",
+
+	"pageproperties-parserfunction-query-description": "A parser function to query schemas data and print them in various formats",
+
+	"pageproperties-parserfunction-query-schema-label": "schema",
+	"pageproperties-parserfunction-query-schema-description": "",
+	"pageproperties-parserfunction-query-schema-example": "",
+
+	"pageproperties-parserfunction-query-separator-label": "separator",
+	"pageproperties-parserfunction-query-separator-description": "",
+	"pageproperties-parserfunction-query-separator-example": "",
+
+	"pageproperties-parserfunction-query-values-separator-label": "values-separator",
+	"pageproperties-parserfunction-query-values-separator-description": "",
+	"pageproperties-parserfunction-query-values-separator-example": "",
+
+	"pageproperties-parserfunction-query-template-label": "template",
+	"pageproperties-parserfunction-query-template-description": "",
+	"pageproperties-parserfunction-query-template-example": "",
+
+	"pageproperties-parserfunction-query-limit-label": "limit",
+	"pageproperties-parserfunction-query-limit-description": "",
+	"pageproperties-parserfunction-query-limit-example": "",
+
+	"pageproperties-parserfunction-query-offset-label": "offset",
+	"pageproperties-parserfunction-query-offset-description": "",
+	"pageproperties-parserfunction-query-offset-example": "",
+
+	"pageproperties-parserfunction-query-order-label": "order",
+	"pageproperties-parserfunction-query-order-description": "",
+	"pageproperties-parserfunction-query-order-example": "",
+
+	"pageproperties-parserfunction-query-format-label": "format",
+	"pageproperties-parserfunction-query-format-description": "",
+	"pageproperties-parserfunction-query-format-example": "",
+
+	"pageproperties-parserfunction-query-pagetitle-name-label": "pagetitle-name",
+	"pageproperties-parserfunction-query-pagetitle-name-description": "",
+	"pageproperties-parserfunction-query-pagetitle-name-example": "",
+
+	"pageproperties-parserfunction-query-articleid-name-label": "articleid-name",
+	"pageproperties-parserfunction-query-articleid-name-description": "",
+	"pageproperties-parserfunction-query-articleid-name-example": "",
+
 	"pageproperties-special-browse-data-description": "Here you can browse all pages with json data filtered by schema",
 	"pageproperties-special-browse-queries-description": "Here you can browse all pages with pageproperties queries filtered by schema",
 	"pageproperties-special-browse-forms-description": "Here you can browse all pages with pageproperties forms filtered by schema",
@@ -70,7 +229,7 @@
 	"pageproperties-special-browse-table-empty": "no results",
 
 	"pageproperties-editsemantic-new-article": "Create article",
-	"pageproperties-editsemantic-edit": "Editing $1 (semantic)",
+	"pageproperties-editsemantic-edit": "Editing $1 (schemas)",
 	"pageproperties-new-article": "New article",
 
 	"pageproperties-jsmodule-pageproperties-outdated-version": "This version of PageProperties is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageProperties\">Update</a>",
@@ -96,8 +255,8 @@
 	"pageproperties-jsmodule-pageproperties-addremoveschemas": "add/remove schemas",
 	"pageproperties-jsmodule-schemas-create-schema": "create schema",
 	"pageproperties-jsmodule-schemas-columns": "name, properties",
-	"pageproperties-jsmodule-pageproperties-page-properties": "Edit semantic",
-	"pageproperties-jsmodule-pageproperties-manage-schemas": "manage schemas",
+	"pageproperties-jsmodule-pageproperties-page-properties": "Edit schemas",
+	"pageproperties-jsmodule-pageproperties-manage-schemas": "Manage schemas",
 	"pageproperties-jsmodule-schemas-defineschema": "define schema",
 
 	"pageproperties-jsmodule-manageproperties-main": "Main",

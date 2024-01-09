@@ -31,5 +31,6 @@ $magicWords = [];
 $magicWords['en'] = [
 	'pagepropertiesprint' => [ 0, 'pagepropertiesprint' ],
 	'pagepropertiesquery' => [ 0, 'pagepropertiesquery' ],
-	'pagepropertiesform' => [ 0, 'pagepropertiesform' ]
+	'pagepropertiesform' => [ 0, 'pagepropertiesform' ],
+	'pagepropertiesbutton' => [ 0, 'pagepropertiesbutton' ]
 ];

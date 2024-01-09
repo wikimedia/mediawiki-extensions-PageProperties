@@ -34,7 +34,7 @@ class DatabaseManager {
 	/** @var dbw */
 	public $dbw;
 
-	/** @var articleId */
+	/** @var int */
 	public $articleId;
 
 	/** @var dateTime */
@@ -46,7 +46,7 @@ class DatabaseManager {
 	/** @var array */
 	private $errors = [];
 
-	/** @var dataTables */
+	/** @var array */
 	public static $propTypes = [
 		'text',
 		'textarea',
@@ -100,8 +100,13 @@ class DatabaseManager {
 	 * @param Title $title
 	 * @param string $type
 	 * @param string|array $schema
+	 * @return bool
 	 */
 	public function storeLink( $title, $type, $schema ) {
+		if ( !\PageProperties::isKnownArticle( $title ) ) {
+			return false;
+		}
+
 		$schemas = ( !is_array( $schema ) ? [ $schema ] : $schema );
 
 		// store a missing schema anyway
@@ -136,6 +141,7 @@ class DatabaseManager {
 				$conds_
 			);
 		}
+		return true;
 	}
 
 	/**

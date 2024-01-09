@@ -29,58 +29,66 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 }
 
 use MediaWiki\Extension\PageProperties\DatabaseManager as DatabaseManager;
+use MediaWiki\MediaWikiServices;
 use Title;
 
 class QueryProcessor {
 
-	/** @var results */
+	/** @var schema */
+	private $schema = [];
+
+	/** @var array */
 	private $results = [];
 
-	/** @var resultsList */
+	/** @var array */
 	private $resultsList = [];
 
-	/** @var conditionProperties */
+	/** @var array */
 	private $conditionProperties = [];
 
-	/** @var conditionSubjects */
+	/** @var array */
 	private $conditionSubjects = [];
 
-	/** @var printouts */
+	/** @var array */
 	private $printouts = [];
 
-	/** @var params */
+	/** @var array */
 	private $params = [];
 
 	/** @var dbr */
 	private $dbr;
 
-	/** @var count */
+	/** @var int */
 	private $count;
 
-	/** @var treeFormat */
+	/** @var bool */
 	private $treeFormat;
 
-	/** @var conditions */
+	/** @var array */
 	private $conditions = [];
 
-	/** @var query */
+	/** @var string */
 	private $query;
 
 	/** @var databaseManager */
 	private $databaseManager;
 
-	/** @var errors */
+	/** @var array */
 	private $errors = [];
 
-	/** @var mapKeyToPrintout */
+	/** @var array */
 	private $mapKeyToPrintout;
 
+	/** @var array */
+	private $formattedNamespaces;
+
 	/**
+	 * @param array $schema
 	 * @param string $query
 	 * @param array $printouts
 	 * @param array $params
 	 */
-	public function __construct( $query, $printouts, $params ) {
+	public function __construct( $schema, $query, $printouts, $params ) {
 		$defaultParameters = [
 			'schema' => [ '', 'string' ],
 			'limit' => [ 100, 'integer' ],
@@ -93,10 +101,13 @@ class QueryProcessor {
 		$params = \PageProperties::applyDefaultParams( $defaultParameters, $params );
 
 		$this->databaseManager = new DatabaseManager();
+		$this->schema = $schema;
 		$this->query = $query;
 		$this->printouts = $printouts;
 		$this->params = $params;
 		$this->dbr = wfGetDB( DB_REPLICA );
+		$this->formattedNamespaces = MediaWikiServices::getInstance()
+			->getContentLanguage()->getFormattedNamespaces();
 	}
 
 	/**
@@ -228,7 +239,9 @@ class QueryProcessor {
 								$arr[] = "v$index $sort";
 							}
 						}
-						$options[$value] = implode( ', ', $arr );
+						if ( count( $arr ) ) {
+							$options[$value] = implode( ', ', $arr );
+						}
 						break;
 					case 'limit':
 					case 'offset':
@@ -240,7 +253,6 @@ class QueryProcessor {
 				}
 			}
 		}
-
 		return $options;
 	}
 
@@ -281,11 +293,11 @@ class QueryProcessor {
 
 	/**
 	 * @param string $value
-	 * @param string $key
-	 * @param string $dataType
+	 * @param string $field
+	 * @param string|null $dataType string
 	 * @return string
 	 */
-	private function parseCondition( $value, $key, $dataType ) {
+	private function parseCondition( $value, $field, $dataType = 'string' ) {
 		// @TODO expand query language with <, > and more
 		// cast where
 		/*
@@ -325,29 +337,56 @@ class QueryProcessor {
 
 				*/
 
-		$any = $this->dbr->anyString();
-
 		// use $this->dbr->buildLike( $prefix, $this->dbr->anyString() )
 		// if $value contains ~
 		$likeBefore = false;
 		$likeAfter = false;
-		preg_match( '/^(~)?(.+?)(~)?$/', $value, $match );
+		preg_match( '/^(!)?(~)?(.+?)(~)?$/', $value, $match );
 
 		if ( !empty( $match ) ) {
-			$value = $match[2];
-			if ( !empty( $match[1] ) ) {
+			$value = $match[3];
+			if ( !empty( $match[2] ) ) {
 				$likeBefore = true;
 			}
-			if ( !empty( $match[3] ) ) {
+			if ( !empty( $match[4] ) ) {
 				$likeAfter = true;
 			}
 		}
 		$val = $value;
 		if ( !$likeBefore && !$likeAfter ) {
+			if ( $val === '+' ) {
+				return "$field IS NOT NULL";
+			}
 			$this->castVal( $dataType, $val );
-			return "t$key.value = $val";
+			if ( in_array( $dataType, [ 'integer', 'numeric', 'date', 'datetime', 'time' ] ) ) {
+				// https://www.semantic-mediawiki.org/wiki/Help:Search_operators#User_manual
+
+				$patterns = [
+					'/^(>)\s*(.+)$/' => '>=',
+					'/^(>>)\s*(.+)$/' => '>',
+					'/^(>=)\s*(.+)$/' => '>=',
+					'/^(<)\s*(.+)$/' => '<=',
+					'/^(<<)\s*(.+)$/' => '<',
+					'/^(<=)\s*(.+)$/' => '<=',
+					'/^(!)\s*(.+)$/' => 'NOT',
+				];
+			} else {
+				$patterns = [
+					'/^(!)\s*(.+)$/' => 'NOT',
+				];
+			}
+
+			foreach ( $patterns as $regex => $sql ) {
+				preg_match( $regex, $value, $match );
+				if ( !empty( $match ) ) {
+					return "$field {$sql} {$match[2]}";
+				}
+			}
+
+			return "$field = $val";
 		}
 
+		$any = $this->dbr->anyString();
 		if ( $likeBefore && !$likeAfter ) {
 			$val = $this->dbr->buildLike( $any, $val );
 		} elseif ( !$likeBefore && $likeAfter ) {
@@ -355,7 +394,8 @@ class QueryProcessor {
 		} elseif ( $likeBefore && $likeAfter ) {
 			$val = $this->dbr->buildLike( $any, $val, $any );
 		}
-		return "t$key.value$val";
+		$not = ( empty( $match[2] ) ) ? '' : ' NOT';
+		return "{$field}{$not}{$val}";
 	}
 
 	private function performQuery() {
@@ -396,8 +436,32 @@ class QueryProcessor {
 			$mapPathNoIndexTable[$row['path_no_index']] = $tablename;
 		}
 
+		// retrieve all, but order according to the schema
+		// descriptor
 		if ( empty( $this->printouts ) ) {
 			$this->printouts = array_keys( $mapPathNoIndexTable );
+
+			$schemaStr = json_encode( $this->schema );
+			usort( $this->printouts, static function ( $a, $b ) use ( $schemaStr ) {
+				// $aPos = strpos( $schemaStr, "\"name\":\"$a\"" );
+				// $bPos = strpos( $schemaStr, "\"name\":\"$b\"" );
+				// if ( $aPos === false ) {
+				// 	$aPos = INF;
+				// }
+				// if ( $bPos === false ) {
+				// 	$bPos =INF;
+				// }
+				preg_match( "/\"name\"\s*:\s*\"$a\"/", $schemaStr, $matches, PREG_OFFSET_CAPTURE );
+				$aPos = ( !empty( $matches[0][1] ) ? $matches[0][1] : INF );
+
+				preg_match( "/\"name\"\s*:\s*\"$b\"/", $schemaStr, $matches, PREG_OFFSET_CAPTURE );
+				$bPos = ( !empty( $matches[0][1] ) ? $matches[0][1] : INF );
+
+				if ( $aPos === $bPos ) {
+					return 0;
+				}
+				return ( $aPos < $bPos ) ? -1 : 1;
+			} );
 		}
 
 		$arr = [];
@@ -489,9 +553,9 @@ class QueryProcessor {
 
 			if ( array_key_exists( $pathNoIndex, $this->conditionProperties ) ) {
 				if ( $key === 0 ) {
-					$conds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], $key, $tablename );
+					$conds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], "t$key.value", $tablename );
 				} else {
-					$joinConds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], $key, $tablename );
+					$joinConds[] = $this->parseCondition( $this->conditionProperties[$pathNoIndex], "t$key.value", $tablename );
 				}
 			}
 
@@ -548,16 +612,33 @@ class QueryProcessor {
 		$categories = [];
 		foreach ( $this->conditionSubjects as $value ) {
 			$title_ = Title::newFromText( $value );
-			if ( !$title_ || !$title_->isKnown() ) {
-				continue;
-			}
+			if ( $title_ && $title_->isKnown() ) {
+				if ( $title_->getNamespace() !== NS_CATEGORY ) {
+					$conds[] = 't0.page_id = ' . $title_->getArticleID();
 
-			if ( $title_->getNamespace() !== NS_CATEGORY ) {
-				$conds[] = 't0.page_id = ' . $title_->getArticleId();
+				} else {
+					$categories[] = 'cl_to = ' . $this->dbr->addQuotes( $title_->getDbKey() )
+						. ' AND cl_from = t0.page_id';
+				}
 
 			} else {
-				$categories[] = 'cl_to = ' . $this->dbr->addQuotes( $title_->getDbKey() )
-					. ' AND cl_from = t0.page_id';
+				// something in this form A:A/~
+				$tables['page'] = $this->dbr->tableName( 'page' );
+				// 'USE INDEX' => ( version_compare( MW_VERSION, '1.36', '<' ) ? 'name_title' : 'page_name_title' ),
+				$joins['page'] = [ 'JOIN', [ 'page.page_id = t0.page_id' ] ];
+
+				// check if is a registered namespace
+				$arr = explode( ':', $value );
+				if ( count( $arr ) > 1 ) {
+					$ns = array_shift( $arr );
+					$nsIndex = array_search( $ns, $this->formattedNamespaces );
+					if ( $nsIndex !== false ) {
+						$value = implode( ':', $arr );
+						$conds[] = "page.page_namespace = $nsIndex";
+					}
+				}
+
+				$conds[] = $this->parseCondition( $value, 'page_title' );
 			}
 		}
 
@@ -626,6 +707,9 @@ class QueryProcessor {
 				}
 			} else {
 				foreach ( $this->mapKeyToPrintout as $key => $printout ) {
+					if ( empty( $row["p$key"] ) ) {
+						continue;
+					}
 					$paths = explode( $separator, $row["p$key"] );
 					$values = explode( $separator, $row["v$key"] );
 					foreach ( $paths as $key => $path ) {

@@ -33,7 +33,6 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	var ToolbarMain;
 	var ActionToolbarMain;
 	var ActionWidget;
-	var Self;
 	var SubmitButton;
 	var ValidateButton;
 	var GoBackButton;
@@ -49,6 +48,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 	var ProcessModel = {};
 	var InputWidgets;
 	var SchemasLayout;
+	var Initialized = false;
 
 	function inArray( val, arr ) {
 		return arr.indexOf( val ) !== -1;
@@ -2343,6 +2343,11 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				return;
 			}
 
+			if ( 'callback' in Form.options && Form.options.callback !== '' ) {
+				PagePropertiesFunctions.executeFunctionByName( Form.options.callback, window, res );
+				return;
+			}
+
 			$( '<input>' )
 				.attr( {
 					type: 'hidden',
@@ -2501,7 +2506,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 											if ( payload.action in thisRes ) {
 												var data = JSON.parse( thisRes[ payload.action ].result );
 												if ( !data.errors.length ) {
-													WindowManager.removeActiveWindow();
+													WindowManager.closeActiveWindow();
 													// @FIXME reload only if the changes affect
 													// the current page
 													if ( data[ 'target-url' ] === window.location.href ) {
@@ -2622,10 +2627,24 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		return false;
 	}
 
-	function initialize( pageProperties ) {
-		if ( arguments.length ) {
-			Self = pageProperties;
+	function isVisible() {
+		return $( '#pagepropertiesform-wrapper-' + FormID ).is( ':visible' );
+	}
+
+	function mutationChange() {
+		if ( !isVisible() ) {
+			Initialized = false;
+		} else if ( !Initialized ) {
+			initialize();
 		}
+	}
+
+	function initialize() {
+		if ( !isVisible() ) {
+			return false;
+		}
+
+		Initialized = true;
 
 		if ( Form.options.view === 'popup' ) {
 			var popupButton = new OO.ui.ButtonWidget( {
@@ -2659,9 +2678,9 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 					PropertiesStack: PropertiesStack
 				} );
 			} );
-			$( '#pagepropertiesform-wrapper-' + FormID ).append( popupButton.$element );
+			$( '#pagepropertiesform-wrapper-' + FormID ).html( popupButton.$element );
 
-			return;
+			return true;
 		}
 
 		var formContent = [];
@@ -2812,7 +2831,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			Config.canmanageforms;
 
 		if ( Config.context === 'parserfunction' || !editToolbar ) {
-			$( '#pagepropertiesform-wrapper-' + FormID ).append( form.$element );
+			$( '#pagepropertiesform-wrapper-' + FormID ).html( form.$element );
 
 			// eslint-disable-next-line no-jquery/no-global-selector
 			$( '#mw-rcfilters-spinner-wrapper' ).remove();
@@ -2821,7 +2840,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 				PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
 			}, 30 );
 
-			return;
+			return true;
 		}
 
 		var items = [];
@@ -2936,7 +2955,7 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 			toolbarCategories.$actions.append( actionToolbarCategories.$element );
 		}
 
-		$( '#pagepropertiesform-wrapper-' + FormID ).append( OuterStack.$element );
+		$( '#pagepropertiesform-wrapper-' + FormID ).html( OuterStack.$element );
 
 		ToolbarMain.initialize();
 
@@ -2958,6 +2977,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		setTimeout( function () {
 			PagePropertiesFunctions.removeNbspFromLayoutHeader( 'form' );
 		}, 30 );
+
+		return true;
 	}
 
 	return {
@@ -2965,7 +2986,8 @@ const PageProperties = function ( Config, Form, FormID, Schemas, WindowManager )
 		getCategories,
 		// updateForms,
 		updateSchemas,
-		updatePanels
+		updatePanels,
+		mutationChange
 	};
 };
 
@@ -3030,7 +3052,7 @@ $( function () {
 				windowManager
 			);
 
-			pageProperties.initialize( pageProperties );
+			pageProperties.initialize();
 
 			if ( config.context === 'parserfunction' && form.errors.length ) {
 				$( '#pagepropertiesform-wrapper-' + formID )
@@ -3039,6 +3061,24 @@ $( function () {
 			}
 
 			instances.push( pageProperties );
+		}
+
+		// *** this allows to render forms when they
+		// are contained within not visible elements
+		// like datatables cells, or dialogs
+		var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+
+		if ( MutationObserver ) {
+			var observer = new MutationObserver( function ( mutations, thisObserver ) {
+				for ( var instance of instances ) {
+					instance.mutationChange();
+				}
+			} );
+
+			observer.observe( document, {
+				subtree: true,
+				childList: true
+			} );
 		}
 	}
 

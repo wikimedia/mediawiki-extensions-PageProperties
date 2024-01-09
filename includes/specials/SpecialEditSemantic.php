@@ -99,17 +99,10 @@ class SpecialEditSemantic extends SpecialPage {
 	 */
 	private function setData( $out ) {
 		$schemas = [];
-		$categories = [];
 		$jsonData = [];
 
 		if ( $this->title && $this->title->isKnown() ) {
 			$jsonData = \PageProperties::getJsonData( $this->title );
-
-			if ( $jsonData === false ) {
-				$jsonData = [];
-			}
-
-			$categories = \PageProperties::getCategories( $this->title );
 		}
 
 		if ( !empty( $jsonData['schemas'] ) ) {
@@ -117,57 +110,43 @@ class SpecialEditSemantic extends SpecialPage {
 		}
 
 		if ( !empty( $_GET['schemas'] ) ) {
-			$schemas = array_merge( explode( '|', $_GET['schemas'] ) );
+			// or $schemas = preg_split( '/\s*,\s*/', $_GET['schemas'], -1, PREG_SPLIT_NO_EMPTY );
+			$schemas = array_merge( $schemas, explode( '|', $_GET['schemas'] ) );
 		}
 
 		$schemas = array_unique( $schemas );
-		\PageProperties::setSchemas( $out, $schemas, true );
-
-		$this->schemas = $schemas;
-
-		$editFreetext = ( !$this->title
-		 // || $this->title->getContentModel() !== 'wikitext'
-		);
-
-		$freetext = !$editFreetext ? null : \PageProperties::getWikipageContent( $this->title );
 
 		$formID = \PageProperties::formID( $this->title ? $this->title : $out->getTitle(), $schemas, 1 );
-
-		$formData = [
-			'freetext' => $freetext,
-			'jsonData' => $jsonData,
-			'categories' => $categories,
-			'schemas' => $schemas,
-			'errors' => [],
-		];
 
 		$targetSlot = \PageProperties::getTargetSlot( $this->title );
 
 		$options = [
-			// success submission
-			'return-url' => ( $this->title ? $this->title->getLocalURL() : '' ),
-
-			// edited page
-			'edit-page' => ( $this->title ? $this->title->getFullText() : '' ),
-
+			'action' => ( $this->title && $this->title->isKnown() ? 'edit' : 'create' ),
 			'target-slot' => $targetSlot,
-			'edit-freetext' => $editFreetext,
-
-			// show errors
-			'origin-url' => 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 's' : '' ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"
+			'edit-freetext' => ( !$this->title || !$this->title->isKnown() ),
 		];
 
-		if ( !$this->title && ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
-			$out->addModules( 'ext.veforall.main' );
-		}
+		$defaultParameters = \PageProperties::$PagepropertiesFormDefaultParameters;
+		array_walk( $defaultParameters, static function ( &$value, $key ) {
+			$value = [ $value['default'], $value['type'] ];
+		} );
+
+		$params = \PageProperties::applyDefaultParams( $defaultParameters, $options );
+
+		// "hardcode" more parameters
+		$params['return-url'] = ( $this->title ? $this->title->getLocalURL() : '' );
+		$params['origin-url'] = 'http' . ( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ? 's' : '' ) . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
+		// if ( !$this->title && ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
+		// 	$out->addModules( 'ext.veforall.main' );
+		// }
 
 		$pageForms = [
 			$formID => [
-				'options' => $options
+				'options' => $params,
+				'schemas' => $schemas
 			]
 		];
-
-		$pageForms[$formID] = array_merge( $pageForms[$formID], $formData );
 
 		\PageProperties::addJsConfigVars( $out, [
 			'pageForms' => $pageForms,

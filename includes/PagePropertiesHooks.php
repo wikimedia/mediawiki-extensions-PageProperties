@@ -88,6 +88,7 @@ class PagePropertiesHooks {
 		$parser->setFunctionHook( 'pagepropertiesprint', [ \PageProperties::class, 'parserFunctionPagepropertiesPrint' ] );
 		$parser->setFunctionHook( 'pagepropertiesquery', [ \PageProperties::class, 'parserFunctionPagepropertiesQuery' ] );
 		$parser->setFunctionHook( 'pagepropertiesform', [ \PageProperties::class, 'parserFunctionPagepropertiesForm' ] );
+		$parser->setFunctionHook( 'pagepropertiesbutton', [ \PageProperties::class, 'parserFunctionPagepropertiesButton' ] );
 	}
 
 	/**
@@ -128,19 +129,21 @@ class PagePropertiesHooks {
 	 * @param OutputPage $output
 	 * @param User $user
 	 * @param WebRequest $request
-	 * @param MediaWiki $mediaWiki
+	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
 	 * @return void
 	 */
-	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, \MediaWiki $mediaWiki ) {
+	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, $mediaWiki ) {
 		\PageProperties::initialize();
 
 		if ( !empty( $GLOBALS['wgPagePropertiesShowSlotsNavigation'] ) && isset( $_GET['slot'] ) ) {
 			$slot = $_GET['slot'];
 			$slots = \PageProperties::getSlots( $title );
 
-			// set content model of active slot
-			$model = $slots[ $slot ]->getModel();
-			$title->setContentModel( $model );
+			if ( is_array( $slots ) && array_key_exists( $slot, $slots ) ) {
+				// set content model of active slot
+				$model = $slots[ $slot ]->getModel();
+				$title->setContentModel( $model );
+			}
 		}
 	}
 
@@ -296,6 +299,38 @@ class PagePropertiesHooks {
 				);
 			}
 		}
+
+		$importer = \PageProperties::getImporter();
+		$error_messages = [];
+
+		// https://www.mediawiki.org/wiki/Help:TemplateData
+		$templates = [
+			'PagePropertiesForm' => \PageProperties::$PagepropertiesFormDefaultParameters,
+
+			// printouts and printouts template are dynamic
+			// so we leave for now
+			// 'PagePropertiesQuery' => \PageProperties::$PagepropertiesQueryDefaultParameters,
+			'PagePropertiesButton' => \PageProperties::$PagepropertiesButtonDefaultParameters,
+			'PagePropertiesPrint' => \PageProperties::$PagepropertiesQueryDefaultParameters
+		];
+
+		foreach ( $templates as $pageName => $value ) {
+			$text = \PageProperties::createTemplateContent( $pageName, $value );
+
+			$contents = [
+				[
+					'role' => SlotRecord::MAIN,
+					'model' => 'wikitext',
+					'text' => $text
+				]
+			];
+
+			try {
+				$importer->doImportSelf( "Template:$pageName", $contents );
+			} catch ( Exception $e ) {
+				$error_messages["Template:$pageName"] = $e->getMessage();
+			}
+		}
 	}
 
 	/**
@@ -431,67 +466,6 @@ class PagePropertiesHooks {
 		if ( $parserOutput->getExtensionData( 'pagepropertiesform' ) !== null ) {
 			$pageForms = $parserOutput->getExtensionData( 'pagepropertiesforms' );
 
-			foreach ( $pageForms as $formID => $value ) {
-				$schemas = $pageForms[$formID]['schemas'];
-				$databaseManager->storeLink( $title, 'form', $schemas );
-
-				$jsonData = [];
-				$freetext = null;
-				$categories = [];
-				$title_ = ( $value['options']['action'] === 'edit' ? $title : null );
-
-				if ( $value['options']['action'] === 'edit' ) {
-					if ( !empty( $value['options']['edit-page'] ) ) {
-						$title_ = Title::newFromText( $value['options']['edit-page'] );
-						if ( !$title_ || !$title_->isKnown() ) {
-							$title_ = null;
-						}
-					}
-					if ( $title_ ) {
-						$pageForms[$formID]['options']['edit-page'] = $title_->getFullText();
-
-						$jsonData_ = \PageProperties::getJsonData( $title_ );
-						if ( $jsonData_ !== false ) {
-							$jsonData = $jsonData_;
-						}
-					}
-				}
-
-				if ( $value['options']['edit-categories'] === true && $title_ ) {
-					$categories = \PageProperties::getCategories( $title_ );
-				}
-
-				if ( $value['options']['edit-freetext'] === true && $title_ ) {
-					$freetext = \PageProperties::getWikipageContent( $title_ );
-
-					// if ( ExtensionRegistry::getInstance()->isLoaded( 'VEForAll' ) ) {
-					//	$out->addModules( 'ext.veforall.main' );
-					// }
-				}
-
-				$formData = &$pageForms[$formID];
-
-				$formData['freetext'] = $freetext;
-				$formData['jsonData'] = $jsonData;
-				$formData['categories'] = $categories;
-				$formData['freetext'] = $freetext;
-				$formData['errors'] = [];
-
-				// current title
-				$pageForms[$formID]['options']['origin-url'] = $title->getLocalURL();
-
-				if ( !empty( $value['options']['return-page'] ) ) {
-					$title_ = Title::newFromText( $value['options']['return-page'] );
-					if ( $title_ ) {
-						$pageForms[$formID]['options']['return-url'] = $title_->getLocalURL();
-					}
-				}
-
-				if ( !empty( $value['options']['return-url'] ) ) {
-					$pageForms[$formID]['options']['return-url'] = $title->getLocalURL();
-				}
-			}
-
 			\PageProperties::addJsConfigVars( $out, [
 				'pageForms' => $pageForms,
 				'config' => [
@@ -501,6 +475,22 @@ class PagePropertiesHooks {
 			] );
 
 			$out->addModules( 'ext.PageProperties.EditSemantic' );
+		}
+
+		if ( $parserOutput->getExtensionData( 'pagepropertiesbutton' ) !== null ) {
+			$pageButtons = $parserOutput->getExtensionData( 'pagepropertiesbuttons' );
+
+			foreach ( $pageButtons as $buttonID => $value ) {
+				if ( !empty( $value['preload'] ) ) {
+					$pageButtons[$buttonID]['data'] = \PageProperties::getPreloadData( $value['preload'] );
+				}
+			}
+
+			$out->addJsConfigVars( [
+				'pageproperties-pageButtons' => json_encode( $pageButtons, true ),
+			] );
+
+			$out->addModules( 'ext.PageProperties.PageButtons' );
 		}
 	}
 

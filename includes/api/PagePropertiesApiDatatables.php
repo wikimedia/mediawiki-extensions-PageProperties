@@ -22,16 +22,7 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-use MediaWiki\Extension\PageProperties\QueryProcessor as QueryProcessor;
-use MediaWiki\Extension\PageProperties\ResultPrinters\QueryResultPrinter as QueryResultPrinter;
-
 class PagePropertiesApiDatatables extends ApiBase {
-
-	/** @var output */
-	private $output;
-
-	/** @var parser */
-	private $parser;
 
 	/**
 	 * @inheritDoc
@@ -56,9 +47,8 @@ class PagePropertiesApiDatatables extends ApiBase {
 		\PageProperties::initialize();
 		$result = $this->getResult();
 		$params = $this->extractRequestParams();
-		$output = $this->getContext()->getOutput();
+		// $output = $this->getContext()->getOutput();
 
-		$this->output = $output;
 		$data = json_decode( $params['data'], true );
 
 		// @see https://datatables.net/reference/option/ajax
@@ -76,8 +66,6 @@ class PagePropertiesApiDatatables extends ApiBase {
 			$datatableData['length'] = $tableData['defer-each'];
 		}
 
-		$this->parser = $parser;
-
 		// add/set specific parameters for this call
 		$params_ = array_merge(
 			$params_,
@@ -94,10 +82,17 @@ class PagePropertiesApiDatatables extends ApiBase {
 			]
 		);
 
+		$output = RequestContext::getMain()->getOutput();
 		$templates = [];
-		$queryProcessor = new QueryProcessor( $query, $printouts, $params_ );
-		$resultsPrinter = new QueryResultPrinter( $parser, $output, $queryProcessor, $schema, $templates, $params_, $printouts );
-		$results = $resultsPrinter->getResults();
+
+		[ $results, $isHtml ] = \PageProperties::getResults(
+			$parser,
+			$output,
+			$query,
+			$templates,
+			$printouts,
+			$params_
+		);
 
 		$rows = [];
 		foreach ( $results as $row ) {

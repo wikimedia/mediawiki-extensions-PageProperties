@@ -704,7 +704,7 @@ const PagePropertiesSchemas = ( function () {
 												if ( updateData( data ) === true ) {
 													Models.pop();
 													SelectedItems.pop();
-													WindowManager.removeActiveWindow();
+													WindowManager.closeActiveWindow();
 													initializeDataTable();
 												}
 											}

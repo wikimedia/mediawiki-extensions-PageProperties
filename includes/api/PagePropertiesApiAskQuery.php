@@ -22,8 +22,6 @@
  * @copyright Copyright ©2023, https://wikisphere.org
  */
 
-use MediaWiki\Extension\PageProperties\QueryProcessor as QueryProcessor;
-use MediaWiki\Extension\PageProperties\ResultPrinters\QueryResultPrinter as QueryResultPrinter;
 use MediaWiki\MediaWikiServices;
 
 class PagePropertiesApiAskQuery extends ApiBase {
@@ -73,8 +71,6 @@ class PagePropertiesApiAskQuery extends ApiBase {
 		$query = $parser->preprocess( $data['query'], $title, $poptions );
 		// -------------->
 
-		$this->parser = $parser;
-
 		// @TODO
 		// set params like
 		$optionsMap = [
@@ -84,12 +80,22 @@ class PagePropertiesApiAskQuery extends ApiBase {
 			// 'sort' => '',
 		];
 		$params_ = [
-			'schema' => $data['schema']
+			'schema' => $data['schema'],
+			'format' => 'query'
 		];
 		$printouts = $data['properties'];
 
 		$output = RequestContext::getMain()->getOutput();
-		$schema = \PageProperties::getSchema( $output, $data['schema'] );
+		$templates = [];
+
+		[ $results, $isHtml ] = \PageProperties::getResults(
+			$parser,
+			$output,
+			$query,
+			$templates,
+			$printouts,
+			$params_
+		);
 
 		if ( !empty( $data['options-query-formula'] ) ) {
 			$defaultValue = $data['options-query-formula'];
@@ -98,11 +104,6 @@ class PagePropertiesApiAskQuery extends ApiBase {
 				return "<$value>";
 			}, $printouts ) );
 		}
-
-		$templates = [];
-		$queryProcessor = new QueryProcessor( $query, $printouts, $params_ );
-		$resultsPrinter = new QueryResultPrinter( $parser, $output, $queryProcessor, $schema, $templates, $params_, $printouts );
-		$results = $resultsPrinter->getResults();
 
 		$optionsValues = [];
 		foreach ( $results as $properties ) {

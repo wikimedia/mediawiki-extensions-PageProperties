@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.4.8",
+	"version": "1.4.9",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -298,6 +298,30 @@
 				"style.css"
 			],
 			"dependencies": [
+			]
+		},
+		"ext.PageProperties.PageButtons": {
+			"position": "top",
+			"scripts": [
+				"PagePropertiesFunctions.js",
+				"PagePropertiesPageButtons.js"
+			],
+			"styles": [
+			],
+			"dependencies": [
+				"ext.PageProperties.promise-polyfill",
+				"mediawiki.util",
+				"mediawiki.base",
+				"mediawiki.cookie",
+				"oojs-ui-core",
+				"oojs-ui-widgets",
+				"mediawiki.storage",
+				"oojs-ui.styles.icons-media",
+				"oojs-ui.styles.icons-movement",
+				"oojs-ui.styles.icons-interactions",
+				"oojs-ui.styles.icons-editing-core"
+			],
+			"messages": [
 			]
 		},
 		"ext.PageProperties.EditSemantic": {

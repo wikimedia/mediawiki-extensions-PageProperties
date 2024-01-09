@@ -30,13 +30,13 @@ use Parser;
 
 class SchemaProcessor {
 
-	/** @var output */
+	/** @var Output */
 	private $output;
 
-	/** @var formattedNamespaces */
+	/** @var array */
 	private $formattedNamespaces;
 
-	/** @var formattedNamespaces */
+	/** @var array */
 	private $allowedMimeTypes;
 
 	/** @var array */
@@ -69,7 +69,7 @@ class SchemaProcessor {
 		'week'
 	];
 
-	/** @var mapSchema */
+	/** @var array */
 	private $mapSchema = [
 		'title' => [ 'title', 'string' ],
 		'description' => [ 'description', 'string' ],
@@ -79,14 +79,14 @@ class SchemaProcessor {
 		'unique-items' => [ 'uniqueItems', 'bool' ],
 	];
 
-	/** @var mapSchemaOptions */
+	/** @var array */
 	private $mapSchemaOptions = [
 		'collapsible' => [ 'disable_collapse', 'bool' ],
 		'collapsed' => [ 'collapsed', 'bool' ],
 		// 'hidden' => [ 'hidden' => 'bool' ],
 	];
 
-	/** @var mapField */
+	/** @var array */
 	private $mapField = [
 		// 'name',
 		'label' => 'title',
@@ -113,7 +113,7 @@ class SchemaProcessor {
 		// 'value-formula',			// replacement formula
 	];
 
-	/** @var mapInputConfig */
+	/** @var array */
 	private $mapInputConfig = [
 		'maxLength' => 'maxLength',
 		'minLength' => 'minLength',
@@ -131,7 +131,7 @@ class SchemaProcessor {
 	];
 
 	// @see ManageProperties var optionsInputs
-	/** @var optionsInputs */
+	/** @var array */
 	private $optionsInputs = [
 		'OO.ui.DropdownInputWidget',
 		'OO.ui.ComboBoxInputWidget',

@@ -49,7 +49,9 @@ $( function () {
 		var count = table.data( 'count' );
 		var tableData = table.data();
 
-		var conf = {};
+		var conf = {
+			pageLength: 20
+		};
 		$( this ).DataTable( conf );
 	} );
 } );
