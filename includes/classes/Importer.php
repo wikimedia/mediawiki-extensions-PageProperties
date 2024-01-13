@@ -38,9 +38,6 @@ class Importer {
 	/** @var string */
 	private $schemaName;
 
-	/** @var array */
-	private $schema;
-
 	/** @var Context */
 	private $context;
 
@@ -88,17 +85,15 @@ class Importer {
 		}
 
 		$this->showMsg = $showMsg;
-
 		$schema = \PageProperties::getSchema( $this->output, $this->schemaName );
 
 		if ( !$schema ) {
 			$showMsg( 'generating schema' );
-			if ( !$this->createSchema( $this->schemaName, $data ) ) {
+			// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.Found
+			if ( !( $schema = $this->createSchema( $this->schemaName, $data ) ) ) {
 				$showMsg( "couldn't save schema" );
 				return false;
 			}
-		} else {
-			$this->schema = $schema;
 		}
 
 		if ( !\PageProperties::isList( $data ) ) {
@@ -111,7 +106,7 @@ class Importer {
 
 		$n = 0;
 		foreach ( $data as $key => $value ) {
-			$flatten = $databaseManager->prepareData( $this->schema, $value );
+			$flatten = $databaseManager->prepareData( $schema, $value );
 			$titleText = $submitForm->replacePageNameFormula( $flatten, $pagenameFormula, $properties );
 
 			$title_ = Title::newFromText( $titleText );
@@ -175,17 +170,18 @@ class Importer {
 	/**
 	 * @param string $name
 	 * @param array $data
-	 * @return RevisionRecord|null
+	 * @return array|bool
 	 */
 	private function createSchema( $name, $data ) {
 		$schemaProcessor = new SchemaProcessor();
 		$schemaProcessor->setOutput( $this->output );
 		$schema = $schemaProcessor->generateFromData( $data, $name );
-		// $recordedObj = $schemaProcessor->convertToSchema( $schema );
-		$recordedObj = $schema;
 		$title = Title::makeTitleSafe( NS_PAGEPROPERTIESSCHEMA, $name );
-		$this->schema = $schemaProcessor->processSchema( $schema, $name );
-		return \PageProperties::saveRevision( $this->user, $title, json_encode( $recordedObj ) );
+		$statusOK = \PageProperties::saveRevision( $this->user, $title, json_encode( $schema ) );
+		if ( !$statusOK ) {
+			return false;
+		}
+		return $schemaProcessor->processSchema( $schema, $name );
 	}
 
 }

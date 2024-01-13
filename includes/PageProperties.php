@@ -1472,9 +1472,24 @@ class PageProperties {
 
 		$databaseManager = new DatabaseManager();
 		$flatten = [];
+		self::$schemaProcessor->setOutput( $output );
+
 		foreach ( $data['schemas'] as $schemaName => $value ) {
+			if ( !array_key_exists( $schemaName, $schemas ) ) {
+				$schema = self::$schemaProcessor->generateFromData( $value, $schemaName );
+
+				$title_ = Title::makeTitleSafe( NS_PAGEPROPERTIESSCHEMA, $schemaName );
+				$statusOK = self::saveRevision( self::$User, $title_, json_encode( $schema ) );
+				if ( !$statusOK ) {
+					self::$Logger->error( 'rebuildArticleDataFromSlot cannot save schema' );
+					continue;
+				}
+				$schemas[$schemaName] = self::$schemaProcessor->processSchema( $schema, $schemaName );
+			}
+
 			$flatten = array_merge( $flatten, $databaseManager->prepareData( $schemas[$schemaName], $value ) );
 		}
+
 		$databaseManager->recordProperties( 'rebuildArticleDataFromSlot', $title, $flatten, $errors );
 	}
 
@@ -1591,13 +1606,17 @@ class PageProperties {
 			$jsonData = [];
 			$freetext = null;
 			$categories = [];
-			$editTitle = ( $title && $title->isKnown() ? $title : null );
+			$editTitle = null;
 
 			if ( !empty( $value['options']['preload'] ) ) {
 				$jsonData = self::getPreloadData( $value['options']['preload'] );
 			}
 
 			if ( $value['options']['action'] === 'edit' ) {
+				if ( $title && $title->isKnown() ) {
+					$editTitle = $title;
+				}
+
 				if ( !empty( $value['options']['edit-page'] ) ) {
 					$editTitle = self::getTitleIfKnown( $value['options']['edit-page'] );
 				}
@@ -1625,7 +1644,6 @@ class PageProperties {
 
 			$formData = &$pageForms[$formID];
 
-			$formData['freetext'] = $freetext;
 			$formData['jsonData'] = $jsonData;
 			$formData['categories'] = $categories;
 			$formData['freetext'] = $freetext;
