@@ -622,6 +622,8 @@ class QueryProcessor {
 				$tables['page'] = $this->dbr->tableName( 'page' );
 				// 'USE INDEX' => ( version_compare( MW_VERSION, '1.36', '<' ) ? 'name_title' : 'page_name_title' ),
 				$joins['page'] = [ 'JOIN', [ 'page.page_id = t0.page_id' ] ];
+				// @FIXME replace underscore inside parseCondition
+				$value = str_replace( ' ', '_', $value );
 
 				// check if is a registered namespace
 				$arr = explode( ':', $value );
