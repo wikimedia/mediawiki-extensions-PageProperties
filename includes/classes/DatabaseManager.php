@@ -60,7 +60,6 @@ class DatabaseManager {
 
 	/** @var array */
 	public static $tables = [
-		'pageproperties_pageproperties',
 		'pageproperties_schema_pages',
 		'pageproperties_schemas',
 		'pageproperties_props',

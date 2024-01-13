@@ -281,14 +281,18 @@ class PagePropertiesHooks {
 	 */
 	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater = null ) {
 		$base = __DIR__;
-		$dbType = $updater->getDB()->getType();
+		$db = $updater->getDB();
+		$dbType = $db->getType();
+
+		$tables = DatabaseManager::$tables;
+		$tables[] = 'pageproperties_pageproperties';
 
 		// print_r($types);
-		foreach ( DatabaseManager::$tables as $tableName ) {
+		foreach ( $tables as $tableName ) {
 			$filename = "$base/../$dbType/$tableName.sql";
 
 			// echo $filename;
-			if ( file_exists( $filename ) ) {
+			if ( file_exists( $filename ) && !$db->tableExists( $tableName ) ) {
 				$updater->addExtensionUpdate(
 					[
 						'addTable',
