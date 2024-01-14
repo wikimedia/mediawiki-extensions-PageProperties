@@ -202,6 +202,10 @@
 	"pageproperties-parserfunction-query-format-description": "A label message",
 	"pageproperties-parserfunction-query-format-example": "A label message",
 
+	"pageproperties-parserfunction-query-pagetitle-label": "A label message",
+	"pageproperties-parserfunction-query-pagetitle-description": "A label message",
+	"pageproperties-parserfunction-query-pagetitle-example": "A label message",
+
 	"pageproperties-parserfunction-query-pagetitle-name-label": "A label message",
 	"pageproperties-parserfunction-query-pagetitle-name-description": "A label message",
 	"pageproperties-parserfunction-query-pagetitle-name-example": "A label message",

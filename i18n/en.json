@@ -209,6 +209,10 @@
 	"pageproperties-parserfunction-query-format-description": "",
 	"pageproperties-parserfunction-query-format-example": "",
 
+	"pageproperties-parserfunction-query-pagetitle-label": "pagetitle",
+	"pageproperties-parserfunction-query-pagetitle-description": "show/hide pagetitle",
+	"pageproperties-parserfunction-query-pagetitle-example": "",
+
 	"pageproperties-parserfunction-query-pagetitle-name-label": "pagetitle-name",
 	"pageproperties-parserfunction-query-pagetitle-name-description": "",
 	"pageproperties-parserfunction-query-pagetitle-name-example": "",

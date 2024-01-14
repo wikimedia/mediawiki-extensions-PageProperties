@@ -48,9 +48,12 @@ class TableResultPrinter extends ResultPrinter {
 	 */
 	public function processRow( $title, $value ) {
 		$this->htmlTable->row();
-		$this->headers['_'] = $this->params['pagetitle-name'];
-		$formatted = Linker::link( $title, $title->getText() );
-		$this->htmlTable->cell( $formatted );
+
+		if ( !empty( $this->params['pagetitle'] ) ) {
+			$this->headers['_'] = $this->params['pagetitle-name'];
+			$formatted = Linker::link( $title, $title->getText() );
+			$this->htmlTable->cell( $formatted );
+		}
 
 		$path = '';
 		$pathNoIndex = '';

@@ -366,6 +366,14 @@ class PageProperties {
 			'default' => '',
 			'example' => 'pageproperties-parserfunction-query-format-example'
 		],
+		'pagetitle' => [
+			'label' => 'pageproperties-parserfunction-query-pagetitle-label',
+			'description' => 'pageproperties-parserfunction-query-pagetitle-description',
+			'type' => 'boolean',
+			'required' => false,
+			'default' => '1',
+			'example' => 'pageproperties-parserfunction-query-pagetitle-example'
+		],
 		'pagetitle-name' => [
 			'label' => 'pageproperties-parserfunction-query-pagetitle-name-label',
 			'description' => 'pageproperties-parserfunction-query-pagetitle-name-description',
@@ -1644,7 +1652,7 @@ class PageProperties {
 
 			$formData = &$pageForms[$formID];
 
-			$formData['jsonData'] = $jsonData;
+			$formData['jsonData'] = ( !empty( $jsonData ) ? $jsonData : [] );
 			$formData['categories'] = $categories;
 			$formData['freetext'] = $freetext;
 			$formData['errors'] = [];
