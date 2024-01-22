@@ -19,7 +19,7 @@
  * @file
  * @ingroup extensions
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright ©2021-2023, https://wikisphere.org
+ * @copyright Copyright ©2021-2024, https://wikisphere.org
  */
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';

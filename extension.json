@@ -1,7 +1,7 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.4.9",
+	"version": "1.5.0",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
@@ -15,173 +15,62 @@
 		]
 	},
 	"callback": "PagePropertiesHooks::initExtension",
-	"HookHandlers": {
-		"pageproperties_searchdata": {
-			"class": "PagePropertiesDataForSearchIndex",
-			"services": [
-				"ContentHandlerFactory"
-			]
-		}
-	},
-	"ContentHandlers": {
-		"html": "PagePropertiesHtmlContentHandler",
-		"pageproperties-jsondata": "PagePropertiesJsonDataContentHandler",
-		"pageproperties-semantic": "PagePropertiesJsonDataContentHandler"
-	},
-	"Actions": {
-		"editsemantic": "PagePropertiesEditAction"
-	},
 	"AutoloadClasses": {
 		"PageProperties": "includes/PageProperties.php",
 		"PagePropertiesHooks": "includes/PagePropertiesHooks.php",
-		"PagePropertiesEditAction": "includes/PagePropertiesEditAction.php",
-		"SpecialPagePropertiesSubmit": "includes/specials/SpecialPagePropertiesSubmit.php",
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
-		"SpecialEditSemantic": "includes/specials/SpecialEditSemantic.php",
-		"SpecialManageSchemas": "includes/specials/SpecialManageSchemas.php",
-		"SpecialPagePropertiesBrowse": "includes/specials/SpecialPagePropertiesBrowse.php",
-		"PagePropertiesHtmlContentHandler": "includes/content/PagePropertiesHtmlContentHandler.php",
-		"PagePropertiesHtmlContent": "includes/content/PagePropertiesHtmlContent.php",
-		"PagePropertiesJsonDataContentHandler": "includes/content/PagePropertiesJsonDataContentHandler.php",
-		"PagePropertiesJsonDataContent": "includes/content/PagePropertiesJsonDataContent.php",
-		"PagePropertiesApiLoadData": "includes/api/PagePropertiesApiLoadData.php",
-		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php",
-		"PagePropertiesApiSaveSchema": "includes/api/PagePropertiesApiSaveSchema.php",
-		"PagePropertiesApiGetSchemas": "includes/api/PagePropertiesApiGetSchemas.php",
-		"PagePropertiesApiSubmitForm": "includes/api/PagePropertiesApiSubmitForm.php",
-		"PagePropertiesApiAskQuery": "includes/api/PagePropertiesApiAskQuery.php",
-		"PagePropertiesApiDatatables": "includes/api/PagePropertiesApiDatatables.php"
-	},
-	"AutoloadNamespaces": {
-		"MediaWiki\\Extension\\PageProperties\\": "includes/classes/",
-		"MediaWiki\\Extension\\PageProperties\\ResultPrinters\\": "includes/classes/formats/",
-		"MediaWiki\\Extension\\PageProperties\\Utils\\": "includes/utils/",
-		"MediaWiki\\Extension\\PageProperties\\Pagers\\": "includes/specials/pagers/",
-		"MediaWiki\\Extension\\PageProperties\\Specials\\": "includes/specials/BrowseData/"
+		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php"
 	},
 	"ExtensionMessagesFiles": {
-		"PagePropertiesAlias": "PageProperties.alias.php",
-		"PagePropertiesMagic": "PagePropertiesMagic.i18n.magic.php"
+		"PagePropertiesAlias": "PageProperties.alias.php"
 	},
 	"Hooks": {
 		"LoadExtensionSchemaUpdates": "PagePropertiesHooks::onLoadExtensionSchemaUpdates",
 		"PageDeleteComplete": "PagePropertiesHooks::onPageDeleteComplete",
 		"ArticleUndelete": "PagePropertiesHooks::onArticleUndelete",
-		"ParserFirstCallInit": "PagePropertiesHooks::onParserFirstCallInit",
-		"PageSaveComplete": "PagePropertiesHooks::onPageSaveComplete",
-		"SMW::Property::initProperties": "PagePropertiesHooks::onSMWPropertyinitProperties",
 		"BeforeInitialize": "PagePropertiesHooks::onBeforeInitialize",
 		"ParserAfterTidy": "PagePropertiesHooks::onParserAfterTidy",
-		"MediaWikiServices": "PagePropertiesHooks::onMediaWikiServices",
 		"MultiContentSave": "PagePropertiesHooks::onMultiContentSave",
-		"RevisionFromEditComplete": "PagePropertiesHooks::onRevisionFromEditComplete",
 		"OutputPageParserOutput": "PagePropertiesHooks::onOutputPageParserOutput",
-		"EditPage::showEditForm:initial": "PagePropertiesHooks::onEditPageshowEditForminitial",
-		"ContentGetParserOutput": "PagePropertiesHooks::onContentGetParserOutput",
-		"ContentAlterParserOutput": "PagePropertiesHooks::onContentAlterParserOutput",
-		"PageRenderingHash": "PagePropertiesHooks::onPageRenderingHash",
 		"BeforePageDisplay": "PagePropertiesHooks::onBeforePageDisplay",
-		"SkinBuildSidebar": "PagePropertiesHooks::onSkinBuildSidebar",
 		"SidebarBeforeOutput": "PagePropertiesHooks::onSidebarBeforeOutput",
 		"SkinTemplateNavigation::Universal": "PagePropertiesHooks::onSkinTemplateNavigation",
-		"SMW::Store::BeforeDataUpdateComplete": "PagePropertiesHooks::onSMWStoreBeforeDataUpdateComplete",
 		"LinkerMakeExternalLink": "PagePropertiesHooks::onLinkerMakeExternalLink"
 	},
 	"SpecialPages": {
-		"PageProperties": "SpecialPageProperties",
-		"PagePropertiesSubmit": "SpecialPagePropertiesSubmit",
-		"EditSemantic": "SpecialEditSemantic",
-		"ManageSchemas": "SpecialManageSchemas",
-		"PagePropertiesBrowse": "SpecialPagePropertiesBrowse",
-		"PagePropertiesBrowseSchemas": "MediaWiki\\Extension\\PageProperties\\Specials\\BrowseSchemas",
-		"PagePropertiesBrowseData": "MediaWiki\\Extension\\PageProperties\\Specials\\BrowseData",
-		"PagePropertiesBrowseQueries": "MediaWiki\\Extension\\PageProperties\\Specials\\BrowseQueries",
-		"PagePropertiesBrowseForms": "MediaWiki\\Extension\\PageProperties\\Specials\\BrowseForms"
+		"PageProperties": "SpecialPageProperties"
 	},
 	"APIModules": {
-		"pageproperties-load-data": "PagePropertiesApiLoadData",
-		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion",
-		"pageproperties-save-schema": "PagePropertiesApiSaveSchema",
-		"pageproperties-get-schemas": "PagePropertiesApiGetSchemas",
-		"pageproperties-submit-form": "PagePropertiesApiSubmitForm",
-		"pageproperties-askquery": "PagePropertiesApiAskQuery",
-		"pageproperties-datatables": "PagePropertiesApiDatatables"
+		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion"
 	},
-	"namespaces": [
-		{
-			"id": 2226,
-			"constant": "NS_PAGEPROPERTIESFORM",
-			"name": "PagePropertiesForm",
-			"defaultcontentmodel": "json",
-			"content": true,
-			"subpages": false
-		},
-		{
-			"id": 2227,
-			"constant": "NS_PAGEPROPERTIESFORM_TALK",
-			"name": "PagePropertiesFormTalk"
-		},
-		{
-			"id": 2228,
-			"constant": "NS_PAGEPROPERTIESSCHEMA",
-			"name": "PagePropertiesSchema",
-			"defaultcontentmodel": "json",
-			"content": true,
-			"subpages": false
-		},
-		{
-			"id": 2229,
-			"constant": "NS_PAGEPROPERTIESSCHEMA_TALK",
-			"name": "PagePropertiesSchemaTalk"
-		}
-	],
 	"GroupPermissions": {
 		"sysop": {
-			"pageproperties-caneditpageproperties": true,
-			"pageproperties-caneditschemas": true,
-			"pageproperties-canmanageschemas": true,
-			"pageproperties-canmanagesemanticproperties": true
+			"pageproperties-caneditpageproperties": true
 		},
 		"bureaucrat": {
-			"pageproperties-caneditpageproperties": true,
-			"pageproperties-caneditschemas": true,
-			"pageproperties-canmanageschemas": true,
-			"pageproperties-canmanagesemanticproperties": true
+			"pageproperties-caneditpageproperties": true
 		},
 		"pageproperties-admin": {
-			"pageproperties-caneditpageproperties": true,
-			"pageproperties-caneditschemas": true,
-			"pageproperties-canmanageschemas": true,
-			"pageproperties-canmanagesemanticproperties": true
+			"pageproperties-caneditpageproperties": true
 		},
-		"pageproperties-pagepropertieseditor": {
-			"pageproperties-caneditpageproperties": true,
-			"pageproperties-caneditschemas": true,
-			"pageproperties-canmanageschemas": true,
-			"pageproperties-canmanagesemanticproperties": false
+		"pageproperties-editor": {
+			"pageproperties-caneditpageproperties": true
 		}
 	},
 	"AddGroups": {
 		"pageproperties-admin": [
 			"pageproperties-admin",
-			"pageproperties-editor",
-			"pageproperties-pagepropertieseditor",
-			"pageproperties-semanticpropertieseditor"
+			"pageproperties-editor"
 		]
 	},
 	"RemoveGroups": {
 		"pageproperties-admin": [
 			"pageproperties-admin",
-			"pageproperties-editor",
-			"pageproperties-pagepropertieseditor",
-			"pageproperties-semanticpropertieseditor"
+			"pageproperties-editor"
 		]
 	},
 	"AvailableRights": [
-		"pageproperties-caneditpageproperties",
-		"pageproperties-caneditschemas",
-		"pageproperties-canmanagesemanticproperties",
-		"pageproperties-canmanageschemas"
+		"pageproperties-caneditpageproperties"
 	],
 	"ResourceFileModulePaths": {
 		"localBasePath": "resources",
@@ -225,253 +114,14 @@
 				"pageproperties-form-seo_subpages-label",
 				"pageproperties-form-seo_entire_wiki-label"
 			]
-		},
-		"ext.PageProperties.promise-polyfill": {
-			"scripts": "promise-polyfill/promise-polyfill.js",
-			"skipFunction": "promise-polyfill/skip-Promise.js"
-		},
-		"ext.PageProperties.Common": {
-			"position": "top",
-			"scripts": [
-				"PagePropertiesFunctions.js",
-				"intl-tel-input/js/intlTelInput.js",
-				"ajv-validator/ajv7.bundle-ecma5-min.js",
-				"PagePropertiesintlTelInput.js",
-				"PagePropertiesButtonMultiselectWidget.js",
-				"PagePropertiesLookupElement.js",
-				"PagePropertiesMenuTagSearchMultiselect.js",
-				"PagePropertiesRatingWidget.js",
-				"PagePropertiesDropdownWidget.js",
-				"PagePropertiesUpload.js",
-				"PagePropertiesVisualEditor.js"
-			],
-			"styles": [
-				"intl-tel-input/css/intlTelInput.min.css",
-				"style-rating.css",
-				"style.css"
-			],
-			"dependencies": [
-				"ext.PageProperties.promise-polyfill",
-				"mediawiki.util",
-				"mediawiki.base",
-				"mediawiki.cookie",
-				"oojs-ui-core",
-				"oojs-ui-widgets",
-				"mediawiki.storage",
-				"oojs-ui.styles.icons-media",
-				"oojs-ui.styles.icons-movement",
-				"oojs-ui.styles.icons-interactions",
-				"oojs-ui.styles.icons-editing-core",
-				"oojs-ui-toolbars",
-				"oojs-ui-windows",
-				"mediawiki.widgets",
-				"mediawiki.widgets.datetime",
-				"mediawiki.widgets.DateInputWidget",
-				"mediawiki.widgets.TitlesMultiselectWidget",
-				"mediawiki.widgets.CategoryMultiselectWidget",
-				"mediawiki.widgets.UserInputWidget",
-				"mediawiki.widgets.UsersMultiselectWidget",
-				"mediawiki.Upload"
-			]
-		},
-		"ext.PageProperties.ManageSchemas": {
-			"position": "top",
-			"scripts": [
-				"tabs.js"
-			],
-			"dependencies": [
-				"ext.PageProperties.EditSemantic"
-			],
-			"messages": [
-				"manageschemas",
-				"pageproperties-form-section-schemas-label"
-			]
-		},
-		"ext.PageProperties.PrintResults": {
-			"position": "top",
-			"scripts": [
-				"datatables/datatables.min.js",
-				"PagePropertiesDatatables.js"
-			],
-			"styles": [
-				"datatables/datatables.min.css",
-				"style.css"
-			],
-			"dependencies": [
-			]
-		},
-		"ext.PageProperties.PageButtons": {
-			"position": "top",
-			"scripts": [
-				"PagePropertiesFunctions.js",
-				"PagePropertiesPageButtons.js"
-			],
-			"styles": [
-			],
-			"dependencies": [
-				"ext.PageProperties.promise-polyfill",
-				"mediawiki.util",
-				"mediawiki.base",
-				"mediawiki.cookie",
-				"oojs-ui-core",
-				"oojs-ui-widgets",
-				"mediawiki.storage",
-				"oojs-ui.styles.icons-media",
-				"oojs-ui.styles.icons-movement",
-				"oojs-ui.styles.icons-interactions",
-				"oojs-ui.styles.icons-editing-core"
-			],
-			"messages": [
-			]
-		},
-		"ext.PageProperties.EditSemantic": {
-			"position": "top",
-			"scripts": [
-				"datatables/datatables.min.js",
-				"PagePropertiesFunctions.js",
-				"PagePropertiesWindowManager.js",
-				"PagePropertiesInputConfig.js",
-				"PagePropertiesContentBlock.js",
-				"PagePropertiesFormField.js",
-				"PagePropertiesSchemas.js",
-				"PagePropertiesProcessModel.js",
-				"VersionCheck.js",
-				"PageProperties.js"
-			],
-			"styles": [
-				"datatables/datatables.min.css"
-			],
-			"dependencies": [
-				"mediawiki.rcfilters.filters.base.styles",
-				"ext.PageProperties.Common"
-			],
-			"messages": [
-				"pageproperties-jsmodule-pageproperties-outdated-version",
-				"pageproperties-jsmodule-pageproperties-addremoveschemas",
-				"pageproperties-jsmodule-schemas-create-schema",
-				"pageproperties-jsmodule-schemas-columns",
-				"pageproperties-jsmodule-pageproperties-page-properties",
-				"pageproperties-jsmodule-pageproperties-manage-schemas",
-				"pageproperties-jsmodule-schemas-defineschema",
-				"pageproperties-jsmodule-schemas-panel-properties",
-				"pageproperties-jsmodule-dialog-save",
-				"pageproperties-jsmodule-dialog-delete",
-				"pageproperties-jsmodule-schemas-name",
-				"pageproperties-jsmodule-schemas-title",
-				"pageproperties-jsmodule-schemas-title-help",
-				"pageproperties-jsmodule-schemas-description",
-				"pageproperties-jsmodule-schemas-description-help",
-				"pageproperties-jsmodule-schemas-add-field",
-				"pageproperties-jsmodule-schemas-add-block-content",
-				"pageproperties-jsmodule-pageproperties-columns-schemas-dialog",
-				"pageproperties-jsmodule-schemas-add-subitem",
-				"pageproperties-jsmodule-schemas-subitem",
-				"pageproperties-jsmodule-schemas-multiple",
-				"pageproperties-jsmodule-formfield-n/a",
-				"pageproperties-jsmodule-formfield-not-required",
-				"pageproperties-jsmodule-forms-definefield",
-				"pageproperties-jsmodule-formfield-name",
-				"pageproperties-jsmodule-formfield-name-help",
-				"pageproperties-jsmodule-formfield-label",
-				"pageproperties-jsmodule-forms-field-help-message",
-				"pageproperties-jsmodule-forms-field-visibility-label",
-				"pageproperties-jsmodule-forms-visibility-visible",
-				"pageproperties-jsmodule-forms-field-visibility-help",
-				"pageproperties-jsmodule-formfield-schematypes",
-				"pageproperties-jsmodule-formfield-schematextsubtypes",
-				"pageproperties-jsmodule-formfield-multiple-values",
-				"pageproperties-jsmodule-formfield-availableinputs",
-				"pageproperties-jsmodule-formfield-required",
-				"pageproperties-jsmodule-formfield-default",
-				"pageproperties-jsmodule-formfield-default-value-help",
-				"pageproperties-jsmodule-inputconfig-dialog-label",
-				"pageproperties-jsmodule-inputconfig-addremoveoptions",
-				"pageproperties-jsmodule-forms-contentblock-newlabel",
-				"pageproperties-jsmodule-forms-contentblock-content",
-				"pageproperties-jsmodule-forms-contentblock-content-help",
-				"pageproperties-jsmodule-schemas-multiple-items",
-				"pageproperties-jsmodule-schemas-layout-section",
-				"pageproperties-jsmodule-schemas-layout-horizontal",
-				"pageproperties-jsmodule-schemas-content-block",
-				"pageproperties-jsmodule-schemas-multiple-items-help",
-				"pageproperties-jsmodule-schemas-layout",
-				"pageproperties-jsmodule-schemas-layout-help",
-				"pageproperties-jsmodule-schemas-min-items",
-				"pageproperties-jsmodule-schemas-min-items-help",
-				"pageproperties-jsmodule-schemas-max-items",
-				"pageproperties-jsmodule-schemas-max-items-help",
-				"pageproperties-jsmodule-schemas-unique-items",
-				"pageproperties-jsmodule-schemas-unique-items-help",
-				"pageproperties-jsmodule-forms-field-options-from",
-				"pageproperties-jsmodule-forms-optionsfrom-optionsvalues",
-				"pageproperties-jsmodule-forms-optionsfrom-optionswikilist",
-				"pageproperties-jsmodule-forms-field-options-values",
-				"pageproperties-jsmodule-forms-field-options-label-formula",
-				"pageproperties-jsmodule-forms-field-options-label-formula-help",
-				"pageproperties-jsmodule-forms-field-wikilist",
-				"pageproperties-jsmodule-forms-selectfield",
-				"pageproperties-jsmodule-forms-searchdialog-save",
-				"pageproperties-jsmodule-formfield-newlabel",
-
-				"pageproperties-jsmodule-formedit-freetext",
-				"pageproperties-jsmodule-forms-categories",
-				"pageproperties-jsmodule-pageproperties-submit",
-				"pageproperties-jsmodule-schemas-alert-noname",
-				"pageproperties-jsmodule-schemas-alert-no-properties",
-				"pageproperties-jsmodule-pageproperties-searchdialog-save",
-				"pageproperties-jsmodule-pageproperties-dialogsearch-selectschemas",
-
-				"pageproperties-jsmodule-schemas-delete-confirm",
-				"pageproperties-jsmodule-pageproperties-delete-confirm",
-				"pageproperties-jsmodule-pageproperties-upload",
-				"pageproperties-jsmodule-forms-content-models",
-				"pageproperties-jsmodule-forms-pagename",
-				"pageproperties-jsmodule-forms-field-valueformula",
-				"pageproperties-jsmodule-forms-field-valueformula-help",
-				"pageproperties-jsmodule-forms-visibility-create-only",
-				"pageproperties-jsmodule-forms-visibility-hidden",
-				"pageproperties-jsmodule-schemas-alert-existing-item",
-				"pageproperties-jsmodule-schemas-alert-existing-schema",
-				"pageproperties-jsmodule-pageproperties-validate",
-				"pageproperties-jsmodule-pageproperties-goback",
-
-				"pageproperties-jsmodule-dialog-validate",
-				"pageproperties-jsmodule-dialog-goback",
-				"pageproperties-jsmodule-dialog-submit",
-				"pageproperties-jsmodule-dialog-close",
-				"pageproperties-jsmodule-forms-field-askquery-schema-label",
-				"pageproperties-jsmodule-forms-field-askquery-schema-help",
-				"pageproperties-jsmodule-forms-field-askquery-label",
-				"pageproperties-jsmodule-forms-field-askquery-help",
-				"pageproperties-jsmodule-forms-field-printouts",
-				"pageproperties-jsmodule-forms-field-printouts-help",
-				"pageproperties-jsmodule-forms-field-optionformula",
-				"pageproperties-jsmodule-forms-field-optionformula-help",
-				"pageproperties-jsmodule-forms-field-nullvalue",
-				"pageproperties-jsmodule-pageproperties-delete",
-				"pageproperties-jsmodule-pageproperties-delete-data-confirm",
-				"pageproperties-jsmodule-formfield-message-more-inputs",
-				"pageproperties-menutagmultiselect-placeholder",
-				"pageproperties-jsmodule-formfield-message-schemapage",
-				"pageproperties-jsmodule-schemas-container-schema",
-				"pageproperties-jsmodule-schemas-message-container-info",
-				"pageproperties-jsmodule-dialog-cancel",
-				"pageproperties-jsmodule-dialog-main",
-				"pageproperties-special-submit-notitle",
-				"pageproperties-jsmodule-pageforms-form-error"
-			]
 		}
 	},
 	"config": {
-		"PagePropertiesDisableJsonLD": false,
 		"PagePropertiesAddTrackingCategory": false,
 		"PagePropertiesDisableSidebarLink": false,
 		"PagePropertiesDisableNavigationLink": false,
-		"PagePropertiesOpenExternalLinksInNewTab": false,
 		"PagePropertiesDisplayAlwaysUnprefixedTitles": false,
-		"PagePropertiesCreateJobsWarningLimit": 0,
-		"PagePropertiesDisableVersionCheck": false,
-		"PagePropertiesEditSemanticNamespaces": [ 0 ]
+		"PagePropertiesDisableVersionCheck": false
 	},
 	"manifest_version": 1
 }

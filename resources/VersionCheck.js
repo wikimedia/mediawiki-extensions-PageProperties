@@ -16,7 +16,7 @@
  *
  * @file
  * @author thomas-topway-it <support@topway.it>
- * @copyright Copyright © 2021-2023, https://wikisphere.org
+ * @copyright Copyright © 2021-2024, https://wikisphere.org
  */
 $( function () {
 	if (
@@ -54,10 +54,7 @@ $( function () {
 							$( messageWidget.$element ).parent().remove();
 						};
 						messageWidget.on( 'close', closeFunction );
-						var selector = $( '#pageproperties-form' ).length ?
-							'#pageproperties-form' :
-							'.PagePropertiesFormWrapper';
-						$( selector )
+						$( '#pageproperties-form' )
 							.first()
 							.prepend( $( '<div><br/></div>' ).prepend( messageWidget.$element ) );
 

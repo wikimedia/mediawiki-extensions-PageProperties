@@ -49,10 +49,7 @@ class PagePropertiesApiCheckLatestVersion extends ApiBase {
 		$groups = [ 'sysop', 'bureaucrat', 'pageproperties-admin' ];
 
 		// execute if any of the condition below is true
-		if ( !$user->isAllowed( 'pageproperties-canmanageschemas' )
-			&& !$user->isAllowed( 'pageproperties-canmanagesemanticproperties' )
-			&& !$user->isAllowed( 'pageproperties-canmanageforms' )
-
+		if ( !$user->isAllowed( 'caneditpageproperties' )
 			// execute if user is in the admin group
 			&& !count( array_intersect( $groups, \PageProperties::getUserGroups() ) ) ) {
 			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
