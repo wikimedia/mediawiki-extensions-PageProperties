@@ -186,6 +186,14 @@ class PagePropertiesHooks {
 			return;
 		}
 		$title = $skin->getTitle();
+
+		// if ( $title->isSpecialPage() ) {
+		//	return;
+		// }
+		if ( !$title || !$title->canExist() ) {
+			return;
+		}
+
 		$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
 		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
 			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );

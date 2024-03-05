@@ -133,7 +133,14 @@ class SpecialPageProperties extends FormSpecialPage {
 			return;
 		}
 
-		$this->wikiPage = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title ) : WikiPage::factory( $title ) );
+		try {
+			$this->wikiPage = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title )
+				: WikiPage::factory( $title ) );
+
+		} catch ( Exception $e ) {
+			$out->addHTML( "<b>Internal error: </b>" . $e->getMessage() );
+			return;
+		}
 
 		$this->outputHeader();
 
