@@ -22,7 +22,6 @@
  * @copyright Copyright ©2021-2024, https://wikisphere.org
  */
 
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
 
 class PagePropertiesHooks {
@@ -41,10 +40,7 @@ class PagePropertiesHooks {
 				'ContentModelChangeFactory',
 				'ContentLanguage',
 				'LanguageNameUtils',
-				// MW 1.36+
-				( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
-				// ***whatever other class
-				: 'PermissionManager' )
+				'WikiPageFactory',
 			]
 		];
 
@@ -158,11 +154,7 @@ class PagePropertiesHooks {
 		if ( $displaytitle !== false ) {
 			// getRevisionParserOutput();
 			$out = $renderedRevision->getSlotParserOutput( SlotRecord::MAIN );
-			if ( method_exists( $out, 'setPageProperty' ) ) {
-				$out->setPageProperty( 'displaytitle', $displaytitle );
-			} else {
-				$out->setProperty( 'displaytitle', $displaytitle );
-			}
+			$out->setPageProperty( 'displaytitle', $displaytitle );
 		}
 	}
 
