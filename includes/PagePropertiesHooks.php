@@ -36,6 +36,7 @@ class PagePropertiesHooks {
 		$GLOBALS['wgSpecialPages']['PageProperties'] = [
 			'class' => \SpecialPageProperties::class,
 			'services' => [
+				'ConnectionProvider',
 				'ContentHandlerFactory',
 				'ContentModelChangeFactory',
 				'ContentLanguage',

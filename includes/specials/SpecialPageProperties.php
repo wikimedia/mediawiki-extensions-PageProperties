@@ -28,11 +28,13 @@ use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\Page\ContentModelChangeFactory;
 use MediaWiki\Page\WikiPageFactory;
+use Wikimedia\Rdbms\IConnectionProvider;
 
 // @TODO handle properties through database
 // @see here https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
 
 class SpecialPageProperties extends FormSpecialPage {
+	private IConnectionProvider $connectionProvider;
 	private IContentHandlerFactory $contentHandlerFactory;
 	private ContentModelChangeFactory $contentModelChangeFactory;
 	private Language $contentLanguage;
@@ -54,6 +56,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	private User $user;
 
 	/**
+	 * @param IConnectionProvider $connectionProvider
 	 * @param IContentHandlerFactory $contentHandlerFactory
 	 * @param ContentModelChangeFactory $contentModelChangeFactory
 	 * @param Language $contentLanguage
@@ -61,6 +64,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @param WikiPageFactory $wikiPageFactory
 	 */
 	public function __construct(
+		IConnectionProvider $connectionProvider,
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
 		Language $contentLanguage,
@@ -72,6 +76,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		// https://www.mediawiki.org/wiki/Manual:Special_pages
 		parent::__construct( 'PageProperties', '', $listed );
 
+		$this->connectionProvider = $connectionProvider;
 		$this->contentHandlerFactory = $contentHandlerFactory;
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
 		$this->contentLanguage = $contentLanguage;
@@ -637,7 +642,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @param array $tags Change tags to apply to the log entry
 	 * @return Status
 	 */
-	public static function changePageLanguage(
+	public function changePageLanguage(
 		IContextSource $context,
 		Title $title,
 		$newLanguage,
@@ -658,7 +663,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		// Load the page language from DB
-		$dbw = \PageProperties::wfGetDB( DB_PRIMARY );
+		$dbw = $this->connectionProvider->getPrimaryDatabase();
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',
@@ -837,7 +842,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		if ( !empty( $pageProperties['language'] ) ) {
 			$newLanguage = $pageProperties['language'];
 
-			$res_ = self::changePageLanguage(
+			$res_ = $this->changePageLanguage(
 				$this->getContext(),
 				$title,
 				$newLanguage,

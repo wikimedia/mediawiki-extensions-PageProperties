@@ -120,7 +120,7 @@ class PageProperties {
 		if ( !empty( $page_id ) ) {
 			$conds['page_id'] = $page_id;
 		}
-		$dbr = self::wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 
 		$row = $dbr->selectRow(
 			'pageproperties_pageproperties',
@@ -155,7 +155,7 @@ class PageProperties {
 		$obj['meta'] = ( !empty( $obj[ 'meta' ] ) ? json_encode( $obj[ 'meta' ] )
 			: null );
 
-		$dbr = self::wfGetDB( DB_PRIMARY );
+		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
 		if ( self::getPageProperties( $title ) === false ) {
 			$obj['page_id'] = $page_id;
 			$obj['created_at'] = $date;
@@ -420,17 +420,6 @@ class PageProperties {
 			$growinglink .= '/';
 		}
 		return $ret;
-	}
-
-	/**
-	 * @fixme use the suggested method since MW 1.39
-	 * @param int $db
-	 * @return \Wikimedia\Rdbms\DBConnRef
-	 */
-	public static function wfGetDB( $db ) {
-		return MediaWikiServices::getInstance()
-			->getDBLoadBalancer()
-			->getMaintenanceConnectionRef( $db );
 	}
 
 }
