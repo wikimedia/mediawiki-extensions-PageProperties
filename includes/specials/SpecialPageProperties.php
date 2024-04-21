@@ -33,6 +33,8 @@ use MediaWiki\Page\ContentModelChangeFactory;
 // @see here https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
 
 class SpecialPageProperties extends FormSpecialPage {
+	private IContentHandlerFactory $contentHandlerFactory;
+	private ContentModelChangeFactory $contentModelChangeFactory;
 
 	/** @var WikiPageFactory */
 	private $wikiPageFactory;
@@ -48,6 +50,8 @@ class SpecialPageProperties extends FormSpecialPage {
 
 	/** @var wikiPage */
 	protected $wikiPage;
+
+	private User $user;
 
 	/**
 	 * @param IContentHandlerFactory $contentHandlerFactory
