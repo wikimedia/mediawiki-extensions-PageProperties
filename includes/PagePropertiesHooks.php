@@ -102,7 +102,7 @@ class PagePropertiesHooks {
 			return;
 		}
 
-		if ( isset( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
+		if ( !empty( $GLOBALS['wgPagePropertiesAddTrackingCategory'] ) ) {
 			$pageProperties = \PageProperties::getPageProperties( $title );
 			if ( !empty( $pageProperties ) ) {
 				$parser->addTrackingCategory( 'pageproperties-tracking-category' );

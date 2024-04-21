@@ -655,7 +655,7 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		// Load the page language from DB
 		// phpcs:ignore MediaWiki.Usage.DeprecatedConstantUsage.DB_MASTER
-		$dbw = wfGetDB( version_compare( MW_VERSION, '1.36', '<' ) ? DB_MASTER : DB_PRIMARY );
+		$dbw = \PageProperties::wfGetDB( version_compare( MW_VERSION, '1.36', '<' ) ? DB_MASTER : DB_PRIMARY );
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',

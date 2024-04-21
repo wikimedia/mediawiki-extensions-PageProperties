@@ -7,6 +7,9 @@
 	"pageproperties": "Page Properties",
 	"pageproperties-navigation": "Page properties",
 
+	"pageproperties-tracking-category": "Pages with overriding page properties or SEO data",
+	"pageproperties-tracking-category-desc": "Pages with overriding page properties or SEO data",
+
 	"apihelp-pageproperties-check-latest-version-summary": "pageproperties check latest version",
 
 	"right-pageproperties-caneditpageproperties": "can edit pageproperties",

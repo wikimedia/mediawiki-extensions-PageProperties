@@ -120,7 +120,7 @@ class PageProperties {
 		if ( !empty( $page_id ) ) {
 			$conds['page_id'] = $page_id;
 		}
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = self::wfGetDB( DB_REPLICA );
 
 		$row = $dbr->selectRow(
 			'pageproperties_pageproperties',
@@ -155,7 +155,7 @@ class PageProperties {
 		$obj['meta'] = ( !empty( $obj[ 'meta' ] ) ? json_encode( $obj[ 'meta' ] )
 			: null );
 
-		$dbr = wfGetDB( DB_MASTER );
+		$dbr = self::wfGetDB( DB_MASTER );
 		if ( self::getPageProperties( $title ) === false ) {
 			$obj['page_id'] = $page_id;
 			$obj['created_at'] = $date;
@@ -221,14 +221,20 @@ class PageProperties {
 			// can be different from the html title
 			$outputPage->setPageTitle( $page_title );
 
+			// required by SkinWMAU
+			$outputPage->setDisplayTitle( $page_title );
+
 		} else {
 			$page_title = $title->getText();
 			if ( !empty( $GLOBALS['wgPagePropertiesDisplayAlwaysUnprefixedTitles'] ) ) {
 				$outputPage->setPageTitle( $page_title );
+
+				// required by SkinWMAU
+				$outputPage->setDisplayTitle( $page_title );
 			}
 		}
 
-		// page_title can be null
+		// page_title can be an empty string
 		if ( empty( $page_title ) ) {
 			$outputPage->addHeadItem( 'pageproperties_empty_title', '<style>h1 { border: none; } .mw-body .firstHeading { border-bottom: none; margin-bottom: 0; margin-top: 0; } </style>' );
 		}
@@ -418,6 +424,26 @@ class PageProperties {
 			$growinglink .= '/';
 		}
 		return $ret;
+	}
+
+	/**
+	 * @fixme use the suggested method since MW 1.39
+	 * @param int $db
+	 * @param string|string[] $groups
+	 * @param string|false $wiki
+	 * @return \Wikimedia\Rdbms\DBConnRef
+	 */
+	public static function wfGetDB( $db, $groups = [], $wiki = false ) {
+		if ( $wiki === false ) {
+			return MediaWikiServices::getInstance()
+				->getDBLoadBalancer()
+				->getMaintenanceConnectionRef( $db, $groups, $wiki );
+		} else {
+			return MediaWikiServices::getInstance()
+				->getDBLoadBalancerFactory()
+				->getMainLB( $wiki )
+				->getMaintenanceConnectionRef( $db, $groups, $wiki );
+		}
 	}
 
 }

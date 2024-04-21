@@ -116,6 +116,9 @@
 			]
 		}
 	},
+	"TrackingCategories": [
+		"pageproperties-tracking-category"
+	],
 	"config": {
 		"PagePropertiesAddTrackingCategory": false,
 		"PagePropertiesDisableSidebarLink": false,

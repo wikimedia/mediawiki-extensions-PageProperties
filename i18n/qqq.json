@@ -8,6 +8,9 @@
 	"pageproperties": "A label message",
 	"pageproperties-navigation": "A label message",
 
+	"pageproperties-tracking-category": "A label message",
+	"pageproperties-tracking-category-desc": "A label message",
+
 	"apihelp-pageproperties-check-latest-version-summary": "A label message",
 
 	"right-pageproperties-caneditpageproperties": "A label message",
