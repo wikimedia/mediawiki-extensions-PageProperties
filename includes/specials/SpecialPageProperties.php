@@ -35,6 +35,8 @@ use MediaWiki\Page\ContentModelChangeFactory;
 class SpecialPageProperties extends FormSpecialPage {
 	private IContentHandlerFactory $contentHandlerFactory;
 	private ContentModelChangeFactory $contentModelChangeFactory;
+	private Language $contentLanguage;
+	private LanguageNameUtils $languageNameUtils;
 
 	/** @var WikiPageFactory */
 	private $wikiPageFactory;
@@ -56,11 +58,15 @@ class SpecialPageProperties extends FormSpecialPage {
 	/**
 	 * @param IContentHandlerFactory $contentHandlerFactory
 	 * @param ContentModelChangeFactory $contentModelChangeFactory
+	 * @param Language $contentLanguage
+	 * @param LanguageNameUtils $languageNameUtils
 	 * @param WikiPageFactory|PermissionManager $wikiPageFactory
 	 */
 	public function __construct(
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
+		Language $contentLanguage,
+		LanguageNameUtils $languageNameUtils,
 
 		// *** omit class name WikiPageFactory, because on
 		// MW < 1.36 we are passing another class (PermissionManager)
@@ -73,6 +79,8 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		$this->contentHandlerFactory = $contentHandlerFactory;
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
+		$this->contentLanguage = $contentLanguage;
+		$this->languageNameUtils = $languageNameUtils;
 		$this->wikiPageFactory = ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? $wikiPageFactory : null );
 	}
 
@@ -376,7 +384,7 @@ class SpecialPageProperties extends FormSpecialPage {
 			$pageProperties[ 'language' ] :
 				$this->getRequest()->getCookie( 'pageproperties_latest_set_language' )
 					// $this->getLanguage()->getCode()
-					?? MediaWikiServices::getInstance()->getContentLanguage()->getCode() );
+					?? $this->contentLanguage->getCode() );
 
 		$ret['page_properties_language_input'] = [
 			'id' => 'mw-pl-languageselector',
@@ -586,8 +594,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		// Building a language selector
 		$userLang = $this->getLanguage()->getCode();
 
-		$languages = MediaWikiServices::getInstance()
-			->getLanguageNameUtils()
+		$languages = $this->languageNameUtils
 			->getLanguageNames( $userLang, LanguageNameUtils::SUPPORTED );
 
 		$options = [];
