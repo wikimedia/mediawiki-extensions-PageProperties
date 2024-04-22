@@ -429,21 +429,12 @@ class PageProperties {
 	/**
 	 * @fixme use the suggested method since MW 1.39
 	 * @param int $db
-	 * @param string|string[] $groups
-	 * @param string|false $wiki
 	 * @return \Wikimedia\Rdbms\DBConnRef
 	 */
-	public static function wfGetDB( $db, $groups = [], $wiki = false ) {
-		if ( $wiki === false ) {
-			return MediaWikiServices::getInstance()
-				->getDBLoadBalancer()
-				->getMaintenanceConnectionRef( $db, $groups, $wiki );
-		} else {
-			return MediaWikiServices::getInstance()
-				->getDBLoadBalancerFactory()
-				->getMainLB( $wiki )
-				->getMaintenanceConnectionRef( $db, $groups, $wiki );
-		}
+	public static function wfGetDB( $db ) {
+		return MediaWikiServices::getInstance()
+			->getDBLoadBalancer()
+			->getMaintenanceConnectionRef( $db );
 	}
 
 }
