@@ -42,6 +42,10 @@ class PagePropertiesApiCheckLatestVersion extends ApiBase {
 	 * @inheritDoc
 	 */
 	public function execute() {
+		if ( $GLOBALS['wgPagePropertiesDisableVersionCheck'] ) {
+			$this->dieWithError( 'apierror-pageproperties-permissions-error' );
+		}
+
 		$user = $this->getUser();
 		\PageProperties::initialize();
 
