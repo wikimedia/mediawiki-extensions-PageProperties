@@ -2,7 +2,7 @@
  * JavaScript for Special:Preferences: Tab navigation.
  */
 ( function () {
-	$( function () {
+	$( () => {
 		let tabs, previousTab, switchingNoHash;
 
 		if ( !$( '.mw-prefs-tabs' ).get( 0 ) ) {
@@ -100,7 +100,7 @@
 		// eslint-disable-next-line no-constant-condition
 		if ( false ) {
 			$( window )
-				.on( 'hashchange', function () {
+				.on( 'hashchange', () => {
 
 					const hash = location.hash;
 					if ( hash.match( /^#mw-[\w-]+/ ) ) {
@@ -123,7 +123,7 @@
 		}
 
 		// ***edited
-		$( '#pageproperties-form' ).on( 'submit', function () {
+		$( '#pageproperties-form' ).on( 'submit', () => {
 			const currentTab = tabs.getCurrentTabPanelName();
 			// ***edited
 			if ( currentTab ) {

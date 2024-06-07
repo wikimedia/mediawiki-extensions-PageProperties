@@ -18,7 +18,7 @@
  * @author thomas-topway-it <support@topway.it>
  * @copyright Copyright © 2021-2024, https://wikisphere.org
  */
-$( function () {
+$( () => {
 	if (
 		!mw.config.get( 'pageproperties-show-notice-outdated-version' ) ||
 		mw.cookie.get( 'pageproperties-check-latest-version' )
@@ -27,12 +27,12 @@ $( function () {
 	}
 
 	// display every 3 days
-	mw.loader.using( 'mediawiki.api', function () {
+	mw.loader.using( 'mediawiki.api', () => {
 		new mw.Api()
 			.postWithToken( 'csrf', {
 				action: 'pageproperties-check-latest-version'
 			} )
-			.done( function ( res ) {
+			.done( ( res ) => {
 				if ( 'pageproperties-check-latest-version' in res ) {
 					if ( res[ 'pageproperties-check-latest-version' ].result === 2 ) {
 						var messageWidget = new OO.ui.MessageWidget( {

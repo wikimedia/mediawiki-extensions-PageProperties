@@ -19,7 +19,7 @@
  * @copyright Copyright © 2021-2022, https://wikisphere.org
  */
 
-$( function () {
+$( () => {
 	PagePropertiesFunctions.removeNbspFromLayoutHeader( '#pageproperties-form' );
 
 	// @TODO the following manipulates the DOM which is
@@ -190,7 +190,7 @@ $( function () {
 							input_value = new_element.value;
 							var name = new_element.$input.attr( 'name' ).replace( '_key_', '_value_' );
 
-							new_element.on( 'change', function ( value ) {
+							new_element.on( 'change', ( value ) => {
 								var $el = $( '[name="' + name + '"]' );
 								$el.attr( 'placeholder', propertiesTypes[ value ] );
 							} );
@@ -385,7 +385,7 @@ $( function () {
 						input_value = ooui_el.value;
 						var name = ooui_el.$input.attr( 'name' ).replace( '_key_', '_value_' );
 
-						ooui_el.on( 'change', function ( value ) {
+						ooui_el.on( 'change', ( value ) => {
 							var $el = $( '[name="' + name + '"]' );
 							$el.attr( 'placeholder', propertiesTypes[ value ] );
 						} );
