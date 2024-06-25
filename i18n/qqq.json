@@ -14,8 +14,10 @@
 	"apihelp-pageproperties-check-latest-version-summary": "A label message",
 
 	"right-pageproperties-caneditpageproperties": "A label message",
-
 	"action-pageproperties-caneditpageproperties": "A label message",
+
+	"group-pageproperties-admin": "A label message",
+	"group-pageproperties-editor": "A label message",
 
 	"pageproperties-jsmodule-pageproperties-outdated-version": "A label message",
 
