@@ -39,6 +39,8 @@ class PagePropertiesHooks {
 			'services' => [
 				'ContentHandlerFactory',
 				'ContentModelChangeFactory',
+				'ContentLanguage',
+				'LanguageNameUtils',
 				// MW 1.36+
 				( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? 'WikiPageFactory'
 				// ***whatever other class
