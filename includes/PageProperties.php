@@ -155,7 +155,7 @@ class PageProperties {
 		$obj['meta'] = ( !empty( $obj[ 'meta' ] ) ? json_encode( $obj[ 'meta' ] )
 			: null );
 
-		$dbr = self::wfGetDB( DB_MASTER );
+		$dbr = self::wfGetDB( DB_PRIMARY );
 		if ( self::getPageProperties( $title ) === false ) {
 			$obj['page_id'] = $page_id;
 			$obj['created_at'] = $date;
@@ -345,11 +345,7 @@ class PageProperties {
 		if ( !$title || !$title->canExist() ) {
 			return null;
 		}
-		// MW 1.36+
-		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
-			return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
-		}
-		return WikiPage::factory( $title );
+		return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 	}
 
 	/**

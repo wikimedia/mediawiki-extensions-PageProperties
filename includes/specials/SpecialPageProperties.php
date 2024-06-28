@@ -26,8 +26,8 @@ include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
 use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\Languages\LanguageNameUtils;
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ContentModelChangeFactory;
+use MediaWiki\Page\WikiPageFactory;
 
 // @TODO handle properties through database
 // @see here https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
@@ -37,9 +37,7 @@ class SpecialPageProperties extends FormSpecialPage {
 	private ContentModelChangeFactory $contentModelChangeFactory;
 	private Language $contentLanguage;
 	private LanguageNameUtils $languageNameUtils;
-
-	/** @var WikiPageFactory */
-	private $wikiPageFactory;
+	private WikiPageFactory $wikiPageFactory;
 
 	/** @var title */
 	protected $title;
@@ -60,17 +58,14 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @param ContentModelChangeFactory $contentModelChangeFactory
 	 * @param Language $contentLanguage
 	 * @param LanguageNameUtils $languageNameUtils
-	 * @param WikiPageFactory|PermissionManager $wikiPageFactory
+	 * @param WikiPageFactory $wikiPageFactory
 	 */
 	public function __construct(
 		IContentHandlerFactory $contentHandlerFactory,
 		ContentModelChangeFactory $contentModelChangeFactory,
 		Language $contentLanguage,
 		LanguageNameUtils $languageNameUtils,
-
-		// *** omit class name WikiPageFactory, because on
-		// MW < 1.36 we are passing another class (PermissionManager)
-		$wikiPageFactory
+		WikiPageFactory $wikiPageFactory
 	) {
 		$listed = false;
 
@@ -81,7 +76,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
 		$this->contentLanguage = $contentLanguage;
 		$this->languageNameUtils = $languageNameUtils;
-		$this->wikiPageFactory = ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ? $wikiPageFactory : null );
+		$this->wikiPageFactory = $wikiPageFactory;
 	}
 
 	/** @inheritDoc */
@@ -146,9 +141,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		try {
-			$this->wikiPage = ( $this->wikiPageFactory ? $this->wikiPageFactory->newFromTitle( $title )
-				: WikiPage::factory( $title ) );
-
+			$this->wikiPage = $this->wikiPageFactory->newFromTitle( $title );
 		} catch ( Exception $e ) {
 			$out->addHTML( "<b>Internal error: </b>" . $e->getMessage() );
 			return;
@@ -665,8 +658,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		// Load the page language from DB
-		// phpcs:ignore MediaWiki.Usage.DeprecatedConstantUsage.DB_MASTER
-		$dbw = \PageProperties::wfGetDB( version_compare( MW_VERSION, '1.36', '<' ) ? DB_MASTER : DB_PRIMARY );
+		$dbw = \PageProperties::wfGetDB( DB_PRIMARY );
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',
@@ -765,7 +757,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		// $page = $this->wikiPageFactory->newFromTitle( $title );
 
 		// ***edited
-		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority() : $this->getUser() );
+		$performer = $this->getContext()->getAuthority();
 
 		$changer = $this->contentModelChangeFactory->newContentModelChange(
 			// ***edited
@@ -776,24 +768,12 @@ class SpecialPageProperties extends FormSpecialPage {
 			$model
 		);
 
-		// MW 1.36+
-		if ( method_exists( ContentModelChange::class, 'authorizeChange' ) ) {
-			$permissionStatus = $changer->authorizeChange();
-			if ( !$permissionStatus->isGood() ) {
-				$out = $this->getOutput();
-				$wikitext = $out->formatPermissionStatus( $permissionStatus );
-				// Hack to get our wikitext parsed
-				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
-			}
-
-		} else {
-			$errors = $changer->checkPermissions();
-			if ( $errors ) {
-				$out = $this->getOutput();
-				$wikitext = $out->formatPermissionsErrorMessage( $errors );
-				// Hack to get our wikitext parsed
-				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
-			}
+		$permissionStatus = $changer->authorizeChange();
+		if ( !$permissionStatus->isGood() ) {
+			$out = $this->getOutput();
+			$wikitext = $out->formatPermissionStatus( $permissionStatus );
+			// Hack to get our wikitext parsed
+			return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
 		}
 
 		// Can also throw a ThrottledError, don't catch it
