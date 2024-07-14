@@ -83,7 +83,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 			$val = reset( $this->mFieldTree );
 			$html = $this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->parse()
 				. $this->displaySection( $val, $key, "mw-prefsection-$key-" )
-				. $this->getFooterText( $key );
+				. $this->getFooterHtml( $key );
 
 			return $this->formatFormHeader() . $html;
 		}
@@ -98,7 +98,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 
 			$content =
 				// ***edited
-				// $this->getHeaderText( $key ) .
+				// $this->getHeaderHtml( $key ) .
 				$this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->parse()
 					. $this->displaySection(
 						$val,
@@ -106,7 +106,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 						$key,
 						"mw-prefsection-$key-"
 				)
-				. $this->getFooterText( $key );
+				. $this->getFooterHtml( $key );
 
 			$tabPanels[] = new OOUI\TabPanelLayout(
 				'mw-prefsection-' . $key,
@@ -285,9 +285,9 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 					$hasUserVisibleFields = true;
 
 					$legend = $this->getLegend( $key );
-					$section = $this->getHeaderText( $key )
+					$section = $this->getHeaderHtml( $key )
 						. $section
-						. $this->getFooterText( $key );
+						. $this->getFooterHtml( $key );
 
 					$attributes = [];
 					if ( $fieldsetIDPrefix ) {
