@@ -19,6 +19,11 @@
 	"group-pageproperties-admin": "A label message",
 	"group-pageproperties-editor": "A label message",
 
+	"group-pageproperties-admin-member": "A label message",
+	"group-pageproperties-editor-member": "A label message",
+
+	"pageproperties-specialpage-notitle": "A label message",
+	"pageproperties-specialpage-no-valid-title": "A label message",
 	"pageproperties-jsmodule-pageproperties-outdated-version": "A label message",
 
 	"pageproperties-return": "A label message",

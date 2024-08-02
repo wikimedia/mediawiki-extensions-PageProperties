@@ -18,6 +18,11 @@
 	"group-pageproperties-admin": "PageProperties admin",
 	"group-pageproperties-editor": "PageProperties editor",
 
+	"group-pageproperties-admin-member": "PageProperties admin",
+	"group-pageproperties-editor-member": "PageProperties editor",
+
+	"pageproperties-specialpage-notitle": "no title",
+	"pageproperties-specialpage-no-valid-title": "no valid title",
 	"pageproperties-jsmodule-pageproperties-outdated-version": "This version of PageProperties is outdated. <a href=\"https://www.mediawiki.org/wiki/Special:ExtensionDistributor/PageProperties\">Update</a>",
 
 	"pageproperties-return": "← [[$1|$2]]",

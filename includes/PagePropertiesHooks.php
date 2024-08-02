@@ -31,24 +31,28 @@ class PagePropertiesHooks {
 	 * @return void
 	 */
 	public static function initExtension( $credits = [] ) {
-		// see includes/specialpage/SpecialPageFactory.php
-
-		$GLOBALS['wgSpecialPages']['PageProperties'] = [
-			'class' => \SpecialPageProperties::class,
-			'services' => [
-				'ConnectionProvider',
-				'ContentHandlerFactory',
-				'ContentModelChangeFactory',
-				'ContentLanguage',
-				'LanguageNameUtils',
-				'WikiPageFactory',
-			]
-		];
-
 		// *** important! otherwise Page information (action=info) will display a wrong value
 		$GLOBALS['wgPageLanguageUseDB'] = true;
 		$GLOBALS['wgAllowDisplayTitle'] = true;
 		$GLOBALS['wgRestrictDisplayTitle'] = false;
+
+		// do not use extension.json to prevent conflicts with VisualData
+/*
+	"ContentHandlers": {
+		"pageproperties-jsondata": "PagePropertiesJsonDataContentHandler",
+		"pageproperties-semantic": "PagePropertiesJsonDataContentHandler"
+	},
+*/
+		if ( basename( $_SERVER['SCRIPT_FILENAME'], '.php' ) === 'migrateSlots' ) {
+			define( 'SLOT_ROLE_PAGEPROPERTIES', 'pageproperties' );
+			define( 'CONTENT_MODEL_PAGEPROPERTIES_JSONDATA', 'pageproperties-jsondata' );
+
+			$GLOBALS['wgContentHandlers']["pageproperties-jsondata"] = "PagePropertiesJsonDataContentHandler";
+			$GLOBALS['wgContentHandlers']["pageproperties-semantic"] = "PagePropertiesJsonDataContentHandler";
+
+			include_once __DIR__ . '/content/PagePropertiesJsonDataContentHandler.php';
+			include_once __DIR__ . '/content/PagePropertiesJsonDataContent.php';
+		}
 	}
 
 	/**
@@ -155,7 +159,11 @@ class PagePropertiesHooks {
 		if ( $displaytitle !== false ) {
 			// getRevisionParserOutput();
 			$out = $renderedRevision->getSlotParserOutput( SlotRecord::MAIN );
-			$out->setPageProperty( 'displaytitle', $displaytitle );
+			if ( method_exists( $out, 'setPageProperty' ) ) {
+				$out->setPageProperty( 'displaytitle', $displaytitle );
+			} else {
+				$out->setProperty( 'displaytitle', $displaytitle );
+			}
 		}
 	}
 

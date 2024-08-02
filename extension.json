@@ -1,13 +1,13 @@
 {
 	"name": "PageProperties",
 	"author": "thomas-topway-it",
-	"version": "1.5.0",
+	"version": "1.5.2",
 	"url": "https://www.mediawiki.org/wiki/Extension:PageProperties",
 	"descriptionmsg": "pageproperties-extension-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "parserhook",
 	"requires": {
-		"MediaWiki": ">= 1.42.0"
+		"MediaWiki": ">= 1.35.0"
 	},
 	"MessagesDirs": {
 		"PageProperties": [

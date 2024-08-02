@@ -24,64 +24,32 @@
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
-use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\Languages\LanguageNameUtils;
-use MediaWiki\Page\ContentModelChangeFactory;
-use MediaWiki\Page\WikiPageFactory;
-use Wikimedia\Rdbms\IConnectionProvider;
+use MediaWiki\MediaWikiServices;
 
-// @TODO handle properties through database
-// @see here https://gerrit.wikimedia.org/r/plugins/gitiles/mediawiki/extensions/PageProperties/+/refs/heads/1.0.3/includes/PageProperties.php
+class SpecialPageProperties extends SpecialPage {
 
-class SpecialPageProperties extends FormSpecialPage {
-	private IConnectionProvider $connectionProvider;
-	private IContentHandlerFactory $contentHandlerFactory;
-	private ContentModelChangeFactory $contentModelChangeFactory;
-	private Language $contentLanguage;
-	private LanguageNameUtils $languageNameUtils;
-	private WikiPageFactory $wikiPageFactory;
-
-	/** @var title */
+	/** @var Title */
 	protected $title;
 
-	/** @var content_model_error */
+	/** @var array */
 	protected $content_model_error;
 
-	/** @var pageProperties */
+	/** @var array */
 	protected $pageProperties = [];
 
 	/** @var wikiPage */
 	protected $wikiPage;
 
-	private User $user;
+	/** @var User */
+	private $user;
 
 	/**
-	 * @param IConnectionProvider $connectionProvider
-	 * @param IContentHandlerFactory $contentHandlerFactory
-	 * @param ContentModelChangeFactory $contentModelChangeFactory
-	 * @param Language $contentLanguage
-	 * @param LanguageNameUtils $languageNameUtils
-	 * @param WikiPageFactory $wikiPageFactory
+	 * @inheritDoc
 	 */
-	public function __construct(
-		IConnectionProvider $connectionProvider,
-		IContentHandlerFactory $contentHandlerFactory,
-		ContentModelChangeFactory $contentModelChangeFactory,
-		Language $contentLanguage,
-		LanguageNameUtils $languageNameUtils,
-		WikiPageFactory $wikiPageFactory
-	) {
+	public function __construct() {
 		$listed = false;
-
-		// https://www.mediawiki.org/wiki/Manual:Special_pages
 		parent::__construct( 'PageProperties', '', $listed );
-
-		$this->connectionProvider = $connectionProvider;
-		$this->contentHandlerFactory = $contentHandlerFactory;
-		$this->contentModelChangeFactory = $contentModelChangeFactory;
-		$this->contentLanguage = $contentLanguage;
-		$this->languageNameUtils = $languageNameUtils;
-		$this->wikiPageFactory = $wikiPageFactory;
 	}
 
 	/** @inheritDoc */
@@ -89,34 +57,17 @@ class SpecialPageProperties extends FormSpecialPage {
 	}
 
 	/** @inheritDoc */
-	protected function getFormFields() {
-	}
-
-	/** @inheritDoc */
 	public function execute( $par ) {
 		// $this->requireLogin();
-		// $this->setParameter( $par );
-		// $this->setHeaders();
+		$this->setHeaders();
+		// $this->checkPermissions();
+		$this->checkReadOnly();
+		$this->outputHeader();
+		$this->addHelpLink( 'Extension:PageProperties' );
 
 		$out = $this->getOutput();
-		$out->setArticleRelated( false );
-		$out->setRobotPolicy( $this->getRobotPolicy() );
-
 		$user = $this->getUser();
-
 		$this->user = $user;
-
-		// This will throw exceptions if there's a problem
-		$this->checkExecutePermissions( $user );
-
-		$securityLevel = $this->getLoginSecurityLevel();
-
-		if ( $securityLevel !== false && !$this->checkLoginSecurityLevel( $securityLevel ) ) {
-			$this->displayRestrictionError();
-			return;
-		}
-
-		$this->addHelpLink( 'Extension:PageProperties' );
 
 		$canEditPageProperties = $user->isAllowed( 'pageproperties-caneditpageproperties' );
 
@@ -126,8 +77,7 @@ class SpecialPageProperties extends FormSpecialPage {
 		}
 
 		if ( !$par ) {
-			// @TODO show proper error
-			$this->displayRestrictionError();
+			$out->addWikiMsg( 'pageproperties-specialpage-notitle' );
 			return;
 		}
 
@@ -136,26 +86,18 @@ class SpecialPageProperties extends FormSpecialPage {
 		$this->title = $title;
 
 		if ( !$title || !$title->isKnown() ) {
-			$this->displayRestrictionError();
-			return;
-		}
-
-		if ( !defined( 'SMW_VERSION' ) && $title->getNamespace() === NS_CATEGORY ) {
-			$this->displayRestrictionError();
+			$out->addWikiMsg( 'pageproperties-specialpage-no-valid-title' );
 			return;
 		}
 
 		try {
-			$this->wikiPage = $this->wikiPageFactory->newFromTitle( $title );
+			$this->wikiPage = \PageProperties::getWikiPage( $title );
 		} catch ( Exception $e ) {
 			$out->addHTML( "<b>Internal error: </b>" . $e->getMessage() );
 			return;
 		}
 
-		$this->outputHeader();
-
 		$context = $this->getContext();
-
 		$context->getOutput()->enableOOUI();
 
 		$out->setPageTitle( $this->msg( 'pageproperties' )->text() );
@@ -202,11 +144,11 @@ class SpecialPageProperties extends FormSpecialPage {
 		$out->addWikiMsg( 'pageproperties-return', $title->getFullText(), $return_title );
 		$out->addHTML( '<br>' );
 
-		// @see includes/htmlform/HTMLForm.php
-		//if ( $htmlForm->showAlways() ) {
-		if ( $this->showAlways( $htmlForm, $default_of_display_title, $default_of_language ) ) {
-			$this->onSuccess();
-		}
+		$this->showAlways(
+			$htmlForm,
+			$default_of_display_title,
+			$default_of_language
+		);
 	}
 
 	/**
@@ -382,7 +324,7 @@ class SpecialPageProperties extends FormSpecialPage {
 			$pageProperties[ 'language' ] :
 				$this->getRequest()->getCookie( 'pageproperties_latest_set_language' )
 					// $this->getLanguage()->getCode()
-					?? $this->contentLanguage->getCode() );
+					?? MediaWikiServices::getInstance()->getContentLanguage()->getCode() );
 
 		$ret['page_properties_language_input'] = [
 			'id' => 'mw-pl-languageselector',
@@ -592,7 +534,8 @@ class SpecialPageProperties extends FormSpecialPage {
 		// Building a language selector
 		$userLang = $this->getLanguage()->getCode();
 
-		$languages = $this->languageNameUtils
+		$languages = MediaWikiServices::getInstance()
+			->getLanguageNameUtils()
 			->getLanguageNames( $userLang, LanguageNameUtils::SUPPORTED );
 
 		$options = [];
@@ -609,11 +552,12 @@ class SpecialPageProperties extends FormSpecialPage {
 	 * @return array
 	 */
 	private function getOptionsForTitle( Title $title = null ) {
-		$models = $this->contentHandlerFactory->getContentModels();
+		$contentHandlerFactory = MediaWikiServices::getInstance()->getContentHandlerFactory();
+		$models = $contentHandlerFactory->getContentModels();
 		$options = [];
 
 		foreach ( $models as $model ) {
-			$handler = $this->contentHandlerFactory->getContentHandler( $model );
+			$handler = $contentHandlerFactory->getContentHandler( $model );
 
 			if ( !$handler->supportsDirectEditing() ) {
 				continue;
@@ -662,8 +606,7 @@ class SpecialPageProperties extends FormSpecialPage {
 			);
 		}
 
-		// Load the page language from DB
-		$dbw = $this->connectionProvider->getPrimaryDatabase();
+		$dbw = \PageProperties::getDB( DB_MASTER );
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',
@@ -762,9 +705,12 @@ class SpecialPageProperties extends FormSpecialPage {
 		// $page = $this->wikiPageFactory->newFromTitle( $title );
 
 		// ***edited
-		$performer = $this->getContext()->getAuthority();
+		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority()
+			: $this->getUser() );
 
-		$changer = $this->contentModelChangeFactory->newContentModelChange(
+		$contentModelChangeFactory = MediaWikiServices::getInstance()->getContentModelChangeFactory();
+
+		$changer = $contentModelChangeFactory->newContentModelChange(
 			// ***edited
 			$performer,
 			$page,
@@ -773,12 +719,24 @@ class SpecialPageProperties extends FormSpecialPage {
 			$model
 		);
 
-		$permissionStatus = $changer->authorizeChange();
-		if ( !$permissionStatus->isGood() ) {
-			$out = $this->getOutput();
-			$wikitext = $out->formatPermissionStatus( $permissionStatus );
-			// Hack to get our wikitext parsed
-			return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+		// MW 1.36+
+		if ( method_exists( ContentModelChange::class, 'authorizeChange' ) ) {
+			$permissionStatus = $changer->authorizeChange();
+			if ( !$permissionStatus->isGood() ) {
+				$out = $this->getOutput();
+				$wikitext = $out->formatPermissionStatus( $permissionStatus );
+				// Hack to get our wikitext parsed
+				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+			}
+
+		} else {
+			$errors = $changer->checkPermissions();
+			if ( $errors ) {
+				$out = $this->getOutput();
+				$wikitext = $out->formatPermissionsErrorMessage( $errors );
+				// Hack to get our wikitext parsed
+				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
+			}
 		}
 
 		// Can also throw a ThrottledError, don't catch it
@@ -862,19 +820,6 @@ class SpecialPageProperties extends FormSpecialPage {
 
 		return !count( $errors ) ? true
 			: Status::newFatal( 'formerror' );
-	}
-
-	/**
-	 * @return void
-	 */
-	public function onSuccess() {
-	}
-
-	/**
-	 * @return void
-	 */
-	protected function getDisplayFormat() {
-		return 'ooui';
 	}
 
 }

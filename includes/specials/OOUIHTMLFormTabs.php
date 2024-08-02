@@ -25,8 +25,26 @@
 class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	/** @var array */
 	protected $html_fragments = [];
+
 	/** @var mixed */
 	protected $stickyFooter = false;
+
+	// @see https://www.mediawiki.org/wiki/Release_notes/1.38
+	/** @var array */
+	private $methodsMap = [
+		'getPreText' => 'getPreHtml',
+		'setPreText' => 'setPreHtml',
+		'addPreText' => 'addPreHtml',
+		'getPostText' => 'getPostHtml',
+		'setPostText' => 'setPostHtml',
+		'addPostText' => 'addPostHtml',
+		'getHeaderText' => 'getHeaderHtml',
+		'setHeaderText' => 'setHeaderHtml',
+		'addHeaderText' => 'addHeaderHtml',
+		'getFooterText' => 'getFooterHtml',
+		'setFooterText' => 'setFooterHtml',
+		'addFooterText' => 'addFooterHtml'
+	];
 
 	/**
 	 * @stable to call
@@ -74,16 +92,33 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	}
 
 	/**
+	 * @param string $method
+	 * @return string
+	 */
+	function getValidMethod( $method ) {
+		$key = array_search( $method, $this->methodsMap );
+		if ( $key === false ) {
+			return $method;
+		}
+		if ( version_compare( MW_VERSION, '1.38', '<' ) ) {
+			return $key;
+		}
+		return $method;
+	}
+
+	/**
 	 * @see includes/specials/forms/PreferencesFormOOUI.php
 	 * @return string
 	 */
 	function getBody() {
+		$getFooterHtml = $this->getValidMethod( 'getFooterHtml' );
+
 		if ( count( $this->mFieldTree ) == 1 ) {
 			$key = key( $this->mFieldTree );
 			$val = reset( $this->mFieldTree );
 			$html = $this->msg( $this->mMessagePrefix . '-' . $key . '-label' )->parse()
 				. $this->displaySection( $val, $key, "mw-prefsection-$key-" )
-				. $this->getFooterHtml( $key );
+				. $this->$getFooterHtml( $key );
 
 			return $this->formatFormHeader() . $html;
 		}
@@ -106,7 +141,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 						$key,
 						"mw-prefsection-$key-"
 				)
-				. $this->getFooterHtml( $key );
+				. $this->$getFooterHtml( $key );
 
 			$tabPanels[] = new OOUI\TabPanelLayout(
 				'mw-prefsection-' . $key,
@@ -285,9 +320,11 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 					$hasUserVisibleFields = true;
 
 					$legend = $this->getLegend( $key );
+
+					$getFooterHtml = $this->getValidMethod( 'getFooterHtml' );
 					$section = $this->getHeaderHtml( $key )
 						. $section
-						. $this->getFooterHtml( $key );
+						. $this->$getFooterHtml( $key );
 
 					$attributes = [];
 					if ( $fieldsetIDPrefix ) {
