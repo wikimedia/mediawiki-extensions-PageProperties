@@ -24,9 +24,10 @@
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
+use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Languages\LanguageNameUtils;
-use MediaWiki\MediaWikiServices;
+use MediaWiki\Page\ContentModelChangeFactory;
 
 class SpecialPageProperties extends SpecialPage {
 
@@ -45,12 +46,26 @@ class SpecialPageProperties extends SpecialPage {
 	/** @var User */
 	private $user;
 
+	private IContentHandlerFactory $contentHandlerFactory;
+	private ContentModelChangeFactory $contentModelChangeFactory;
+	private Language $language;
+	private LanguageNameUtils $languageNameUtils;
+
 	/**
 	 * @inheritDoc
 	 */
-	public function __construct() {
+	public function __construct(
+		IContentHandlerFactory $contentHandlerFactory,
+		ContentModelChangeFactory $contentModelChangeFactory,
+		Language $language,
+		LanguageNameUtils $languageNameUtils
+	) {
 		$listed = false;
 		parent::__construct( 'PageProperties', '', $listed );
+		$this->contentHandlerFactory = $contentHandlerFactory;
+		$this->contentModelChangeFactory = $contentModelChangeFactory;
+		$this->language = $language;
+		$this->languageNameUtils = $languageNameUtils;
 	}
 
 	/** @inheritDoc */
@@ -325,7 +340,7 @@ class SpecialPageProperties extends SpecialPage {
 			$pageProperties[ 'language' ] :
 				$this->getRequest()->getCookie( 'pageproperties_latest_set_language' )
 					// $this->getLanguage()->getCode()
-					?? MediaWikiServices::getInstance()->getContentLanguage()->getCode() );
+					?? $this->language->getCode() );
 
 		$ret['page_properties_language_input'] = [
 			'id' => 'mw-pl-languageselector',
@@ -535,8 +550,7 @@ class SpecialPageProperties extends SpecialPage {
 		// Building a language selector
 		$userLang = $this->getLanguage()->getCode();
 
-		$languages = MediaWikiServices::getInstance()
-			->getLanguageNameUtils()
+		$languages = $this->languageNameUtils
 			->getLanguageNames( $userLang, LanguageNameUtils::SUPPORTED );
 
 		$options = [];
@@ -553,12 +567,11 @@ class SpecialPageProperties extends SpecialPage {
 	 * @return array
 	 */
 	private function getOptionsForTitle( $title = null ) {
-		$contentHandlerFactory = MediaWikiServices::getInstance()->getContentHandlerFactory();
-		$models = $contentHandlerFactory->getContentModels();
+		$models = $this->contentHandlerFactory->getContentModels();
 		$options = [];
 
 		foreach ( $models as $model ) {
-			$handler = $contentHandlerFactory->getContentHandler( $model );
+			$handler = $this->contentHandlerFactory->getContentHandler( $model );
 
 			if ( !$handler->supportsDirectEditing() ) {
 				continue;
@@ -709,9 +722,7 @@ class SpecialPageProperties extends SpecialPage {
 		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority()
 			: $this->getUser() );
 
-		$contentModelChangeFactory = MediaWikiServices::getInstance()->getContentModelChangeFactory();
-
-		$changer = $contentModelChangeFactory->newContentModelChange(
+		$changer = $this->contentModelChangeFactory->newContentModelChange(
 			// ***edited
 			$performer,
 			$page,

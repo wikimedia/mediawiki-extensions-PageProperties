@@ -41,7 +41,15 @@
 		"LinkerMakeExternalLink": "PagePropertiesHooks::onLinkerMakeExternalLink"
 	},
 	"SpecialPages": {
-		"PageProperties": "SpecialPageProperties"
+		"PageProperties": {
+			"class": "SpecialPageProperties",
+			"services": [
+				"ContentHandlerFactory",
+				"ContentModelChangeFactory",
+				"ContentLanguage",
+				"LanguageNameUtils"
+			]
+		}
 	},
 	"APIModules": {
 		"pageproperties-check-latest-version": "PagePropertiesApiCheckLatestVersion"
