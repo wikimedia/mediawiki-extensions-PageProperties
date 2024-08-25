@@ -606,7 +606,7 @@ class SpecialPageProperties extends SpecialPage {
 			);
 		}
 
-		$dbw = \PageProperties::getDB( DB_MASTER );
+		$dbw = \PageProperties::getDB( DB_PRIMARY );
 		$oldLanguage = $dbw->selectField(
 			'page',
 			'page_lang',

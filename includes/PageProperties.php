@@ -159,7 +159,7 @@ class PageProperties {
 		$obj['meta'] = ( !empty( $obj[ 'meta' ] ) ? json_encode( $obj[ 'meta' ] )
 			: null );
 
-		$dbr = self::getDB( DB_MASTER );
+		$dbr = self::getDB( DB_PRIMARY );
 		if ( self::getPageProperties( $title ) === false ) {
 			$obj['page_id'] = $page_id;
 			$obj['created_at'] = $date;
@@ -442,7 +442,6 @@ class PageProperties {
 		$connectionProvider = MediaWikiServices::getInstance()->getConnectionProvider();
 		switch ( $db ) {
 			case DB_PRIMARY:
-			case DB_MASTER:
 				return $connectionProvider->getPrimaryDatabase();
 			case DB_REPLICA:
 			default:

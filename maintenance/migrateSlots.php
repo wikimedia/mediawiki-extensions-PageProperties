@@ -61,7 +61,7 @@ class MigrateSlots extends Maintenance {
 	public function execute() {
 		$this->removeSlot = (bool)$this->getOption( 'remove-slot' ) ?? false;
 		$this->user = User::newSystemUser( 'Maintenance script', [ 'steal' => true ] );
-		$this->db = \PageProperties::getDB( DB_MASTER );
+		$this->db = \PageProperties::getDB( DB_PRIMARY );
 
 		$this->processArticles();
 	}
