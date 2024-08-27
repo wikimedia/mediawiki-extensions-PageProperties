@@ -349,11 +349,7 @@ class PageProperties {
 		if ( !$title || !$title->canExist() ) {
 			return null;
 		}
-		// MW 1.36+
-		if ( method_exists( MediaWikiServices::class, 'getWikiPageFactory' ) ) {
-			return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
-		}
-		return WikiPage::factory( $title );
+		return MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 	}
 
 	/**

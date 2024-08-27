@@ -716,8 +716,7 @@ class SpecialPageProperties extends UnlistedSpecialPage {
 		// $page = $this->wikiPageFactory->newFromTitle( $title );
 
 		// ***edited
-		$performer = ( method_exists( RequestContext::class, 'getAuthority' ) ? $this->getContext()->getAuthority()
-			: $this->getUser() );
+		$performer = $this->getContext()->getAuthority();
 
 		$changer = $this->contentModelChangeFactory->newContentModelChange(
 			// ***edited
@@ -728,24 +727,12 @@ class SpecialPageProperties extends UnlistedSpecialPage {
 			$model
 		);
 
-		// MW 1.36+
-		if ( method_exists( ContentModelChange::class, 'authorizeChange' ) ) {
-			$permissionStatus = $changer->authorizeChange();
-			if ( !$permissionStatus->isGood() ) {
-				$out = $this->getOutput();
-				$wikitext = $out->formatPermissionStatus( $permissionStatus );
-				// Hack to get our wikitext parsed
-				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
-			}
-
-		} else {
-			$errors = $changer->checkPermissions();
-			if ( $errors ) {
-				$out = $this->getOutput();
-				$wikitext = $out->formatPermissionsErrorMessage( $errors );
-				// Hack to get our wikitext parsed
-				return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
-			}
+		$permissionStatus = $changer->authorizeChange();
+		if ( !$permissionStatus->isGood() ) {
+			$out = $this->getOutput();
+			$wikitext = $out->formatPermissionStatus( $permissionStatus );
+			// Hack to get our wikitext parsed
+			return Status::newFatal( new RawMessage( '$1', [ $wikitext ] ) );
 		}
 
 		// Can also throw a ThrottledError, don't catch it
