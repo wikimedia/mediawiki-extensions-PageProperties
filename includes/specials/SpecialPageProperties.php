@@ -551,7 +551,7 @@ class SpecialPageProperties extends SpecialPage {
 	 * @param Title|null $title
 	 * @return array
 	 */
-	private function getOptionsForTitle( Title $title = null ) {
+	private function getOptionsForTitle( ?Title $title = null ) {
 		$contentHandlerFactory = MediaWikiServices::getInstance()->getContentHandlerFactory();
 		$models = $contentHandlerFactory->getContentModels();
 		$options = [];
