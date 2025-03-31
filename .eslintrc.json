@@ -21,7 +21,8 @@
 		"no-jquery/no-parse-html-literal": "warn",
 		"no-jquery/no-sizzle": "warn",
 		"no-jquery/variable-pattern": "warn",
-		"es-x/no-async-functions": "off"
+		"es-x/no-async-functions": "off",
+		"no-jquery/no-done-fail": "warn"
 	},
 	"parserOptions": {
 		"ecmaVersion": 8
