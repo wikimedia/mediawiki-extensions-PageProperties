@@ -21,6 +21,8 @@
  * @copyright Copyright ©2021-2024, https://wikisphere.org
  */
 
+use MediaWiki\Extension\PageProperties\Aliases\Html as HtmlClass;
+use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
@@ -55,7 +57,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param OutputPage $outputPage
 	 * @return void
 	 */
@@ -90,7 +92,7 @@ class PageProperties {
 
 			// https://hotexamples.com/examples/-/EasyRdf_Graph/serialise/php-easyrdf_graph-serialise-method-examples.html
 			if ( is_scalar( $output ) ) {
-				$outputPage->addHeadItem( 'json-ld', Html::Element(
+				$outputPage->addHeadItem( 'json-ld', HtmlClass::Element(
 						'script', [ 'type' => 'application/ld+json' ], $output
 					)
 				);
@@ -99,7 +101,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param array $conds_ null
 	 * @return array|false
 	 */
@@ -147,7 +149,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param array $obj
 	 * @param array &$errors null
 	 * @return array|false
@@ -180,14 +182,14 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param OutputPage $outputPage
 	 * @return void
 	 */
 	public static function setMetaAndTitle( $title, $outputPage ) {
 		global $wgSitename;
 		$meta = [];
-		$mainPage = Title::newMainPage();
+		$mainPage = TitleClass::newMainPage();
 
 		// the current page is different than the main page
 		if ( $mainPage->getPrefixedDBkey() != $title->getPrefixedDBkey() ) {
@@ -265,7 +267,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @return array
 	 */
 	private static function getMergedMetas( $title ) {
@@ -300,7 +302,7 @@ class PageProperties {
 
 		foreach ( $meta as $k => $v ) {
 			if ( strpos( $k, 'hreflang' ) !== false ) {
-				$outputPage->addHeadItem( $k, Html::element( 'link', [ 'rel' => 'alternate', 'href' => $v, 'hreflang' => substr( $k, 9 ) ] ) );
+				$outputPage->addHeadItem( $k, HtmlClass::element( 'link', [ 'rel' => 'alternate', 'href' => $v, 'hreflang' => substr( $k, 9 ) ] ) );
 				continue;
 			}
 
@@ -310,13 +312,13 @@ class PageProperties {
 				}
 
 			} else {
-				$outputPage->addHeadItem( $k, Html::element( 'meta', [ 'property' => $k, 'content'  => $v ] ) );
+				$outputPage->addHeadItem( $k, HtmlClass::element( 'meta', [ 'property' => $k, 'content'  => $v ] ) );
 			}
 		}
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @return mixed
 	 */
 	public static function getDisplayTitle( $title ) {
@@ -330,7 +332,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @return bool
 	 */
 	public static function isKnownArticle( $title ) {
@@ -342,7 +344,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @return WikiPage|null
 	 */
 	public static function getWikiPage( $title ) {
@@ -372,7 +374,7 @@ class PageProperties {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param bool $exclude_current
 	 * @return array
 	 */
@@ -395,7 +397,7 @@ class PageProperties {
 				$output[] = $title;
 
 			} else {
-				$title_ = Title::newFromText( $title_text );
+				$title_ = TitleClass::newFromText( $title_text );
 				if ( $title_ && $title_->isKnown() ) {
 					$output[] = $title_;
 				}
@@ -418,7 +420,7 @@ class PageProperties {
 		foreach ( $arr as $text ) {
 			$growinglink .= $text;
 			$display .= $text;
-			$title_ = Title::newFromText( $growinglink );
+			$title_ = TitleClass::newFromText( $growinglink );
 			if ( is_object( $title_ ) && $title_->isKnown() ) {
 				$ret = $display;
 				$display = '';

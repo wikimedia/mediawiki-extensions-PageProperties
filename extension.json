@@ -21,6 +21,9 @@
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
 		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php"
 	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\PageProperties\\Aliases\\": "includes/aliases/"
+	},
 	"ExtensionMessagesFiles": {
 		"PagePropertiesAlias": "PageProperties.alias.php"
 	},

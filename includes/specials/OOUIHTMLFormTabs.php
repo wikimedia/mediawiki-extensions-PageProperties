@@ -22,6 +22,8 @@
  * @copyright Copyright ©2021-2023, https://wikisphere.org
  */
 
+use MediaWiki\Extension\PageProperties\Aliases\Html as HtmlClass;
+
 class OOUIHTMLFormTabs extends OOUIHTMLForm {
 	/** @var array */
 	protected $html_fragments = [];
@@ -84,7 +86,7 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 		// force 'multipart/form-data' to allow file upload
 		$attributes['enctype'] = 'multipart/form-data';
 
-		return Html::rawElement(
+		return HtmlClass::rawElement(
 			'form',
 			$attributes,
 			$html

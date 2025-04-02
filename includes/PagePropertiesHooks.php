@@ -22,6 +22,7 @@
  * @copyright Copyright ©2021-2024, https://wikisphere.org
  */
 
+use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Revision\SlotRecord;
 
 class PagePropertiesHooks {
@@ -56,7 +57,7 @@ class PagePropertiesHooks {
 	}
 
 	/**
-	 * @param Title &$title
+	 * @param Title|Mediawiki\Title\Title &$title
 	 * @param null $unused
 	 * @param OutputPage $output
 	 * @param User $user
@@ -64,7 +65,7 @@ class PagePropertiesHooks {
 	 * @param MediaWiki|MediaWiki\Actions\ActionEntryPoint $mediaWiki
 	 * @return void
 	 */
-	public static function onBeforeInitialize( \Title &$title, $unused, \OutputPage $output, \User $user, \WebRequest $request, $mediaWiki ) {
+	public static function onBeforeInitialize( &$title, $unused, $output, $user, $request, $mediaWiki ) {
 		\PageProperties::initialize();
 	}
 
@@ -84,14 +85,14 @@ class PagePropertiesHooks {
 	}
 
 	/**
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param bool $create
 	 * @param string $comment
 	 * @param int $oldPageId
 	 * @param array $restoredPages
 	 * @return bool|void
 	 */
-	public static function onArticleUndelete( Title $title, $create, $comment, $oldPageId, $restoredPages ) {
+	public static function onArticleUndelete( $title, $create, $comment, $oldPageId, $restoredPages ) {
 	}
 
 	/**
@@ -152,7 +153,7 @@ class PagePropertiesHooks {
 	 */
 	public static function onMultiContentSave( MediaWiki\Revision\RenderedRevision $renderedRevision, MediaWiki\User\UserIdentity $user, CommentStoreComment $summary, $flags, Status $hookStatus ) {
 		$revision = $renderedRevision->getRevision();
-		$title = Title::newFromLinkTarget( $revision->getPageAsLinkTarget() );
+		$title = TitleClass::newFromLinkTarget( $revision->getPageAsLinkTarget() );
 		$displaytitle = \PageProperties::getDisplayTitle( $title );
 
 		// this will store displaytitle in the page_props table
@@ -201,7 +202,7 @@ class PagePropertiesHooks {
 		$specialpage_title = SpecialPage::getTitleFor( 'PageProperties' );
 		if ( strpos( $title->getFullText(), $specialpage_title->getFullText() ) === 0 ) {
 			$par = str_replace( $specialpage_title->getFullText() . '/', '', $title->getFullText() );
-			$title = Title::newFromText( $par, NS_MAIN );
+			$title = TitleClass::newFromText( $par, NS_MAIN );
 		}
 		$sidebar['TOOLBOX'][] = [
 			'text'   => wfMessage( 'pageproperties-label' )->text(),

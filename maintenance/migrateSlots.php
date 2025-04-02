@@ -32,6 +32,8 @@ if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
 	include_once __DIR__ . '/../vendor/autoload.php';
 }
 
+use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
+
 class MigrateSlots extends Maintenance {
 
 	/** @var \Wikimedia\Rdbms\DBConnRef|\Wikimedia\Rdbms\IDatabase|\Wikimedia\Rdbms\IReadableDatabase */
@@ -71,7 +73,7 @@ class MigrateSlots extends Maintenance {
 		$context = RequestContext::getMain();
 
 		for ( $i = 0; $i <= $maxByPageId; $i++ ) {
-			$title = Title::newFromID( $i );
+			$title = TitleClass::newFromID( $i );
 
 			if ( !$title || !$title->isKnown() ) {
 				continue;

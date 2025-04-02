@@ -24,12 +24,13 @@
 
 include_once __DIR__ . '/OOUIHTMLFormTabs.php';
 
+use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\MediaWikiServices;
 
 class SpecialPageProperties extends SpecialPage {
 
-	/** @var Title */
+	/** @var Title|Mediawiki\Title\Title */
 	protected $title;
 
 	/** @var array */
@@ -82,7 +83,7 @@ class SpecialPageProperties extends SpecialPage {
 		}
 
 		// NS_MAIN is ignored if $par is prefixed
-		$title = Title::newFromText( $par, NS_MAIN );
+		$title = TitleClass::newFromText( $par, NS_MAIN );
 		$this->title = $title;
 
 		if ( !$title || !$title->isKnown() ) {
@@ -210,7 +211,7 @@ class SpecialPageProperties extends SpecialPage {
 	 */
 	private function getFormValues( $out ) {
 		$request = $this->getRequest();
-		$mainPage = Title::newMainPage();
+		$mainPage = TitleClass::newMainPage();
 
 		$pageProperties = \PageProperties::getPageProperties( $this->title );
 
@@ -483,7 +484,7 @@ class SpecialPageProperties extends SpecialPage {
 			'default' => $SEO_subpages,
 		];
 
-		$mainPage = Title::newMainPage();
+		$mainPage = TitleClass::newMainPage();
 
 		if ( $mainPage->getPrefixedText() == $this->title->getPrefixedText() ) {
 			$ret['SEO_entire_site'] = [
@@ -548,10 +549,10 @@ class SpecialPageProperties extends SpecialPage {
 
 	/**
 	 * @see includes/specials/SpecialChangeContentModel.php
-	 * @param Title|null $title
+	 * @param Title|Mediawiki\Title\Title|null $title
 	 * @return array
 	 */
-	private function getOptionsForTitle( ?Title $title = null ) {
+	private function getOptionsForTitle( $title = null ) {
 		$contentHandlerFactory = MediaWikiServices::getInstance()->getContentHandlerFactory();
 		$models = $contentHandlerFactory->getContentModels();
 		$options = [];
@@ -580,15 +581,15 @@ class SpecialPageProperties extends SpecialPage {
 	/**
 	 * @see includes/specials/SpecialPageLanguage.php	// https://www.mediawiki.org/wiki/Manual:Language
 	 * @param IContextSource $context
-	 * @param Title $title
+	 * @param Title|Mediawiki\Title\Title $title
 	 * @param string $newLanguage Language code
 	 * @param string $reason Reason for the change
 	 * @param array $tags Change tags to apply to the log entry
 	 * @return Status
 	 */
 	public function changePageLanguage(
-		IContextSource $context,
-		Title $title,
+		$context,
+		$title,
 		$newLanguage,
 		$reason,
 		array $tags = []

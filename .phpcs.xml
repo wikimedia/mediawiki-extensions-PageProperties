@@ -5,6 +5,7 @@
 		<exclude name="MediaWiki.NamingConventions.LowerCamelFunctionsName.FunctionName" />
 		<exclude name="MediaWiki.Usage.SuperGlobalsUsage.SuperGlobals" />
 		<exclude name="Squiz.Scope.MethodScope.Missing" />
+		<exclude name="Generic.Files.OneObjectStructurePerFile.MultipleFound" />
 	</rule>
 	<file>.</file>
 	<arg name="extensions" value="php"/>
