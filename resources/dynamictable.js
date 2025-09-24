@@ -300,7 +300,7 @@ $( () => {
 */
 		$( $table ).find( 'input' ).each( function () {
 			name = $( this ).attr( 'name' );
-			if ( name.indexOf( '_key_' ) !== -1 && $( this ).val().trim() === 'robots' ) {
+			if ( name.includes( '_key_' ) && $( this ).val().trim() === 'robots' ) {
 				found = true;
 				return false;
 			}
@@ -310,7 +310,7 @@ $( () => {
 		if ( !found ) {
 			$table.find( 'input' ).each( function () {
 				name = $( this ).attr( 'name' );
-				if ( name.indexOf( '_key_' ) !== -1 && $( this ).val().trim() === '' &&
+				if ( name.includes( '_key_' ) && $( this ).val().trim() === '' &&
 					$table.find( '[name=' + name.replace( '_key_', '_value_' ) + ']' ).eq( 0 ).val().trim() === ''
 				) {
 					$( this ).val( 'robots' );
@@ -346,11 +346,11 @@ $( () => {
 
 		for ( const i in parameters ) {
 			if ( parameters[ i ] ) {
-				if ( values.indexOf( i ) === -1 ) {
+				if ( !values.includes( i ) ) {
 					values.push( i );
 				}
 
-			} else if ( values.indexOf( i ) > -1 ) {
+			} else if ( values.includes( i ) ) {
 				values.splice( values.indexOf( i ), 1 );
 			}
 		}
