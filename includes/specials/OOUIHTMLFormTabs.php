@@ -78,7 +78,10 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 		# Include a <fieldset> wrapper for style, if requested.
 		if ( $this->mWrapperLegend !== false ) {
 			$legend = is_string( $this->mWrapperLegend ) ? $this->mWrapperLegend : false;
-			$html = Xml::fieldset( $legend, $html, $this->mWrapperAttributes );
+			$html = HtmlClass::openElement( 'fieldset', $this->mWrapperAttributes ) . "\n" .
+				HtmlClass::element( 'legend', [], $legend ) . "\n" .
+				$html . "\n" .
+				HtmlClass::closeElement( 'fieldset' ) . "\n";
 		}
 
 		$attributes = $this->getFormAttributes();
@@ -222,10 +225,10 @@ class OOUIHTMLFormTabs extends OOUIHTMLForm {
 				'framed' => false,
 			] );
 
-			$html = Xml::tags( 'div', [ 'class' => 'mw-prefs-buttons' ], $html );
+			$html = HtmlClass::rawElement( 'div', [ 'class' => 'mw-prefs-buttons' ], $html );
 
 		} else {
-			$html = Xml::tags( 'div', [ 'class' => 'mw-prefs-buttons-nosticky' ], $html );
+			$html = HtmlClass::rawElement( 'div', [ 'class' => 'mw-prefs-buttons-nosticky' ], $html );
 		}
 
 		return $html;
