@@ -12,8 +12,8 @@
 
 	"apihelp-pageproperties-check-latest-version-summary": "pageproperties check latest version",
 
-	"right-pageproperties-caneditpageproperties": "can edit pageproperties",
-	"action-pageproperties-caneditpageproperties": "edit pageproperties",
+	"right-pageproperties-caneditpageproperties": "Edit page properties",
+	"action-pageproperties-caneditpageproperties": "edit page properties",
 
 	"group-pageproperties-admin": "PageProperties admin",
 	"group-pageproperties-editor": "PageProperties editor",
