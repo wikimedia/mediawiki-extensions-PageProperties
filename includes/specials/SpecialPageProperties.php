@@ -22,8 +22,6 @@
  * @copyright Copyright ©2021-2024, https://wikisphere.org
  */
 
-include_once __DIR__ . '/OOUIHTMLFormTabs.php';
-
 use MediaWiki\Content\IContentHandlerFactory;
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Languages\LanguageNameUtils;

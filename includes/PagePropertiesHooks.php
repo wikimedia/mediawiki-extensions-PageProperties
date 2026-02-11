@@ -50,9 +50,6 @@ class PagePropertiesHooks {
 
 			$GLOBALS['wgContentHandlers']["pageproperties-jsondata"] = "PagePropertiesJsonDataContentHandler";
 			$GLOBALS['wgContentHandlers']["pageproperties-semantic"] = "PagePropertiesJsonDataContentHandler";
-
-			include_once __DIR__ . '/content/PagePropertiesJsonDataContentHandler.php';
-			include_once __DIR__ . '/content/PagePropertiesJsonDataContent.php';
 		}
 	}
 

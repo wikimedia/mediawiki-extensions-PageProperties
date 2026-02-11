@@ -28,10 +28,6 @@ if ( $IP === false ) {
 }
 require_once "$IP/maintenance/Maintenance.php";
 
-if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
-	include_once __DIR__ . '/../vendor/autoload.php';
-}
-
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 
 class MigrateSlots extends Maintenance {

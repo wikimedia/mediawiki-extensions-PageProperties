@@ -26,10 +26,6 @@ use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
-if ( is_readable( __DIR__ . '/../vendor/autoload.php' ) ) {
-	include_once __DIR__ . '/../vendor/autoload.php';
-}
-
 class PageProperties {
 
 	/** @var array */

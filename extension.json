@@ -18,6 +18,9 @@
 	"AutoloadClasses": {
 		"PageProperties": "includes/PageProperties.php",
 		"PagePropertiesHooks": "includes/PagePropertiesHooks.php",
+		"PagePropertiesJsonDataContentHandler": "includes/content/PagePropertiesJsonDataContentHandler.php",
+		"PagePropertiesJsonDataContent": "includes/content/PagePropertiesJsonDataContent.php",
+		"OOUIHTMLFormTabs": "includes/specials/OOUIHTMLFormTabs.php",
 		"SpecialPageProperties": "includes/specials/SpecialPageProperties.php",
 		"PagePropertiesApiCheckLatestVersion": "includes/api/PagePropertiesApiCheckLatestVersion.php"
 	},
@@ -137,5 +140,6 @@
 		"PagePropertiesDisplayAlwaysUnprefixedTitles": false,
 		"PagePropertiesDisableVersionCheck": false
 	},
+	"load_composer_autoloader": true,
 	"manifest_version": 1
 }
