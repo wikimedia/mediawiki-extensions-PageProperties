@@ -64,8 +64,10 @@ class PageProperties {
 
 		// @TODO use directly the function makeExportDataForSubject
 		// SemanticMediawiki/includes/export/SMW_Exporter.php
-		$export_rdf = SpecialPage::getTitleFor( 'ExportRDF' );
-		if ( $export_rdf->isKnown() ) {
+		$export_rdf = MediaWikiServices::getInstance()
+			->getSpecialPageFactory()
+			->getTitleForAlias( 'ExportRDF' );
+		if ( $export_rdf ) {
 			$export_url = $export_rdf->getFullURL( [ 'page' => $title->getFullText(), 'recursive' => '1', 'backlinks' => 0 ] );
 
 			try {
