@@ -27,7 +27,7 @@ use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Languages\LanguageNameUtils;
 use MediaWiki\Page\ContentModelChangeFactory;
 
-class SpecialPageProperties extends SpecialPage {
+class SpecialPageProperties extends UnlistedSpecialPage {
 
 	/** @var Title|Mediawiki\Title\Title */
 	protected $title;
@@ -58,8 +58,7 @@ class SpecialPageProperties extends SpecialPage {
 		Language $language,
 		LanguageNameUtils $languageNameUtils
 	) {
-		$listed = false;
-		parent::__construct( 'PageProperties', '', $listed );
+		parent::__construct( 'PageProperties' );
 		$this->contentHandlerFactory = $contentHandlerFactory;
 		$this->contentModelChangeFactory = $contentModelChangeFactory;
 		$this->language = $language;
