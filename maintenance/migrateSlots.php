@@ -112,7 +112,7 @@ class MigrateSlots extends Maintenance {
 		echo 'migrating slot pageproperties to table' . PHP_EOL;
 
 		$slotContent = $slots['pageproperties']->getContent();
-		$contents = $slotContent->getNativeData();
+		$contents = $slotContent instanceof TextContent ? $slotContent->getText() : '';
 		$contents = json_decode( $contents, true );
 
 		$pageProperties = [
