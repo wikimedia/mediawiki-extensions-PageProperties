@@ -23,6 +23,7 @@
  */
 
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
 
 class PagePropertiesHooks {

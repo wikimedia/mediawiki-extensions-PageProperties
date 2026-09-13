@@ -29,6 +29,7 @@ if ( $IP === false ) {
 require_once "$IP/maintenance/Maintenance.php";
 
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
+use MediaWiki\Revision\RevisionRecord;
 
 class MigrateSlots extends Maintenance {
 

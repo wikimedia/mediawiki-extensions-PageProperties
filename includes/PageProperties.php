@@ -25,6 +25,8 @@ use MediaWiki\Extension\PageProperties\Aliases\Html as HtmlClass;
 use MediaWiki\Extension\PageProperties\Aliases\Title as TitleClass;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\User\UserGroupManager;
+use Psr\Log\LoggerInterface;
 
 class PageProperties {
 
@@ -37,7 +39,7 @@ class PageProperties {
 	/** @var UserGroupManager */
 	private static $userGroupManager;
 
-	/** @var Logger */
+	/** @var LoggerInterface */
 	private static $Logger;
 
 	/** @var int */
